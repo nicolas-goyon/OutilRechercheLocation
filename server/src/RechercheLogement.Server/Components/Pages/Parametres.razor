@@ -1,0 +1,98 @@
+@page "/parametres"
+@using RechercheLogement.Server.Api
+@inject ApiTokenService Tokens
+@inject ServerSettings Settings
+@inject IJSRuntime JS
+
+<PageTitle>Paramètres — Recherche logement</PageTitle>
+<h1>⚙ Paramètres</h1>
+
+<section class="panel">
+    <h2>Token du plugin</h2>
+    <p>Le plugin Tampermonkey doit envoyer ce token pour lire ou modifier les données. Ne le partage pas.</p>
+    <div class="token">
+        <code>@(_show ? _token : new string('•', 24))</code>
+        <button type="button" @onclick="() => _show = !_show">@(_show ? "Masquer" : "Afficher")</button>
+        <button type="button" @onclick="() => Copy(_token)">Copier</button>
+        @if (!Tokens.FromConfiguration)
+        {
+            <button type="button" class="danger" @onclick="Regenerate">Régénérer</button>
+        }
+    </div>
+    @if (Tokens.FromConfiguration)
+    {
+        <p class="muted">Token fixé par la variable d'environnement <code>RechercheLogement__ApiToken</code>.</p>
+    }
+    @if (_regenerated)
+    {
+        <p class="warn">Nouveau token créé : l'ancien est refusé. Mets à jour <code>apiToken</code> dans le script Tampermonkey.</p>
+    }
+</section>
+
+<section class="panel">
+    <h2>Script Tampermonkey</h2>
+    <p>Crée un nouveau script dans Tampermonkey et colle ceci (le <code>@@require</code> pointe sur la dernière version publiée du plugin ; voir le README).</p>
+    <pre class="snippet">@Snippet</pre>
+    <button type="button" @onclick="() => Copy(Snippet)">Copier le script</button>
+</section>
+
+<section class="panel">
+    <h2>Sauvegarde</h2>
+    <p>La base SQLite est dans <code>@Settings.DatabasePath</code> (volume Docker <code>recherche-logement-data</code>). Export JSON complet :</p>
+    <button type="button" @onclick="Export">⬇ Exporter (JSON)</button>
+</section>
+
+@code {
+    [Inject] private Catalog Catalog { get; set; } = default!;
+
+    private string _token = "";
+    private bool _show;
+    private bool _regenerated;
+
+    protected override void OnInitialized() => _token = Tokens.Current;
+
+    private string Snippet => $$"""
+        // ==UserScript==
+        // @name         Recherche logement — suivi multi-sites
+        // @namespace    local.recherche-logement
+        // @version      1.0.0
+        // @description  Masque / étiquette les annonces et les synchronise avec le site local.
+        // @match        https://www.bienici.com/*
+        // @noframes
+        // @run-at       document-idle
+        // @grant        unsafeWindow
+        // @grant        GM_registerMenuCommand
+        // @grant        GM_getValue
+        // @grant        GM_setValue
+        // @grant        GM_addValueChangeListener
+        // @grant        GM_removeValueChangeListener
+        // @grant        GM_xmlhttpRequest
+        // @connect      localhost
+        // @connect      127.0.0.1
+        // @require      https://cdn.jsdelivr.net/gh/nicolas-goyon/OutilRechercheLocation@plugin-vX.Y.Z/plugin/dist/recherche-logement.js
+        // ==/UserScript==
+
+        (function () {
+          'use strict';
+          window.TMRechercheLogement.init({
+            serverUrl: '{{Settings.PublicUrl}}',
+            apiToken: '{{_token}}',
+          });
+        })();
+        """;
+
+    private void Regenerate()
+    {
+        _token = Tokens.Regenerate();
+        _regenerated = true;
+        _show = true;
+    }
+
+    private async Task Copy(string text) => await JS.InvokeVoidAsync("rl.copy", text);
+
+    private async Task Export()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(Catalog.Export(), JsonDefaults.Options);
+        await JS.InvokeVoidAsync("rl.download", $"recherche-logement-{DateTime.Now:yyyy-MM-dd}.json", json);
+    }
+}

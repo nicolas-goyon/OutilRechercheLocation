@@ -1,0 +1,17 @@
+node_modules/
+package-lock.json
+dist/
+*.tsbuildinfo
+*.log
+.DS_Store
+Thumbs.db
+
+# .NET
+bin/
+obj/
+.vs/
+.idea/
+*.user
+server/src/RechercheLogement.Server/data/
+
+# plugin/dist/ est reconstruit et ajouté au tag par la CI (plugin-vX.Y.Z), jamais commité sur main.

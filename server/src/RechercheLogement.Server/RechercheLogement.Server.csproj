@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>RechercheLogement.Server</RootNamespace>
+    <UserSecretsId>recherche-logement</UserSecretsId>
+    <Version>0.2.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RechercheLogement.Core\RechercheLogement.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="RechercheLogement.Tests" />
+  </ItemGroup>
+</Project>

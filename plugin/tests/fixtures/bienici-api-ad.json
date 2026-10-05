@@ -1,0 +1,24 @@
+{
+  "id": "hektor-sia-immo-2342",
+  "adType": "rent",
+  "propertyType": "flat",
+  "reference": "TSLAP320002342",
+  "title": "GRAND 3 PIÈCES 88,32 M2   PROCHE MÉTRO   PARIS 19e",
+  "description": "EXCLUSIVITÉ SIA IMMOBILIER<br> Nous vous proposons à la location ce spacieux appartement 3 pièces de 88,32 m2, situé au 1er étage sans ascenseur, au 86 avenue de Flandre, Paris 19e.<br>Lumineux, confortable et parfaitement agencé, cet appartement bénéficie de beaux volumes et d'une distribution fonctionnelle.<br>",
+  "price": 1866,
+  "charges": 65,
+  "surfaceArea": 88.32,
+  "roomsQuantity": 3,
+  "bedroomsQuantity": 2,
+  "floor": 1,
+  "isFurnished": false,
+  "postalCode": "75019",
+  "city": "Paris 19e",
+  "district": { "name": "Paris 19e Arrondissement - Bassin de la Villette", "libelle": "Bassin de la Villette", "cp": "75019" },
+  "blurInfo": { "type": "disk", "radius": 50, "position": { "lat": 48.890093725013195, "lon": 2.376918913801298 } },
+  "photos": [
+    { "url_photo": "https://sia-immo.staticlbi.com/original/images/biens/1/356f34382cd570bb444faa7d37d200eb/photo_3c9c36dc663b54820545f52f6aef3a1e.png", "url": "https://file.bienici.com/photo/hektor-sia-immo-2342_sia-immo.staticlbi.com_original_images_biens_1_356f34382cd570bb444faa7d37d200eb_photo_3c9c36dc663b54820545f52f6aef3a1e.png" },
+    { "url_photo": "https://sia-immo.staticlbi.com/original/images/biens/1/356f34382cd570bb444faa7d37d200eb/photo_0a2fdb5cd3d88ed785ca666f2370f74a.png", "url": "https://file.bienici.com/photo/hektor-sia-immo-2342_sia-immo.staticlbi.com_original_images_biens_1_356f34382cd570bb444faa7d37d200eb_photo_0a2fdb5cd3d88ed785ca666f2370f74a.png" }
+  ],
+  "publicationDate": "2026-10-02T22:40:03.953Z"
+}

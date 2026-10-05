@@ -1,0 +1,6 @@
+<span class="badge @Format.StatusClass(Status)">@Format.StatusIcon(Status) @Labels.Of(Status)@if (Status == PropertyStatus.ToContact && Stage is not null && Stage != ContactStage.Pending) {<text> · @Labels.Of(Stage.Value)</text>}</span>
+
+@code {
+    [Parameter, EditorRequired] public PropertyStatus Status { get; set; }
+    [Parameter] public ContactStage? Stage { get; set; }
+}

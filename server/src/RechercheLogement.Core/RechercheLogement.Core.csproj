@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Logique métier pure : aucune dépendance NuGet. -->
+  <PropertyGroup>
+    <RootNamespace>RechercheLogement.Core</RootNamespace>
+  </PropertyGroup>
+</Project>

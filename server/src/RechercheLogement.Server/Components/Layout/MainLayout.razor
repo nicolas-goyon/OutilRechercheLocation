@@ -1,0 +1,19 @@
+@inherits LayoutComponentBase
+
+<div class="app">
+    <nav class="sidebar">
+        <a class="brand" href="/">🏠 Recherche logement</a>
+        <NavLink href="/" Match="NavLinkMatch.All">Tableau de bord</NavLink>
+        <NavLink href="/a-contacter">📞 À contacter</NavLink>
+        <NavLink href="/biens">Tous les biens</NavLink>
+        <NavLink href="/doublons">≈ Doublons à vérifier</NavLink>
+        <NavLink href="/parametres">⚙ Paramètres</NavLink>
+    </nav>
+    <main class="content">
+        @Body
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    Une erreur est survenue. <a href="." class="reload">Recharger</a>
+</div>

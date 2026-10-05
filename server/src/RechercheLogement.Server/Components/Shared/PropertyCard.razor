@@ -1,0 +1,39 @@
+<article class="card @Format.StatusClass(Item.Property.Status)">
+    <a class="photo" href="/biens/@Item.Property.Id">
+        @if (Item.Photo is not null)
+        {
+            <img src="@Thumb(Item.Photo)" alt="" loading="lazy" />
+        }
+        else
+        {
+            <span class="nophoto">🏠</span>
+        }
+    </a>
+    <div class="card-body">
+        <div class="card-top">
+            <StatusBadge Status="Item.Property.Status" Stage="Item.Property.ContactStage" />
+            <StatusButtons PropertyId="@Item.Property.Id" Current="Item.Property.Status" />
+        </div>
+        <a class="title" href="/biens/@Item.Property.Id">@(Item.Title ?? "Annonce")</a>
+        <div class="price">@Format.Price(Item.Price) <span class="muted">· @Format.Surface(Item.Surface)@(Item.Rooms is not null ? $" · {Item.Rooms} p." : "")</span></div>
+        <div class="muted">@Item.PostalCode @Item.City @(Item.District is not null ? $"({Item.District})" : "")</div>
+        <div class="sites">
+            @foreach (var l in Item.Listings)
+            {
+                <a class="site" href="@l.Data.Url" target="_blank" rel="noopener" title="@l.Data.Title">@Labels.Site(l.Site) ↗</a>
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(Item.Property.Note))
+        {
+            <div class="note">📝 @Item.Property.Note</div>
+        }
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public PropertySummary Item { get; set; } = default!;
+
+    /// <summary>Miniature : Bien'ici redimensionne à la volée.</summary>
+    private static string Thumb(string url) =>
+        url.StartsWith("https://file.bienici.com/", StringComparison.Ordinal) ? $"{url}?width=400&height=240&fit=cover" : url;
+}

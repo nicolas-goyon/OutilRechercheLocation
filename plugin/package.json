@@ -1,0 +1,20 @@
+{
+  "name": "tm-recherche-logement",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Plugin Tampermonkey : masque / étiquette les annonces immobilières et les synchronise avec le site local (../server).",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "node scripts/build.mjs",
+    "build:watch": "node scripts/build.mjs --watch",
+    "test": "node --import tsx --test tests/*.test.ts"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.5",
+    "typescript": "^5.5.4",
+    "tsx": "^4.19.0",
+    "linkedom": "^0.18.5",
+    "@types/node": "^20.14.0"
+  }
+}

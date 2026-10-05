@@ -1,0 +1,127 @@
+name: Plugin — test & publication (jsDelivr)
+
+# Construit le bundle du plugin et le publie sur un tag `plugin-vX.Y.Z`, servi par jsDelivr :
+#   https://cdn.jsdelivr.net/gh/nicolas-goyon/OutilRechercheLocation@plugin-vX.Y.Z/plugin/dist/recherche-logement.js
+#
+# - Pull request / push touchant plugin/ : typecheck + tests + build.
+# - Push sur main : en plus, publication d'un nouveau tag (patch par défaut,
+#   "[minor]" ou "[major]" dans un message de commit pour monter plus haut).
+# - workflow_dispatch : republier un tag existant ("tag") ou forcer une montée ("bump").
+
+on:
+  push:
+    branches: [main]
+    paths: ['plugin/**', '.github/workflows/plugin.yml']
+  pull_request:
+    paths: ['plugin/**', '.github/workflows/plugin.yml']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag existant à reconstruire (ex. plugin-v0.2.0) — vide pour une nouvelle version'
+        required: false
+      bump:
+        description: 'Montée de version (ignorée si "tag" est renseigné)'
+        required: false
+        type: choice
+        default: patch
+        options: [patch, minor, major]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: plugin-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: plugin
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Vérifier le bundle
+        run: test -s dist/recherche-logement.js && echo "OK ($(wc -c < dist/recherche-logement.js) octets)"
+
+  release:
+    needs: test
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculer le tag
+        id: tag
+        working-directory: .
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          INPUT_BUMP: ${{ github.event.inputs.bump }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_TAG:-}" ]; then
+            echo "name=${INPUT_TAG}" >> "$GITHUB_OUTPUT"; echo "existing=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            bump="${INPUT_BUMP:-patch}"
+          else
+            if [ -z "${BEFORE_SHA:-}" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+              messages="$(git log -1 --pretty=%B "$AFTER_SHA")"
+            else
+              messages="$(git log --pretty=%B "${BEFORE_SHA}..${AFTER_SHA}")"
+            fi
+            if grep -qi '\[major\]' <<< "$messages"; then bump=major
+            elif grep -qi '\[minor\]' <<< "$messages"; then bump=minor
+            else bump=patch; fi
+          fi
+          latest="$(git tag -l 'plugin-v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -n1)"
+          latest="${latest:-plugin-v0.1.0}"
+          IFS='.' read -r major minor patch <<< "${latest#plugin-v}"
+          case "$bump" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            *)     patch=$((patch + 1)) ;;
+          esac
+          tag="plugin-v${major}.${minor}.${patch}"
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            echo "::error::Le tag ${tag} existe déjà."; exit 1
+          fi
+          echo "name=${tag}" >> "$GITHUB_OUTPUT"; echo "existing=false" >> "$GITHUB_OUTPUT"
+
+      - name: Se placer sur le tag existant
+        if: steps.tag.outputs.existing == 'true'
+        working-directory: .
+        run: git checkout "${{ steps.tag.outputs.name }}"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run build
+
+      - name: Commiter dist/ sur le tag et le pousser
+        working-directory: .
+        env:
+          TAG: ${{ steps.tag.outputs.name }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f plugin/dist/
+          if git diff --cached --quiet; then echo "dist/ inchangé"; exit 0; fi
+          git commit -m "ci(build): plugin dist pour ${TAG}"
+          git tag -f "${TAG}"
+          git push origin "${TAG}" --force
+          echo "### ${TAG}" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://cdn.jsdelivr.net/gh/${{ github.repository }}@${TAG}/plugin/dist/recherche-logement.js" >> "$GITHUB_STEP_SUMMARY"

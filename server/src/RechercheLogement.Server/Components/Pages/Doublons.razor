@@ -1,0 +1,62 @@
+@page "/doublons"
+@inherits LiveComponent
+
+<PageTitle>Doublons — Recherche logement</PageTitle>
+<h1>≈ Doublons à vérifier</h1>
+<p class="muted">Annonces probablement identiques (score entre 50 et 80 %). Au-dessus de 80 %, elles sont fusionnées automatiquement (réversible depuis la fiche du bien).</p>
+
+@if (_items.Count == 0)
+{
+    <p>Rien à vérifier. 🎉</p>
+}
+@foreach (var d in _items)
+{
+    <section class="panel dup">
+        <div class="dup-head">
+            <b>@Math.Round(d.Link.Score * 100) %</b>
+            <span class="muted">@string.Join(" · ", d.Link.Reasons)</span>
+            <span class="spacer"></span>
+            <button type="button" @onclick="() => Catalog.DismissDuplicate(d.A.Key, d.B.Key)">Pas le même bien</button>
+            <button type="button" class="primary" @onclick="() => Catalog.ConfirmDuplicate(d.A.Key, d.B.Key)">✔ Même bien</button>
+        </div>
+        <table class="compare">
+            <tr><th></th><th>@Side(d.A, d.StatusA)</th><th>@Side(d.B, d.StatusB)</th></tr>
+            <tr><td>Photo</td><td>@Photo(d.A)</td><td>@Photo(d.B)</td></tr>
+            @Row("Titre", d.A.Data.Title, d.B.Data.Title)
+            @Row("Prix", Format.Price(d.A.Data.Price), Format.Price(d.B.Data.Price))
+            @Row("Surface", Format.Surface(d.A.Data.Surface), Format.Surface(d.B.Data.Surface))
+            @Row("Pièces", d.A.Data.Rooms?.ToString(), d.B.Data.Rooms?.ToString())
+            @Row("Étage", d.A.Data.Floor?.ToString(), d.B.Data.Floor?.ToString())
+            @Row("Lieu", $"{d.A.Data.PostalCode} {d.A.Data.City} {d.A.Data.District}", $"{d.B.Data.PostalCode} {d.B.Data.City} {d.B.Data.District}")
+            @Row("Réf. agence", d.A.Data.AgencyRef, d.B.Data.AgencyRef)
+            @Row("Description", d.A.Data.DescriptionExcerpt?[..Math.Min(220, d.A.Data.DescriptionExcerpt.Length)], d.B.Data.DescriptionExcerpt?[..Math.Min(220, d.B.Data.DescriptionExcerpt.Length)])
+        </table>
+    </section>
+}
+
+@code {
+    private IReadOnlyList<PendingDuplicate> _items = [];
+
+    protected override void Load() => _items = Catalog.PendingDuplicates().Take(100).ToList();
+
+    private static RenderFragment Side(Listing l, PropertyStatus status) => __builder =>
+    {
+        <a href="@l.Data.Url" target="_blank" rel="noopener">@Labels.Site(l.Site) ↗</a>
+        <text> </text>
+        <StatusBadge Status="status" />
+    };
+
+    private static RenderFragment Photo(Listing l) => __builder =>
+    {
+        var url = l.Data.Photos?.FirstOrDefault();
+        if (url is not null)
+        {
+            <img src="@(url.StartsWith("https://file.bienici.com/", StringComparison.Ordinal) ? url + "?width=320&height=200&fit=cover" : url)" alt="" loading="lazy" />
+        }
+    };
+
+    private static RenderFragment Row(string label, string? a, string? b) => __builder =>
+    {
+        <tr class="@(a is not null && a == b ? "same" : "")"><td>@label</td><td>@(a ?? "—")</td><td>@(b ?? "—")</td></tr>
+    };
+}

@@ -1,0 +1,70 @@
+@page "/biens"
+@inherits LiveComponent
+
+<PageTitle>Biens — Recherche logement</PageTitle>
+<h1>Tous les biens</h1>
+
+<div class="filters">
+    <div class="chips">
+        @foreach (var s in Enum.GetValues<PropertyStatus>())
+        {
+            <label class="chip @Format.StatusClass(s) @(_statuses.Contains(s) ? "on" : "")">
+                <input type="checkbox" checked="@_statuses.Contains(s)" @onchange="() => Toggle(s)" />
+                @Format.StatusIcon(s) @Labels.Of(s)
+            </label>
+        }
+    </div>
+    <input placeholder="Recherche (titre, ville, note...)" @bind="_text" @bind:event="oninput" @bind:after="Load" />
+    <input placeholder="Code postal" @bind="_postalCode" @bind:event="oninput" @bind:after="Load" class="small" />
+    <input type="number" placeholder="Prix max" @bind="_maxPrice" @bind:after="Load" class="small" />
+    <input type="number" placeholder="Surface min" @bind="_minSurface" @bind:after="Load" class="small" />
+    <select @bind="_sort" @bind:after="Load">
+        <option value="@PropertySort.LastSeen">Vus récemment</option>
+        <option value="@PropertySort.LastUpdate">Modifiés récemment</option>
+        <option value="@PropertySort.PriceAsc">Prix croissant</option>
+        <option value="@PropertySort.PriceDesc">Prix décroissant</option>
+        <option value="@PropertySort.SurfaceDesc">Surface décroissante</option>
+    </select>
+</div>
+
+<p class="muted">@_items.Count bien(s)@(_items.Count >= Take ? $" (les {Take} premiers)" : "")</p>
+<div class="grid">
+    @foreach (var p in _items) { <PropertyCard Item="p" /> }
+</div>
+
+@code {
+    private const int Take = 300;
+
+    [SupplyParameterFromQuery(Name = "statut")] public string? StatusParam { get; set; }
+
+    private HashSet<PropertyStatus> _statuses = [PropertyStatus.None, PropertyStatus.Seen, PropertyStatus.ToContact];
+    private string? _text;
+    private string? _postalCode;
+    private decimal? _maxPrice;
+    private double? _minSurface;
+    private PropertySort _sort = PropertySort.LastSeen;
+    private IReadOnlyList<PropertySummary> _items = [];
+
+    protected override void OnInitialized()
+    {
+        if (StatusParam is not null && Enum.TryParse<PropertyStatus>(StatusParam, ignoreCase: true, out var s)) _statuses = [s];
+        base.OnInitialized();
+    }
+
+    protected override void Load() => _items = Catalog.QueryProperties(new PropertyQuery
+    {
+        Statuses = _statuses,
+        Text = _text,
+        PostalCode = _postalCode,
+        MaxPrice = _maxPrice,
+        MinSurface = _minSurface,
+        Sort = _sort,
+        Take = Take,
+    });
+
+    private void Toggle(PropertyStatus s)
+    {
+        if (!_statuses.Remove(s)) _statuses.Add(s);
+        Load();
+    }
+}

@@ -1,0 +1,156 @@
+@page "/biens/{Id}"
+@inherits LiveComponent
+
+<PageTitle>@(_detail?.Summary.Title ?? "Bien") — Recherche logement</PageTitle>
+
+@if (_detail is null)
+{
+    <h1>Bien introuvable</h1>
+    <p class="muted">Il a peut-être été fusionné avec un autre bien. <a href="/biens">Retour à la liste</a></p>
+}
+else
+{
+    var s = _detail.Summary;
+    var p = s.Property;
+    <div class="detail-head @Format.StatusClass(p.Status)">
+        <div>
+            <h1>@(s.Title ?? "Annonce")</h1>
+            <div class="price">@Format.Price(s.Price) <span class="muted">· @Format.Surface(s.Surface)@(s.Rooms is not null ? $" · {s.Rooms} pièce(s)" : "")</span></div>
+            <div class="muted">@s.PostalCode @s.City @(s.District is not null ? $"({s.District})" : "") · vu la 1re fois le @Format.Date(s.Listings.Min(l => l.FirstSeenAt))</div>
+        </div>
+        <div class="head-actions">
+            <StatusBadge Status="p.Status" Stage="p.ContactStage" />
+            <StatusButtons PropertyId="@p.Id" Current="p.Status" />
+        </div>
+    </div>
+
+    @if (p.Status == PropertyStatus.ToContact)
+    {
+        <section class="panel">
+            <h2>📞 Suivi du contact</h2>
+            <div class="stages">
+                @foreach (var st in Enum.GetValues<ContactStage>())
+                {
+                    <button type="button" class="stage @(st == (p.ContactStage ?? ContactStage.Pending) ? "on" : "")" @onclick="() => Catalog.SetContactStage(p.Id, st)">@Labels.Of(st)</button>
+                }
+            </div>
+        </section>
+    }
+
+    <div class="two-cols">
+        <section class="panel">
+            <h2>Annonces (@s.Listings.Count)</h2>
+            @foreach (var l in s.Listings)
+            {
+                <div class="listing">
+                    @if (l.Data.Photos is { Count: > 0 })
+                    {
+                        <div class="photos">
+                            @foreach (var ph in l.Data.Photos) { <img src="@Thumb(ph)" alt="" loading="lazy" /> }
+                        </div>
+                    }
+                    <div><b>@Labels.Site(l.Site)</b> — <a href="@l.Data.Url" target="_blank" rel="noopener">@(l.Data.Title ?? l.SiteId) ↗</a></div>
+                    <dl>
+                        <dt>Prix</dt><dd>@Format.Price(l.Data.Price)@(l.Data.Charges is not null ? $" (dont {Format.Price(l.Data.Charges)} de charges)" : "")</dd>
+                        <dt>Surface</dt><dd>@Format.Surface(l.Data.Surface)</dd>
+                        <dt>Pièces / ch.</dt><dd>@(l.Data.Rooms?.ToString() ?? "—") / @(l.Data.Bedrooms?.ToString() ?? "—")</dd>
+                        <dt>Étage</dt><dd>@(l.Data.Floor?.ToString() ?? "—")</dd>
+                        <dt>Meublé</dt><dd>@(l.Data.Furnished switch { true => "oui", false => "non", _ => "—" })</dd>
+                        <dt>Réf. agence</dt><dd>@(l.Data.AgencyRef ?? "—") @l.Data.AgencyName</dd>
+                        <dt>Vue</dt><dd>@Format.Date(l.FirstSeenAt) → @Format.Date(l.LastSeenAt)</dd>
+                        @if (l.PriceHistory.Count > 0)
+                        {
+                            <dt>Prix</dt><dd>@string.Join(" → ", l.PriceHistory.Select(h => $"{Format.Price(h.Price)} ({Format.Date(h.At)})")) → @Format.Price(l.Data.Price)</dd>
+                        }
+                    </dl>
+                    @if (!string.IsNullOrEmpty(l.Data.DescriptionExcerpt)) { <p class="excerpt">@l.Data.DescriptionExcerpt…</p> }
+                    @if (s.Listings.Count > 1)
+                    {
+                        <button type="button" class="link" @onclick="() => Detach(l.Key)">Dissocier cette annonce</button>
+                    }
+                </div>
+            }
+        </section>
+
+        <div>
+            <section class="panel">
+                <h2>Note</h2>
+                <textarea rows="4" @bind="_note" placeholder="Note personnelle"></textarea>
+                <button type="button" class="primary" @onclick="() => Catalog.SetNote(p.Id, _note)">Enregistrer</button>
+            </section>
+
+            @if (_detail.Suggestions.Count > 0)
+            {
+                <section class="panel">
+                    <h2>≈ Doublons possibles</h2>
+                    @foreach (var d in _detail.Suggestions)
+                    {
+                        <div class="dup-mini">
+                            @Math.Round(d.Link.Score * 100) % — <b>@Labels.Site(d.B.Site)</b> @d.B.Data.Title @Format.Price(d.B.Data.Price)
+                            <StatusBadge Status="d.StatusB" />
+                            <div class="muted">@string.Join(", ", d.Link.Reasons)</div>
+                            <button type="button" class="primary" @onclick="() => Catalog.ConfirmDuplicate(d.A.Key, d.B.Key)">Même bien</button>
+                            <button type="button" @onclick="() => Catalog.DismissDuplicate(d.A.Key, d.B.Key)">Pas le même</button>
+                        </div>
+                    }
+                </section>
+            }
+
+            <section class="panel">
+                <h2>Historique</h2>
+                <div class="comment">
+                    <input placeholder="Ajouter un commentaire (appel, visite...)" @bind="_comment" @onkeydown="OnCommentKey" />
+                    <button type="button" @onclick="AddComment">Ajouter</button>
+                </div>
+                <ul class="timeline">
+                    @foreach (var e in _detail.Events)
+                    {
+                        <li><span class="muted">@Format.DateTime(e.At)</span> @e.Text</li>
+                    }
+                </ul>
+            </section>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = "";
+
+    private PropertyDetail? _detail;
+    private string? _note;
+    private string? _comment;
+    private string? _loadedFor;
+
+    protected override void OnParametersSet() => Load();
+
+    protected override void Load()
+    {
+        _detail = Catalog.GetProperty(Id);
+        if (_detail is not null && _loadedFor != Id)
+        {
+            _note = _detail.Summary.Property.Note;
+            _loadedFor = Id;
+        }
+    }
+
+    private void Detach(string key)
+    {
+        Catalog.Detach(key);
+        // L'annonce dissociée a maintenant son propre bien ; on reste sur celui-ci.
+    }
+
+    private void AddComment()
+    {
+        if (string.IsNullOrWhiteSpace(_comment)) return;
+        Catalog.AddComment(Id, _comment);
+        _comment = null;
+    }
+
+    private void OnCommentKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") AddComment();
+    }
+
+    private static string Thumb(string url) =>
+        url.StartsWith("https://file.bienici.com/", StringComparison.Ordinal) ? $"{url}?width=320&height=200&fit=cover" : url;
+}

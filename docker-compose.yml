@@ -1,0 +1,22 @@
+# Site local de suivi de recherche logement.
+#   docker compose up -d --build     puis http://localhost:5080
+#   docker compose logs server | grep "Token API"   (token à mettre dans le script Tampermonkey)
+services:
+  server:
+    build: ./server
+    # Ou l'image publiée par la CI : image: ghcr.io/nicolas-goyon/outilrecherchelocation-server:latest
+    image: recherche-logement-server:local
+    container_name: recherche-logement
+    ports:
+      # Lié à 127.0.0.1 uniquement : le site n'est pas exposé sur le réseau.
+      - "127.0.0.1:5080:8080"
+    environment:
+      RechercheLogement__PublicUrl: "http://localhost:5080"
+      # Token fixe (sinon généré au premier démarrage, visible dans Paramètres) :
+      # RechercheLogement__ApiToken: "change-moi"
+    volumes:
+      - recherche-logement-data:/data
+    restart: unless-stopped
+
+volumes:
+  recherche-logement-data:

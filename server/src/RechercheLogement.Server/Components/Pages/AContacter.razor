@@ -1,0 +1,43 @@
+@page "/a-contacter"
+@inherits LiveComponent
+
+<PageTitle>À contacter — Recherche logement</PageTitle>
+<h1>📞 À contacter</h1>
+<p class="muted">Faire avancer chaque bien d'une étape avec les flèches, ou ouvrir sa fiche pour ajouter un commentaire.</p>
+
+<div class="kanban">
+    @foreach (var stage in Enum.GetValues<ContactStage>())
+    {
+        var items = _items.Where(i => (i.Property.ContactStage ?? ContactStage.Pending) == stage).ToList();
+        <section class="column">
+            <h3>@Labels.Of(stage) <span class="muted">(@items.Count)</span></h3>
+            @foreach (var i in items)
+            {
+                <div class="kcard">
+                    <a href="/biens/@i.Property.Id" class="title">@(i.Title ?? "Annonce")</a>
+                    <div>@Format.Price(i.Price) · @Format.Surface(i.Surface)</div>
+                    <div class="muted">@i.PostalCode @i.City</div>
+                    @if (!string.IsNullOrEmpty(i.Property.Note)) { <div class="note">📝 @i.Property.Note</div> }
+                    <div class="kactions">
+                        @if (stage > ContactStage.Pending)
+                        {
+                            <button type="button" title="Étape précédente" @onclick="() => Catalog.SetContactStage(i.Property.Id, stage - 1)">←</button>
+                        }
+                        @foreach (var l in i.Listings) { <a href="@l.Data.Url" target="_blank" rel="noopener">@Labels.Site(l.Site) ↗</a> }
+                        @if (stage < ContactStage.Declined)
+                        {
+                            <button type="button" title="Étape suivante" @onclick="() => Catalog.SetContactStage(i.Property.Id, stage + 1)">→</button>
+                        }
+                    </div>
+                </div>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<PropertySummary> _items = [];
+
+    protected override void Load() =>
+        _items = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.ToContact }, Sort = PropertySort.LastUpdate, Take = 1000 });
+}

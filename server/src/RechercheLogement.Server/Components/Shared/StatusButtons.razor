@@ -1,0 +1,16 @@
+@* Boutons de statut rapides (mêmes que dans le plugin). *@
+<div class="status-buttons">
+    @foreach (var s in new[] { PropertyStatus.Seen, PropertyStatus.Rejected, PropertyStatus.ToContact })
+    {
+        var active = Current == s;
+        <button type="button" class="sb @Format.StatusClass(s) @(active ? "active" : "")"
+                title="@(active ? $"Annuler : {Labels.Of(s)}" : Labels.Of(s))"
+                @onclick="() => Catalog.SetStatus(PropertyId, active ? PropertyStatus.None : s)">@Format.StatusIcon(s)</button>
+    }
+</div>
+
+@code {
+    [Inject] private Catalog Catalog { get; set; } = default!;
+    [Parameter, EditorRequired] public string PropertyId { get; set; } = "";
+    [Parameter, EditorRequired] public PropertyStatus Current { get; set; }
+}
