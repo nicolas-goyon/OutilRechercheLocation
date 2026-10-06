@@ -74,7 +74,7 @@ deploy/                   docker-compose.yml (image GHCR :latest) + update.sh / 
 
 | Entité | Rôle | Champs clés |
 | --- | --- | --- |
-| **Listing** | Une annonce sur un site. Clé `site:siteId`. | `PropertyId`, `Data` (prix, surface, pièces, CP, GPS, réf. agence, `PhotoKeys`, extrait de description…), `FirstSeenAt`, `LastSeenAt`, `PriceHistory`, `Sources` (`card`/`api`) |
+| **Listing** | Une annonce sur un site. Clé `site:siteId`. | `PropertyId`, `Data` (prix, surface, pièces, CP, GPS, réf. agence, `OtherRefs`, agence + `AgencySiren`, `PhotoKeys`, extrait de description…), `FirstSeenAt`, `LastSeenAt`, `PriceHistory`, `Sources` (`card`/`api`) |
 | **Property** | Le bien réel | `Status` (`None`, `Seen`, `Rejected`, `ToContact`), `ContactStage` (`Pending` → `Contacted` → `VisitScheduled` → `Visited` → `ApplicationSent` → `Accepted`/`Declined`), `Note`, `StatusChangedAt` |
 | **DuplicateLink** | Paire candidate de doublons | `Score`, `Reasons`, `State` (`Suggested`, `Confirmed`, `Dismissed`), `DecidedBy` (`auto`/`user`) |
 | **SavedSearch** | Recherche favorite : lien de recherche d'un site d'annonces (critères dans l'URL). Doublons permis. | `Name`, `Url`, `Site` (déduit de l'URL), `Note`, `Order`, `LastOpenedAt` |
@@ -136,11 +136,15 @@ renvoie une action après une coupure réseau, le serveur ne l'applique pas une 
    - distance supérieure à 1,5 km (plus la marge de précision du GPS).
    - écart de surface supérieur à 10 %.
    - écart de 2 pièces ou plus.
+   - SIREN d'agence différent (mentions légales RCS / SIRET : agences différentes).
 3. **Points**. Score = points / 10, avec un maximum de 1.
 
    | Critère | Points |
    | --- | --- |
-   | Même réf. agence | +6 (réf. compatible : +4) |
+   | Même réf. agence | +6 (réf. compatible : +4). Toutes les références comptent : champ dédié du site, et « Réf. : … » / « Mandat n° … » trouvés dans la description ou un encadré |
+   | Même agence | +1 (même SIREN, ou un mot commun dans le nom, hors mots génériques et ville) |
+   | Agences différentes (noms) | −3 |
+   | Même agence, références différentes | −3 |
    | Photos d'origine identiques | ≥ 2 photos : +6 (1 photo : +4) |
    | Description | quasi identique : +5 (proche : +3) |
    | Surface | écart ≤ 1 m² ou ≤ 2 % : +2 (≤ 5 % : +1) |
@@ -151,7 +155,11 @@ renvoie une action après une coupure réseau, le serveur ne l'applique pas une 
    | Chambres identiques | +0,5 |
    | Meublé différent | −1 |
 
-4. **Seuils** :
+4. **Plafond** : un même bien est rarement confié à deux agences. Score plafonné à 0,6 (jamais de
+   fusion automatique, au mieux une suggestion) si les noms d'agence diffèrent (sauf même
+   référence) ou si la même agence donne deux références différentes. Un nom réduit à un sigle
+   court (« YFR ») ne permet pas de conclure.
+5. **Seuils** :
    - score ≥ 0,8 : fusion automatique (réversible).
    - score ≥ 0,5 : suggestion.
 

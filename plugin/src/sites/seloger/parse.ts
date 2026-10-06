@@ -32,7 +32,7 @@
  * pas à trouver un doublon sur un autre site : pas de photoKeys.
  */
 import type { ListingData, TransactionType } from '../../core/types';
-import { normalizeText, parseNumber } from '../../shared/text';
+import { extractRefs, extractSiren, normalizeText, parseNumber } from '../../shared/text';
 
 export const CARD_SELECTOR = '[data-testid="serp-core-classified-card-testid"]';
 export const DETAIL_SELECTOR = '[data-testid="aviv.CDP.main"]';
@@ -206,7 +206,7 @@ export interface SelogerSerpClassified {
   };
   gallery?: { images?: { url?: string }[] };
   mainDescription?: { description?: string; headline?: string };
-  provider?: { intermediaryCard?: { title?: string | null } };
+  provider?: { intermediaryCard?: { title?: string | null }; agencyLegalInformations?: string[] };
   rawData?: {
     distributionType?: string;
     propertyType?: string;
@@ -237,7 +237,9 @@ export function parseSelogerSerpClassified(c: SelogerSerpClassified): ListingDat
     city: addr?.city,
     district: addr?.district,
     agencyRef: raw.offererMarketingKey || undefined,
-    agencyName: c.provider?.intermediaryCard?.title || undefined,
+    otherRefs: otherRefs(c.mainDescription?.description, raw.offererMarketingKey),
+    agencyName: c.provider?.intermediaryCard?.title?.replace(/\s+/g, ' ').trim() || undefined,
+    agencySiren: extractSiren((c.provider?.agencyLegalInformations ?? []).join('\n')),
     photos: photos.length ? photos : undefined,
     descriptionExcerpt: c.mainDescription?.description ? normalizeText(c.mainDescription.description).slice(0, 600) : undefined,
     publishedAt: c.metadata?.creationDate,
@@ -269,7 +271,7 @@ export interface SelogerDetailClassified {
     price?: { components?: PriceComponent[] };
     features?: { details?: { categories?: { elements?: { icon?: string; value?: string }[] }[] } };
   };
-  contactSections?: { contactCard?: { title?: string | null } };
+  contactSections?: { contactCard?: { title?: string | null }; provider?: { agencyLegalInformations?: string[] } };
   rawData?: { distributionType?: string; propertyType?: string };
   tracking?: { av_items?: { price?: number }[] };
 }
@@ -317,7 +319,9 @@ export function parseSelogerDetailClassified(c: SelogerDetailClassified, pageUrl
     district: addr?.district,
     geo: coords ? { lat: coords[1], lon: coords[0], precisionM: DETAIL_GEO_PRECISION_M } : undefined,
     agencyRef: ref || undefined,
-    agencyName: c.contactSections?.contactCard?.title || undefined,
+    otherRefs: otherRefs(s.description?.description, ref),
+    agencyName: c.contactSections?.contactCard?.title?.replace(/\s+/g, ' ').trim() || undefined,
+    agencySiren: extractSiren((c.contactSections?.provider?.agencyLegalInformations ?? []).join('\n')),
     photos: photos.length ? photos : undefined,
     descriptionExcerpt: s.description?.description ? normalizeText(s.description.description).slice(0, 600) : undefined,
     publishedAt: c.metadata?.creationDate,
@@ -347,6 +351,16 @@ export function parseSelogerDetailDom(main: Element, pageUrl?: string): ListingD
     propertyType: propertyTypeFromText(heading),
     price: parseNumber(srPrice),
     agencyRef: ref,
+    otherRefs: otherRefs(description, ref),
+    // Bloc "Informations légales" de l'agence (RCS, SIRET), à côté du contact.
+    agencySiren: extractSiren(main.textContent),
     descriptionExcerpt: description ? normalizeText(description).slice(0, 600) : undefined,
   };
+}
+
+/** Références écrites dans la description, sans répéter la référence du champ dédié. */
+function otherRefs(description: string | undefined, mainRef: string | undefined): string[] | undefined {
+  const main = mainRef?.toUpperCase();
+  const list = extractRefs(description).filter((r) => r !== main);
+  return list.length ? list : undefined;
 }

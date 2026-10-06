@@ -1,0 +1,23 @@
+{
+  "id": "century-21-202_2190_28251",
+  "adType": "rent",
+  "propertyType": "flat",
+  "reference": "28251",
+  "description": "ONET-LE-CHÂTEAU Secteur Les Balquières : Dans une résidence neuve, appartement 2 pièces en très bon état de 48 m2 avec séjour/ cuisine équipée. Mandat n° 28251-C21.",
+  "price": 605,
+  "charges": 15,
+  "surfaceArea": 49,
+  "roomsQuantity": 2,
+  "postalCode": "12850",
+  "city": "Onet-le-Château",
+  "blurInfo": { "type": "disk", "radius": 50, "position": { "lat": 44.36760784197518, "lon": 2.5760028002654147 } },
+  "contactRelativeData": {
+    "agencyNameToDisplay": "CENTURY 21 Foch Immobilier",
+    "contactNameToDisplay": "CENTURY 21 Foch Immobilier",
+    "phoneToDisplay": "0565733838",
+    "contactIsAgency": true,
+    "rcs": "407797521",
+    "agencyId": "century-21-83537",
+    "accountType": "agency"
+  }
+}

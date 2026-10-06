@@ -16,7 +16,7 @@
  * sont dans .search-results-list__leading-ads-box.
  */
 import type { ListingData } from '../../core/types';
-import { normalizeText, parseNumber } from '../../shared/text';
+import { extractRefs, normalizeSiren, normalizeText, parseNumber } from '../../shared/text';
 
 export const CARD_SELECTOR = 'article.ad-overview[data-id]';
 
@@ -65,6 +65,7 @@ export function parseBieniciCard(card: Element): ListingData {
     transaction: href?.startsWith('/annonce/location') || perMonth ? 'rent' : href?.startsWith('/annonce/vente') ? 'buy' : undefined,
     photos: photo ? [stripPhotoParams(photo)] : undefined,
     descriptionExcerpt: description ? normalizeText(description).slice(0, 600) : undefined,
+    otherRefs: nonEmpty(extractRefs(description)),
   };
   return data;
 }
@@ -112,6 +113,7 @@ export function parseBieniciDetail(section: Element): ListingData {
     price: parseNumber(text('.detailedSheetPrice .ad-price__the-price')),
     transaction: transactionWord === 'location' || perMonth ? 'rent' : transactionWord ? 'buy' : undefined,
     agencyRef: ref,
+    otherRefs: nonEmpty(extractRefs(description).filter((r) => r !== ref?.toUpperCase())),
     photos: photos.length ? [...new Set(photos)].slice(0, 4) : undefined,
     descriptionExcerpt: description ? normalizeText(description).slice(0, 600) : undefined,
     url: id ? detailUrl(id, section) : undefined,
@@ -203,6 +205,8 @@ export interface BieniciApiAd {
   photos?: { url?: string; url_photo?: string }[];
   publicationDate?: string;
   accountDisplayName?: string;
+  /** Présent dans realEstateAd.json (page d'une annonce), absent de la liste. */
+  contactRelativeData?: { agencyNameToDisplay?: string; contactNameToDisplay?: string; rcs?: string; agencyId?: string } | null;
 }
 
 const first = (v: number | number[] | undefined) => (Array.isArray(v) ? v[0] : v);
@@ -213,7 +217,9 @@ export function parseBieniciApiAd(ad: BieniciApiAd): ListingData {
     transaction: ad.adType === 'rent' ? 'rent' : ad.adType === 'buy' ? 'buy' : undefined,
     propertyType: ad.propertyType,
     agencyRef: ad.reference || undefined,
-    agencyName: ad.accountDisplayName || undefined,
+    otherRefs: nonEmpty(extractRefs(ad.description).filter((r) => r !== ad.reference?.toUpperCase())),
+    agencyName: ad.contactRelativeData?.agencyNameToDisplay || ad.accountDisplayName || undefined,
+    agencySiren: normalizeSiren(ad.contactRelativeData?.rcs),
     price: first(ad.price),
     charges: ad.charges,
     surface: first(ad.surfaceArea),
@@ -230,4 +236,8 @@ export function parseBieniciApiAd(ad: BieniciApiAd): ListingData {
     descriptionExcerpt: ad.description ? normalizeText(ad.description).slice(0, 600) : undefined,
     publishedAt: ad.publicationDate,
   };
+}
+
+function nonEmpty<T>(list: T[]): T[] | undefined {
+  return list.length ? list : undefined;
 }

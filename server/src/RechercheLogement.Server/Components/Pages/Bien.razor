@@ -56,7 +56,8 @@ else
                         <dt>Pièces / ch.</dt><dd>@(l.Data.Rooms?.ToString() ?? "—") / @(l.Data.Bedrooms?.ToString() ?? "—")</dd>
                         <dt>Étage</dt><dd>@(l.Data.Floor?.ToString() ?? "—")</dd>
                         <dt>Meublé</dt><dd>@(l.Data.Furnished switch { true => "oui", false => "non", _ => "—" })</dd>
-                        <dt>Réf. agence</dt><dd>@(l.Data.AgencyRef ?? "—") @l.Data.AgencyName</dd>
+                        <dt>Agence</dt><dd>@(Format.Agency(l.Data) ?? "—")</dd>
+                        <dt>Réf. agence</dt><dd>@(Format.Refs(l.Data) ?? "—")</dd>
                         <dt>Vue</dt><dd>@Format.Date(l.FirstSeenAt) → @Format.Date(l.LastSeenAt)</dd>
                         @if (l.PriceHistory.Count > 0)
                         {

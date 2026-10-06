@@ -57,8 +57,13 @@ public sealed record ListingData
     public string? City { get; init; }
     public string? District { get; init; }
     public GeoPoint? Geo { get; init; }
+    /// <summary>Référence de l'annonce donnée par l'agence (champ dédié du site). Souvent identique d'un site à l'autre.</summary>
     public string? AgencyRef { get; init; }
+    /// <summary>Autres références trouvées ("Réf. : …", "Mandat n° …" dans la description ou un encadré de la page).</summary>
+    public IReadOnlyList<string>? OtherRefs { get; init; }
     public string? AgencyName { get; init; }
+    /// <summary>SIREN de l'agence (9 chiffres, mentions légales RCS / SIRET). Identifie l'agence d'un site à l'autre.</summary>
+    public string? AgencySiren { get; init; }
     public IReadOnlyList<string>? Photos { get; init; }
     public IReadOnlyList<string>? PhotoKeys { get; init; }
     public string? DescriptionExcerpt { get; init; }
@@ -86,7 +91,9 @@ public sealed record ListingData
         District = Pick(District, incoming.District, fillOnly),
         Geo = Pick(Geo, incoming.Geo, fillOnly),
         AgencyRef = Pick(AgencyRef, incoming.AgencyRef, fillOnly),
+        OtherRefs = PickList(OtherRefs, incoming.OtherRefs, fillOnly, 6),
         AgencyName = Pick(AgencyName, incoming.AgencyName, fillOnly),
+        AgencySiren = Pick(AgencySiren, incoming.AgencySiren, fillOnly),
         Photos = PickList(Photos, incoming.Photos, fillOnly, 4),
         PhotoKeys = PickList(PhotoKeys, incoming.PhotoKeys, fillOnly, 6),
         DescriptionExcerpt = Pick(DescriptionExcerpt, Truncate(incoming.DescriptionExcerpt, 600), fillOnly),
@@ -95,8 +102,8 @@ public sealed record ListingData
 
     /// <summary>Égalité de contenu. La méthode compare les listes élément par élément.</summary>
     public bool SameAs(ListingData other) =>
-        this with { Photos = null, PhotoKeys = null } == other with { Photos = null, PhotoKeys = null }
-        && SeqEq(Photos, other.Photos) && SeqEq(PhotoKeys, other.PhotoKeys);
+        this with { Photos = null, PhotoKeys = null, OtherRefs = null } == other with { Photos = null, PhotoKeys = null, OtherRefs = null }
+        && SeqEq(Photos, other.Photos) && SeqEq(PhotoKeys, other.PhotoKeys) && SeqEq(OtherRefs, other.OtherRefs);
 
     private static T? Pick<T>(T? current, T? incoming, bool fillOnly) where T : class =>
         incoming is null || (fillOnly && current is not null) ? current : (incoming is string s && s.Length == 0 ? current : incoming);

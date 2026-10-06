@@ -62,8 +62,13 @@ export interface ListingData {
   city?: string;
   district?: string;
   geo?: GeoPoint;
+  /** Référence de l'annonce donnée par l'agence (champ dédié du site). Souvent identique d'un site à l'autre. */
   agencyRef?: string;
+  /** Autres références trouvées (encadré de la page, "Réf. : …" ou "Mandat n° …" dans la description). */
+  otherRefs?: string[];
   agencyName?: string;
+  /** SIREN de l'agence (9 chiffres, RCS / SIRET des mentions légales). Identifie l'agence d'un site à l'autre. */
+  agencySiren?: string;
   photos?: string[];
   /** Empreintes (noms de fichier) des photos d'origine. Elles aident à trouver un doublon entre sites. */
   photoKeys?: string[];

@@ -39,7 +39,8 @@ export const selogerAdapter: SiteAdapter = {
 
   matches: (loc) => /(^|\.)seloger\.com$/.test(loc.hostname),
 
-  isSearchPage: (loc) => loc.pathname.startsWith('/classified-search') || loc.pathname.startsWith('/list.htm'),
+  // "/classified-search?..." (recherche avec filtres) ou "/recherche/location/appartement/<région>/<ville>/<id>" (page de ville).
+  isSearchPage: (loc) => /^\/(classified-search|recherche\/|list\.htm)/.test(loc.pathname),
 
   findCards(root) {
     return [...root.querySelectorAll<HTMLElement>(CARD_SELECTOR)]

@@ -28,7 +28,8 @@
             @Row("Pièces", d.A.Data.Rooms?.ToString(), d.B.Data.Rooms?.ToString())
             @Row("Étage", d.A.Data.Floor?.ToString(), d.B.Data.Floor?.ToString())
             @Row("Lieu", $"{d.A.Data.PostalCode} {d.A.Data.City} {d.A.Data.District}", $"{d.B.Data.PostalCode} {d.B.Data.City} {d.B.Data.District}")
-            @Row("Réf. agence", d.A.Data.AgencyRef, d.B.Data.AgencyRef)
+            @Row("Agence", Format.Agency(d.A.Data), Format.Agency(d.B.Data))
+            @Row("Réf. agence", Format.Refs(d.A.Data), Format.Refs(d.B.Data))
             @Row("Description", d.A.Data.DescriptionExcerpt?[..Math.Min(220, d.A.Data.DescriptionExcerpt.Length)], d.B.Data.DescriptionExcerpt?[..Math.Min(220, d.B.Data.DescriptionExcerpt.Length)])
         </table>
     </section>

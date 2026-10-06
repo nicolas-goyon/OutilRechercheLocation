@@ -43,7 +43,9 @@ Requête. Un lot contient au maximum 1000 observations et 1000 actions.
         "price": 1866, "charges": 65, "surface": 88.32, "rooms": 3, "bedrooms": 2, "floor": 1,
         "furnished": false, "postalCode": "75019", "city": "Paris 19e", "district": "Bassin de la Villette",
         "geo": { "lat": 48.8901, "lon": 2.3769, "precisionM": 50 },
-        "agencyRef": "TSLAP320002342", "photos": ["https://file.bienici.com/photo/…"],
+        "agencyRef": "TSLAP320002342", "otherRefs": ["M-2342"],
+        "agencyName": "SIA Immobilier", "agencySiren": "407797521",
+        "photos": ["https://file.bienici.com/photo/…"],
         "photoKeys": ["photo_3c9c36dc663b54820545f52f6aef3a1e"], "descriptionExcerpt": "exclusivite sia …",
         "url": "https://www.bienici.com/annonce/location/…/hektor-sia-immo-2342"
       }
@@ -62,6 +64,12 @@ Requête. Un lot contient au maximum 1000 observations et 1000 actions.
 | `card` | Données lues sur la carte HTML. Elles ne remplacent pas des données `api` déjà connues. |
 | `api` | JSON du site d'annonces (plus précis). |
 | `detail` | Page d'une annonce, lue dans le DOM. Même règle que `card` : ne remplace pas des données `api`. |
+
+Champs d'identification utilisés par la détection de doublons :
+
+- `agencyRef` : référence de l'annonce dans le champ dédié du site.
+- `otherRefs` : autres références lues dans le texte (« Réf. : … », « Mandat n° … »).
+- `agencySiren` : SIREN de l'agence (9 chiffres), lu dans les mentions légales (RCS / SIRET).
 
 | `type` d'action | champs |
 | --- | --- |

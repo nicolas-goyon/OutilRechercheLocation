@@ -2,30 +2,92 @@
   "brand": "seloger",
   "id": "262UMHKCWPS4",
   "status": "Published",
-  "metadata": { "id": "262UMHKCWPS4", "legacyId": "280943293", "creationDate": "2026-09-29T08:22:00Z", "updateDate": "2026-10-05T16:26:11.516Z" },
-  "location": { "address": { "country": "France", "city": "Bordeaux", "zipCode": "33800", "district": "Bordeaux Sud" }, "isAddressPublished": true },
+  "metadata": {
+    "id": "262UMHKCWPS4",
+    "legacyId": "280943293",
+    "creationDate": "2026-09-29T08:22:00Z",
+    "updateDate": "2026-10-05T16:26:11.516Z"
+  },
+  "location": {
+    "address": {
+      "country": "France",
+      "city": "Bordeaux",
+      "zipCode": "33800",
+      "district": "Bordeaux Sud"
+    },
+    "isAddressPublished": true
+  },
   "hardFacts": {
     "title": "Appartement à louer",
     "facts": [
-      { "type": "numberOfRooms", "value": "3 pièces", "splitValue": "3", "label": "pièces" },
-      { "type": "numberOfBedrooms", "value": "2 chambres", "splitValue": "2", "label": "chambres" },
-      { "type": "livingSpace", "value": "57,2 m²", "splitValue": "57,2", "label": "m²" },
-      { "type": "numberOfFloors", "value": "7ème étage", "splitValue": "7ème", "label": "étage" }
+      {
+        "type": "numberOfRooms",
+        "value": "3 pièces",
+        "splitValue": "3",
+        "label": "pièces"
+      },
+      {
+        "type": "numberOfBedrooms",
+        "value": "2 chambres",
+        "splitValue": "2",
+        "label": "chambres"
+      },
+      {
+        "type": "livingSpace",
+        "value": "57,2 m²",
+        "splitValue": "57,2",
+        "label": "m²"
+      },
+      {
+        "type": "numberOfFloors",
+        "value": "7ème étage",
+        "splitValue": "7ème",
+        "label": "étage"
+      }
     ],
-    "keyfacts": ["3 pièces", "2 chambres", "57,2 m²", "7ème étage"],
-    "price": { "value": "949,02 €/mois", "formatted": "949,02 €/mois", "additionalInformation": "charges comprises", "ariaLabel": "949,02 euros/mois" }
+    "keyfacts": [
+      "3 pièces",
+      "2 chambres",
+      "57,2 m²",
+      "7ème étage"
+    ],
+    "price": {
+      "value": "949,02 €/mois",
+      "formatted": "949,02 €/mois",
+      "additionalInformation": "charges comprises",
+      "ariaLabel": "949,02 euros/mois"
+    }
   },
   "gallery": {
     "images": [
-      { "key": "2debcce0-1a96-4683-838b-bd21f42c096d", "url": "https://cdnihddipa.cloudimg.io/2/d/e/b/2debcce0-1a96-4683-838b-bd21f42c096d.jpg?ci_seal=0333de191bf5f4dcf3db1dc22a2bf1557b5850d9" },
-      { "key": "52e4d541-efe7-4a9e-9a6a-dc7b20282aa1", "url": "https://cdnihddipa.cloudimg.io/5/2/e/4/52e4d541-efe7-4a9e-9a6a-dc7b20282aa1.jpg?ci_seal=707734f483d10b30dac64b4c053b4096ee7a8a8e" }
+      {
+        "key": "2debcce0-1a96-4683-838b-bd21f42c096d",
+        "url": "https://cdnihddipa.cloudimg.io/2/d/e/b/2debcce0-1a96-4683-838b-bd21f42c096d.jpg?ci_seal=0333de191bf5f4dcf3db1dc22a2bf1557b5850d9"
+      },
+      {
+        "key": "52e4d541-efe7-4a9e-9a6a-dc7b20282aa1",
+        "url": "https://cdnihddipa.cloudimg.io/5/2/e/4/52e4d541-efe7-4a9e-9a6a-dc7b20282aa1.jpg?ci_seal=707734f483d10b30dac64b4c053b4096ee7a8a8e"
+      }
     ]
   },
   "mainDescription": {
     "description": "A TITRE EXCEPTIONNEL 50% SUR LES HONORAIRES. Située quai de Brienne, en bord de Garonne, cette résidence neuve bénéficie d'un emplacement pratique avec un accès direct aux Quais de Garonne. Découvrez votre appa...",
     "headline": "3 pièces"
   },
-  "provider": { "intermediaryCard": { "display": true, "subtitle": "Proposé par une agence immobilière", "title": "YFR" }, "publisherType": "AGENCY" },
+  "provider": {
+    "intermediaryCard": {
+      "display": true,
+      "subtitle": "Proposé par une agence immobilière",
+      "title": "YFR"
+    },
+    "publisherType": "AGENCY",
+    "agencyLegalInformations": [
+      "YouFirst Residence",
+      "<b>Siège:</b> 16 RUE DES CAPUCINES, 75002 PARIS",
+      "<b>RCS:</b> 328921432",
+      "<b>SIRET:</b> 32892143200048"
+    ]
+  },
   "rawData": {
     "distributionType": "RENT",
     "nbbedroom": 2,
@@ -34,7 +96,10 @@
     "price": 949.02,
     "propertyType": "APARTMENT",
     "propertyTypeLabel": "Appartement",
-    "surface": { "main": 57.17, "plot": null }
+    "surface": {
+      "main": 57.17,
+      "plot": null
+    }
   },
   "url": "https://www.seloger.com/annonce/location/nouvelle-aquitaine/gironde-33/bordeaux-33000/262UMHKCWPS4"
 }

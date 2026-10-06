@@ -1,46 +1,132 @@
 {
   "brand": "seloger",
   "id": "262UMHKCWPS4",
-  "metadata": { "legacyId": "280943293", "creationDate": "2026-09-29T08:22:00Z", "updateDate": "2026-10-05T16:26:11.516Z" },
+  "metadata": {
+    "legacyId": "280943293",
+    "creationDate": "2026-09-29T08:22:00Z",
+    "updateDate": "2026-10-05T16:26:11.516Z"
+  },
   "domains": {
     "medias": {
       "images": [
-        { "id": "2debcce0-1a96-4683-838b-bd21f42c096d", "url": "https://mms.seloger.com/2/d/e/b/2debcce0-1a96-4683-838b-bd21f42c096d.jpg?ci_seal=0333de191bf5f4dcf3db1dc22a2bf1557b5850d9" },
-        { "id": "52e4d541-efe7-4a9e-9a6a-dc7b20282aa1", "url": "https://mms.seloger.com/5/2/e/4/52e4d541-efe7-4a9e-9a6a-dc7b20282aa1.jpg?ci_seal=707734f483d10b30dac64b4c053b4096ee7a8a8e" }
+        {
+          "id": "2debcce0-1a96-4683-838b-bd21f42c096d",
+          "url": "https://mms.seloger.com/2/d/e/b/2debcce0-1a96-4683-838b-bd21f42c096d.jpg?ci_seal=0333de191bf5f4dcf3db1dc22a2bf1557b5850d9"
+        },
+        {
+          "id": "52e4d541-efe7-4a9e-9a6a-dc7b20282aa1",
+          "url": "https://mms.seloger.com/5/2/e/4/52e4d541-efe7-4a9e-9a6a-dc7b20282aa1.jpg?ci_seal=707734f483d10b30dac64b4c053b4096ee7a8a8e"
+        }
       ]
     }
   },
   "sections": {
     "location": {
-      "address": { "country": "FRA", "city": "Bordeaux", "zipCode": "33800", "district": "Bordeaux Sud" },
+      "address": {
+        "country": "FRA",
+        "city": "Bordeaux",
+        "zipCode": "33800",
+        "district": "Bordeaux Sud"
+      },
       "isAddressPublished": true,
-      "geometry": { "type": "Point", "coordinates": [-0.542778, 44.8202] }
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -0.542778,
+          44.8202
+        ]
+      }
     },
     "description": {
-      "description": "A TITRE EXCEPTIONNEL 50% SUR LES HONORAIRES. \r\nSituée quai de Brienne, en bord de Garonne, cette résidence neuve bénéficie d'un emplacement pratique.\r\n\r\nDécouvrez votre appartement 3 Piéces de 57 m² avec balcon au 7ème étage.",
+      "description": "A TITRE EXCEPTIONNEL 50% SUR LES HONORAIRES. \r\nSituée quai de Brienne, en bord de Garonne, cette résidence neuve bénéficie d'un emplacement pratique.\r\n\r\nDécouvrez votre appartement 3 Piéces de 57 m² avec balcon au 7ème étage.\r\nRéf. agence : YFR-BDX-0457 - Mandat n° 2024-118.",
       "headline": "3 pièces"
     },
     "hardFacts": {
       "title": "Appartement à louer",
-      "keyfacts": ["3 pièces", "2 chambres", "57,17 m²", "7ème étage"],
-      "price": { "value": "949 €", "formatted": "949 €/mois", "additionalInformation": "charges comprises", "ariaLabel": "949.02 €" }
+      "keyfacts": [
+        "3 pièces",
+        "2 chambres",
+        "57,17 m²",
+        "7ème étage"
+      ],
+      "price": {
+        "value": "949 €",
+        "formatted": "949 €/mois",
+        "additionalInformation": "charges comprises",
+        "ariaLabel": "949.02 €"
+      }
     },
-    "key": { "keys": [{ "label": "Identifiant", "value": "262UMHKCWPS4" }, { "label": "Référence annonce", "value": "P181036-1642-24058" }] },
+    "key": {
+      "keys": [
+        {
+          "label": "Identifiant",
+          "value": "262UMHKCWPS4"
+        },
+        {
+          "label": "Référence annonce",
+          "value": "P181036-1642-24058"
+        }
+      ]
+    },
     "price": {
       "components": [
         {
           "type": "PRIMARY",
           "units": [
             {
-              "main": { "price": { "label": { "main": "Loyer charges comprises" }, "value": { "main": { "value": "949,02 €/mois", "ariaLabel": "949.02 €" } }, "highlighted": true } },
-              "details": [{ "label": "dont", "prices": [{ "label": { "main": "Provisions pour charges avec régularisation annuelle" }, "value": { "main": { "value": "171,51 €/mois", "ariaLabel": "171.51 €" } } }] }]
+              "main": {
+                "price": {
+                  "label": {
+                    "main": "Loyer charges comprises"
+                  },
+                  "value": {
+                    "main": {
+                      "value": "949,02 €/mois",
+                      "ariaLabel": "949.02 €"
+                    }
+                  },
+                  "highlighted": true
+                }
+              },
+              "details": [
+                {
+                  "label": "dont",
+                  "prices": [
+                    {
+                      "label": {
+                        "main": "Provisions pour charges avec régularisation annuelle"
+                      },
+                      "value": {
+                        "main": {
+                          "value": "171,51 €/mois",
+                          "ariaLabel": "171.51 €"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
         {
           "type": "SECONDARY",
           "units": [
-            { "main": { "price": { "label": { "main": "Honoraires TTC à la charge du locataire" }, "value": { "main": { "value": "750,06 €", "ariaLabel": "750.06 €" } } } } }
+            {
+              "main": {
+                "price": {
+                  "label": {
+                    "main": "Honoraires TTC à la charge du locataire"
+                  },
+                  "value": {
+                    "main": {
+                      "value": "750,06 €",
+                      "ariaLabel": "750.06 €"
+                    }
+                  }
+                }
+              }
+            }
           ]
         }
       ]
@@ -48,12 +134,48 @@
     "features": {
       "details": {
         "categories": [
-          { "title": "Informations générales", "elements": [{ "icon": "furnished", "value": "Non meublé" }, { "icon": "floors", "value": "7ème étage" }] }
+          {
+            "title": "Informations générales",
+            "elements": [
+              {
+                "icon": "furnished",
+                "value": "Non meublé"
+              },
+              {
+                "icon": "floors",
+                "value": "7ème étage"
+              }
+            ]
+          }
         ]
       }
     }
   },
-  "contactSections": { "contactCard": { "title": "YFR", "subtitle": "Proposé par une agence immobilière" } },
-  "rawData": { "distributionType": "RENT", "propertyType": "APARTMENT", "propertyTypeLabel": "Appartement" },
-  "tracking": { "av_items": [{ "id": "262UMHKCWPS4", "price": 949.02 }] }
+  "contactSections": {
+    "contactCard": {
+      "title": "YFR",
+      "subtitle": "Proposé par une agence immobilière"
+    },
+    "provider": {
+      "agencyLegalInformations": [
+        "YouFirst Residence",
+        "<b>Siège:</b> 16 RUE DES CAPUCINES, 75002 PARIS",
+        "<b>RCS:</b> 328921432",
+        "<b>SIRET:</b> 32892143200048"
+      ]
+    }
+  },
+  "rawData": {
+    "distributionType": "RENT",
+    "propertyType": "APARTMENT",
+    "propertyTypeLabel": "Appartement"
+  },
+  "tracking": {
+    "av_items": [
+      {
+        "id": "262UMHKCWPS4",
+        "price": 949.02
+      }
+    ]
+  }
 }
