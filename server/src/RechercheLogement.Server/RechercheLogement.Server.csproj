@@ -3,6 +3,13 @@
     <RootNamespace>RechercheLogement.Server</RootNamespace>
     <UserSecretsId>recherche-logement</UserSecretsId>
     <Version>0.2.0</Version>
+    <!--
+      .NET 10 : blazor.web.js est un static web asset, fourni par un paquet NuGet.
+      Le SDK restaure ce paquet uniquement s'il trouve un fichier .razor au moment du restore.
+      Le Dockerfile lance le restore avant de copier src/ : sans cette propriété,
+      l'image ne contient pas blazor.web.js (404) et aucun bouton interactif ne fonctionne.
+    -->
+    <RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
