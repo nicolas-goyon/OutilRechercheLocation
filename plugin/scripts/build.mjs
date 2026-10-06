@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-// Repris du template Tampermonkey-MultiFile-Plugin-Template v2 (auto-update),
-// adapté au monorepo : le plugin vit dans plugin/ et ses tags sont "plugin-vX.Y.Z".
+// Copié du template Tampermonkey-MultiFile-Plugin-Template v2 (auto-update).
+// Adapté au monorepo : le plugin est dans plugin/ et ses tags sont "plugin-vX.Y.Z".
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -20,7 +20,7 @@ const entry = {
   globalName: 'TMRechercheLogement',
 };
 
-// Préfixe des tags du plugin (le dépôt contient aussi le serveur).
+// Préfixe des tags du plugin. (Le dépôt contient aussi le serveur.)
 const TAG_PREFIX = 'plugin-v';
 
 // Chemin du plugin dans le dépôt (pour les URL jsDelivr).
@@ -30,29 +30,29 @@ const PLUGIN_DIR_IN_REPO = 'plugin';
 // Coordonnées de la release
 // ---------------------------------------------------------------------------
 
-// La CI passe le tag publié (RELEASE_VERSION=plugin-v1.2.3) ; en local, version de package.json.
+// La CI transmet le tag publié (RELEASE_VERSION=plugin-v1.2.3). En local, le build utilise la version de package.json.
 const version = (process.env.RELEASE_VERSION || pkg.version).replace(/^(plugin-)?v/, '');
 if (!/^\d+\.\d+\.\d+/.test(version)) {
-  throw new Error(`Version invalide "${version}" (attendu X.Y.Z)`);
+  throw new Error(`Version incorrecte "${version}". Format attendu : X.Y.Z.`);
 }
 
-// "owner/repo" : GITHUB_REPOSITORY en CI, sinon "repository" de package.json.
+// "owner/repo" : GITHUB_REPOSITORY en CI. Sinon, "repository" de package.json.
 const repo = process.env.GITHUB_REPOSITORY || repoFromPackageJson();
 
 function repoFromPackageJson() {
   const raw = typeof pkg.repository === 'string' ? pkg.repository : pkg.repository?.url;
   const m = raw && raw.match(/github(?:\.com)?[:/]([^/]+\/[^/.#]+)/);
-  if (!m) throw new Error('Dépôt GitHub introuvable : renseigner "repository" dans package.json ou GITHUB_REPOSITORY.');
+  if (!m) throw new Error('Dépôt GitHub inconnu. Remplir "repository" dans package.json ou définir GITHUB_REPOSITORY.');
   return m[1];
 }
 
-// Épinglé sur le tag : Tampermonkey garde les @require en cache indéfiniment,
-// l'URL doit donc changer à chaque nouveau contenu.
+// URL épinglée sur le tag. Tampermonkey garde les @require en cache sans limite
+// de durée. L'URL doit donc changer à chaque nouveau contenu.
 const bundleUrl = `https://cdn.jsdelivr.net/gh/${repo}@${TAG_PREFIX}${version}/${PLUGIN_DIR_IN_REPO}/dist/${entry.out}.js`;
 
 // GitHub redirige releases/latest/download/<fichier> vers la release la plus
-// récente : URL fixe que Tampermonkey interroge pour les mises à jour.
-// (Seul le plugin publie des releases GitHub dans ce dépôt — voir plugin.yml.)
+// récente. Tampermonkey lit cette URL fixe pour trouver les mises à jour.
+// (Dans ce dépôt, seul le plugin publie des releases GitHub. Voir plugin.yml.)
 const latestAssetUrl = (file) => `https://github.com/${repo}/releases/latest/download/${file}`;
 
 // ---------------------------------------------------------------------------
@@ -72,8 +72,8 @@ const options = {
   define: {
     __PLUGIN_VERSION__: JSON.stringify(version),
   },
-  // Dans le bac à sable Tampermonkey (@grant != none), le `var` de l'IIFE
-  // reste local : on l'attache explicitement à window.
+  // Dans le sandbox Tampermonkey (@grant != none), le `var` de l'IIFE reste
+  // local. Ce code l'attache donc à window.
   footer: {
     js: `if (typeof window !== 'undefined') { window.${entry.globalName} = ${entry.globalName}; }`,
   },
@@ -83,7 +83,7 @@ const options = {
 // Userscripts (un par userscripts/<id>.mjs)
 // ---------------------------------------------------------------------------
 
-// Générés par le build ; les fichiers d'instance ne peuvent pas les définir.
+// Le build génère ces clés. Les fichiers d'instance ne peuvent pas les définir.
 const RESERVED = new Set(['version', 'updateURL', 'downloadURL', 'installURL']);
 
 const DEFAULT_HEADERS = {
@@ -98,7 +98,7 @@ const HEADER_ORDER = [
   'require', 'resource', 'updateURL', 'downloadURL',
 ];
 
-// Clés de config qui ne doivent jamais finir dans un .user.js publié.
+// Clés de config interdites dans un .user.js publié.
 const SECRET_CONFIG_KEYS = ['apiToken'];
 
 async function loadInstances() {
@@ -113,7 +113,7 @@ async function loadInstances() {
   for (const file of files) {
     const id = path.basename(file, '.mjs');
     if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) {
-      throw new Error(`userscripts/${file} : nom de fichier en kebab-case attendu (il devient ${id}.user.js)`);
+      throw new Error(`userscripts/${file} : le nom de fichier doit être en kebab-case. (Il devient ${id}.user.js.)`);
     }
     const mod = (await import(pathToFileURL(path.join(userscriptsDir, file)).href)).default;
     if (!mod || typeof mod !== 'object' || !mod.headers || !mod.config) {
@@ -124,11 +124,11 @@ async function loadInstances() {
       if (!headers[key]) throw new Error(`userscripts/${file} : headers.${key} est obligatoire`);
     }
     for (const key of Object.keys(headers)) {
-      if (RESERVED.has(key)) throw new Error(`userscripts/${file} : headers.${key} est généré par le build, le retirer`);
+      if (RESERVED.has(key)) throw new Error(`userscripts/${file} : le build génère headers.${key}. Retirer cette clé.`);
     }
     for (const key of SECRET_CONFIG_KEYS) {
       if (config[key]) {
-        throw new Error(`userscripts/${file} : config.${key} est secret et le .user.js est publié — il se saisit dans le plugin (panneau 🏠 > Connexion)`);
+        throw new Error(`userscripts/${file} : config.${key} est secret et le .user.js est public. Retirer cette clé. L'utilisateur saisit cette valeur dans le plugin (panneau 🏠 > Connexion).`);
       }
     }
     // Tampermonkey identifie un script par @name + @namespace.
@@ -171,11 +171,11 @@ function renderInstance({ id, headers, config }) {
   const configJson = JSON.stringify(config, null, 2).replace(/\n/g, '\n  ');
   const body = [
     '',
-    `// GÉNÉRÉ par plugin/scripts/build.mjs depuis plugin/userscripts/${id}.mjs — ne pas modifier.`,
-    '// Tampermonkey écrase ce script à chaque mise à jour automatique : modifier',
-    '// le fichier d\'instance dans le dépôt et publier une nouvelle version.',
-    '// Le token du site local ne figure pas ici : il se saisit dans le plugin',
-    '// (bouton 🏠 > Connexion) et reste dans le stockage Tampermonkey.',
+    `// GÉNÉRÉ par plugin/scripts/build.mjs depuis plugin/userscripts/${id}.mjs. Ne pas modifier.`,
+    '// Tampermonkey écrase ce script à chaque mise à jour automatique. Pour le',
+    '// changer, modifier le fichier d\'instance dans le dépôt et publier une nouvelle version.',
+    '// Ce script ne contient pas le token du serveur local. L\'utilisateur saisit',
+    '// le token dans le plugin (bouton 🏠 > Connexion). Le token reste dans le stockage Tampermonkey.',
     '',
     '(function () {',
     "  'use strict';",
@@ -196,7 +196,7 @@ async function writeUserscripts() {
     fs.writeFileSync(path.join(distDir, `${instance.id}.meta.js`), meta);
     console.log(`[userscript] -> dist/${instance.id}.user.js + .meta.js (v${version})`);
   }
-  if (instances.length === 0) console.warn('[userscript] aucun userscripts/*.mjs, rien de généré');
+  if (instances.length === 0) console.warn('[userscript] aucun fichier userscripts/*.mjs. Aucun script généré.');
 }
 
 async function run() {

@@ -118,6 +118,7 @@ dd { margin: 0; }
 
 .token { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .token code { background: var(--bg); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); word-break: break-all; }
+.token .token-value { flex: 1 1 320px; min-width: 0; background: var(--bg); color: inherit; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); font: 13px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; }
 .warn { color: var(--suggest); font-weight: 600; }
 
 #blazor-error-ui { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #fef3c7; color: #78350f; padding: 10px 16px; z-index: 1000; }

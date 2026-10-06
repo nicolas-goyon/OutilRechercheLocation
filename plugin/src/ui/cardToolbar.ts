@@ -1,11 +1,12 @@
 /**
- * Barre d'actions affichée en haut de chaque carte d'annonce :
+ * Barre d'actions en haut de chaque carte d'annonce :
  *
  *   [👁] [✕] [📞]  [⋯]  [🔗 2]  [≈ déjà vue ? 72 %]
  *   [📞 Visite prévue]            <- uniquement pour les biens "à contacter"
  *
- * Chaque barre a son propre shadow root (CSS du site isolé) et stoppe la
- * propagation des clics pour ne pas ouvrir l'annonce.
+ * Chaque barre a son propre shadow root. Le CSS du site d'annonces ne
+ * s'applique donc pas à la barre. La barre arrête la propagation des clics.
+ * Un clic sur la barre n'ouvre donc pas l'annonce.
  */
 import type { ContactStage, PropertyStatus } from '../core/types';
 import { h } from '../shared/dom/h';
@@ -17,7 +18,7 @@ export interface ToolbarModel {
   status: PropertyStatus;
   contactStage?: ContactStage;
   hasNote: boolean;
-  /** false tant que le serveur n'a jamais répondu pour cette annonce. */
+  /** false si le serveur n'a encore jamais répondu pour cette annonce. */
   known: boolean;
   siblings: number;
   siblingsTitle: string;
@@ -51,14 +52,14 @@ export function renderToolbar(anchor: HTMLElement, model: ToolbarModel, handlers
     h(
       'div',
       { style: { display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center', font: `600 12px/1 ${THEME.fontFamily}` } },
-      statusButton('👁', 'Vue (garder visible, atténuée)', 'seen', model.status, THEME.seen, handlers),
-      statusButton('✕', 'Vue, pas intéressé : masquer', 'rejected', model.status, THEME.rejected, handlers),
+      statusButton('👁', 'Vue : garder l\'annonce visible, mais atténuée', 'seen', model.status, THEME.seen, handlers),
+      statusButton('✕', 'Pas intéressé : masquer l\'annonce', 'rejected', model.status, THEME.rejected, handlers),
       statusButton('📞', 'Me plaît : à contacter', 'toContact', model.status, THEME.toContact, handlers),
-      pill(model.hasNote ? '📝' : '⋯', model.hasNote ? 'Note et détails' : 'Détails / note', THEME.bg, handlers.onDetails),
+      pill(model.hasNote ? '📝' : '⋯', model.hasNote ? 'Note et détails' : 'Détails et note', THEME.bg, handlers.onDetails),
       model.siblings > 0 && pill(`🔗 ${model.siblings}`, model.siblingsTitle, THEME.accent, handlers.onDetails),
       model.suggestion &&
         pill(
-          `≈ ${model.suggestion.danger ? 'déjà écartée' : 'déjà vue'} ? ${Math.round(model.suggestion.score * 100)} %`,
+          `≈ ${model.suggestion.danger ? 'déjà masquée' : 'déjà vue'} ? ${Math.round(model.suggestion.score * 100)} %`,
           model.suggestion.label,
           model.suggestion.danger ? THEME.rejected : THEME.suggest,
           handlers.onSuggestion,
@@ -70,7 +71,7 @@ export function renderToolbar(anchor: HTMLElement, model: ToolbarModel, handlers
       h(
         'div',
         { style: { marginTop: '4px' } },
-        pill(`📞 ${CONTACT_STAGE_LABEL[model.contactStage ?? 'pending']}`, 'Suivi du contact (modifiable sur le site local)', THEME.toContact, handlers.onDetails),
+        pill(`📞 ${CONTACT_STAGE_LABEL[model.contactStage ?? 'pending']}`, 'Suivi du contact. Modifier l\'étape sur le serveur local.', THEME.toContact, handlers.onDetails),
       ),
     );
   }
@@ -83,7 +84,7 @@ function statusButton(icon: string, title: string, status: PropertyStatus, curre
     'button',
     {
       type: 'button',
-      title: active ? `${title} — cliquer pour annuler` : title,
+      title: active ? `${title}. Cliquer pour annuler.` : title,
       style: {
         width: '28px',
         height: '28px',

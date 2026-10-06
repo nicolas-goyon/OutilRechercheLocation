@@ -1,16 +1,25 @@
 # API plugin ↔ serveur
 
-Base : `http://localhost:5080`. Toutes les routes `/api/*` exigent :
+Base : `http://localhost:5080`. Toutes les routes `/api/*` exigent cet en-tête :
 
 ```
 Authorization: Bearer <token>
 ```
 
-Réponse `401 {"error": "Token API manquant ou invalide"}` sinon. JSON en camelCase, énumérations
-en camelCase (`toContact`, `visitScheduled`…). Dates : millisecondes Unix.
+Si le token est absent ou incorrect, le serveur répond `401 {"error": "Token API absent ou incorrect."}`.
 
-Contrat côté plugin : `plugin/src/core/types.ts` ; côté serveur :
-`server/src/RechercheLogement.Core/Contracts/SyncContracts.cs`. Les deux doivent rester alignés.
+Formats :
+
+- JSON en camelCase.
+- Énumérations en camelCase (`toContact`, `visitScheduled`…).
+- Dates en millisecondes Unix.
+
+Le contrat existe en deux copies :
+
+- plugin : `plugin/src/core/types.ts`.
+- serveur : `server/src/RechercheLogement.Core/Contracts/SyncContracts.cs`.
+
+Toute modification d'une copie exige la même modification dans l'autre copie.
 
 ## `GET /api/ping`
 
@@ -20,7 +29,7 @@ Contrat côté plugin : `plugin/src/core/types.ts` ; côté serveur :
 
 ## `POST /api/sync`
 
-Requête (max 1000 observations et 1000 actions par lot) :
+Requête. Un lot contient au maximum 1000 observations et 1000 actions.
 
 ```json
 {
@@ -49,16 +58,16 @@ Requête (max 1000 observations et 1000 actions par lot) :
 
 | `source` | sens |
 | --- | --- |
-| `card` | données lues sur la carte HTML (ne remplacent pas des données `api` déjà connues) |
-| `api` | JSON du site (plus précis) |
-| `detail` | fiche d'annonce (réservé) |
+| `card` | Données lues sur la carte HTML. Elles ne remplacent pas des données `api` déjà connues. |
+| `api` | JSON du site d'annonces (plus précis). |
+| `detail` | Page d'une annonce (réservé pour une version future). |
 
 | `type` d'action | champs |
 | --- | --- |
 | `setStatus` | `status` : `none` \| `seen` \| `rejected` \| `toContact` |
-| `setNote` | `note` (vide = effacer) |
+| `setNote` | `note` (une note vide efface la note) |
 | `confirmDuplicate` / `dismissDuplicate` | `otherKey` |
-| `detach` | — (sort l'annonce de son bien) |
+| `detach` | Aucun champ. Sépare l'annonce de son bien. |
 
 Réponse :
 
@@ -81,21 +90,30 @@ Réponse :
 }
 ```
 
-`listings` contient une entrée par annonce observée, visée par une action ou demandée dans `want`.
-`contactStage` n'est présent que pour `status = toContact`. Une action dont l'`id` a déjà été
-traité est renvoyée dans `appliedActionIds` sans être réappliquée ; une action sur une annonce
-inconnue est dans `rejectedActionIds` (le plugin la retire de sa file).
+`listings` contient une entrée pour chaque annonce de ces trois types :
+
+- annonce observée.
+- annonce visée par une action.
+- annonce demandée dans `want`.
+
+`contactStage` est présent uniquement si `status = toContact`.
+
+Si le serveur a déjà traité l'`id` d'une action, il met cet `id` dans `appliedActionIds`. Il
+n'applique pas l'action une deuxième fois.
+
+Si une action vise une annonce inconnue, le serveur met son `id` dans `rejectedActionIds`. Le plugin
+retire alors l'action de sa file.
 
 ## `GET /api/listings/{key}`
 
-`ListingView` d'une annonce, `404` si inconnue.
+Retourne la `ListingView` d'une annonce. Retourne `404` si l'annonce est inconnue.
 
 ## `GET /api/export`
 
-Sauvegarde complète (annonces, biens, liens, historique).
+Retourne une sauvegarde complète (annonces, biens, liens, historique).
 
 ## Hors API
 
-- `GET /health` (sans token) : `{"status":"ok"}`.
-- Le site web (`/`, `/biens`, `/a-contacter`, `/doublons`, `/parametres`) n'utilise pas l'API : il
-  appelle directement le service métier côté serveur (Blazor).
+- `GET /health` (sans token) retourne `{"status":"ok"}`.
+- Les pages web du serveur (`/`, `/biens`, `/a-contacter`, `/doublons`, `/parametres`) n'utilisent
+  pas l'API. Elles appellent directement le service métier sur le serveur (Blazor).

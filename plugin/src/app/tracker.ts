@@ -1,11 +1,14 @@
 /**
- * Orchestrateur côté page : relie l'adaptateur du site, la synchro serveur et l'UI.
+ * Orchestrateur dans la page. Il relie l'adaptateur de site, la synchronisation
+ * avec le serveur et l'UI.
  *
- *  - repère les cartes d'annonces (et les re-repère à chaque re-rendu : les
- *    sites sont des SPA), les envoie au serveur comme observations ;
- *  - transmet aussi les données enrichies (JSON du site) ;
- *  - applique l'état reçu (ou en cache) : attributs data-tmrl-* qui masquent /
- *    atténuent / colorent les cartes, et barre d'actions par carte.
+ *  - Il trouve les cartes d'annonces. Il les trouve de nouveau après chaque
+ *    nouveau rendu, car les sites d'annonces sont des SPA.
+ *  - Il envoie les cartes au serveur comme observations.
+ *  - Il envoie aussi les données enrichies (JSON du site d'annonces).
+ *  - Il applique l'état reçu (ou l'état en cache) :
+ *     - attributs data-tmrl-*, qui masquent, atténuent ou colorent les cartes.
+ *     - une barre d'actions sur chaque carte.
  */
 import type { SyncEngine } from '../core/sync';
 import { listingKey, type ListingView, type PropertyStatus } from '../core/types';
@@ -18,7 +21,7 @@ import { showDetails, showSuggestion } from '../ui/views';
 export interface TrackerOptions {
   /** Statuts dont les cartes sont masquées. Default: ['rejected']. */
   hideStatuses: PropertyStatus[];
-  /** Masquer aussi une annonce non qualifiée dont un doublon PROBABLE a l'un de ces statuts. Default: []. */
+  /** Une annonce sans statut est aussi masquée si un doublon PROBABLE a l'un de ces statuts. Default: []. */
   hideSuggestedDuplicatesOf: PropertyStatus[];
   debug: boolean;
 }
@@ -58,7 +61,7 @@ export class Tracker {
     });
 
     this.adapter.startEnrichment?.((siteId, data) => {
-      // On n'enregistre que les annonces réellement affichées (l'API en renvoie parfois d'autres).
+      // Le plugin enregistre uniquement les annonces affichées. L'API renvoie parfois d'autres annonces.
       if (!document.querySelector(`[data-tmrl-card="${CSS.escape(siteId)}"]`)) {
         this.pendingApi.set(siteId, data);
         return;
@@ -67,7 +70,7 @@ export class Tracker {
     });
 
     this.sync.onChange(() => this.schedule());
-    // Retour sur l'onglet : on redemande l'état (un statut a pu changer sur le site local).
+    // Retour sur l'onglet : le plugin demande de nouveau l'état. Un statut a pu changer sur le serveur local.
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         this.sync.refresh(this.adapter.findCards(document).map((c) => listingKey(this.adapter.id, c.siteId)));
@@ -117,7 +120,7 @@ export class Tracker {
     if (this.options.debug) console.debug('[RechercheLogement] scan', counts);
   }
 
-  /** Envoie la carte au serveur une fois par élément/annonce (les SPA réutilisent les éléments). */
+  /** Envoie la carte au serveur une fois par couple élément/annonce. Les SPA réutilisent les éléments. */
   private ingest(card: CardRef): void {
     if (this.processed.get(card.element) === card.siteId) return;
     this.processed.set(card.element, card.siteId);
@@ -157,7 +160,7 @@ export class Tracker {
         suggestion: best && {
           score: best.score,
           danger: best.otherStatus === 'rejected',
-          label: `Probablement la même annonce que ${siteLabel(best.other.site)} « ${best.other.title ?? best.other.key} » — ${best.reasons.join(', ')}. Cliquer pour décider.`,
+          label: `Probablement le même bien que ${siteLabel(best.other.site)} « ${best.other.title ?? best.other.key} ». Raisons : ${best.reasons.join(', ')}. Cliquer pour décider.`,
         },
       },
       {

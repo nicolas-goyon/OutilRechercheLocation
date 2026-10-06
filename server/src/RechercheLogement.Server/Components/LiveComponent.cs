@@ -4,8 +4,8 @@ using RechercheLogement.Core.Services;
 namespace RechercheLogement.Server.Components;
 
 /// <summary>
-/// Base des pages : se rafraîchit toute seule quand le catalogue change
-/// (ex. une annonce masquée depuis le plugin apparaît immédiatement ici).
+/// Classe de base des pages. La page se met à jour quand le catalogue change.
+/// Exemple : si le plugin masque une annonce, la page affiche immédiatement ce changement.
 /// </summary>
 public abstract class LiveComponent : ComponentBase, IDisposable
 {

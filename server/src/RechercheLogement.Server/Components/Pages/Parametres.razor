@@ -9,7 +9,7 @@
 
 <section class="panel">
     <h2>Token du plugin</h2>
-    <p>Le plugin Tampermonkey doit envoyer ce token pour lire ou modifier les données. Ne le partage pas.</p>
+    <p>Le plugin Tampermonkey doit envoyer ce token pour lire ou modifier les données. Ne pas partager ce token.</p>
     <div class="token">
         <code>@(_show ? _token : new string('•', 24))</code>
         <button type="button" @onclick="() => _show = !_show">@(_show ? "Masquer" : "Afficher")</button>
@@ -21,31 +21,33 @@
     </div>
     @if (Tokens.FromConfiguration)
     {
-        <p class="muted">Token fixé par la variable d'environnement <code>RechercheLogement__ApiToken</code>.</p>
+        <p class="muted">La variable d'environnement <code>RechercheLogement__ApiToken</code> fixe ce token.</p>
     }
     @if (_regenerated)
     {
-        <p class="warn">Nouveau token créé : l'ancien est refusé. Recolle-le dans le plugin (panneau 🏠 > Connexion).</p>
+        <p class="warn">Nouveau token créé. Le serveur refuse maintenant l'ancien token. Coller le nouveau token dans le plugin (panneau 🏠 > Connexion).</p>
     }
 </section>
 
 <section class="panel">
     <h2>Installer le plugin</h2>
     <ol class="steps">
-        <li>Avec Tampermonkey installé dans le navigateur, ouvrir
-            <a href="@Settings.PluginInstallUrl" target="_blank" rel="noopener">le script du plugin ↗</a>
-            puis cliquer sur <b>Installer</b>. Il se met ensuite à jour tout seul à chaque nouvelle version.</li>
-        <li>Ouvrir une recherche sur un site d'annonces (bienici.com…) : le panneau 🏠 s'ouvre au premier lancement.</li>
-        <li>Dans <b>Connexion au site local</b>, laisser l'URL <code>@Settings.PublicUrl</code>, coller le token ci-dessus
-            (<button type="button" class="link" @onclick="() => Copy(_token)">copier</button>), puis <b>Tester</b> et <b>Enregistrer</b>.</li>
+        <li>Installer Tampermonkey dans le navigateur.</li>
+        <li>Ouvrir <a href="@Settings.PluginInstallUrl" target="_blank" rel="noopener">le script du plugin ↗</a>
+            et cliquer sur <b>Installer</b>. Le plugin se met ensuite à jour automatiquement à chaque nouvelle version.</li>
+        <li>Ouvrir une recherche sur un site d'annonces (bienici.com…). Au premier lancement, le panneau 🏠 s'ouvre.</li>
+        <li>Dans <b>Connexion au serveur local</b>, garder l'URL <code>@Settings.PublicUrl</code>.</li>
+        <li>Coller le token ci-dessus
+            (<button type="button" class="link" @onclick="() => Copy(_token)">copier</button>).</li>
+        <li>Cliquer sur <b>Tester</b>, puis sur <b>Enregistrer</b>.</li>
     </ol>
-    <p class="muted">Le token n'est jamais dans le script publié : il reste dans le stockage Tampermonkey de ton navigateur,
-        et survit aux mises à jour du plugin. Après une régénération, le recoller dans le panneau 🏠.</p>
+    <p class="muted">Le script publié ne contient jamais le token. Le token reste dans le stockage Tampermonkey de votre navigateur.
+        Les mises à jour du plugin ne changent pas ce stockage. Après une régénération, coller le nouveau token dans le panneau 🏠.</p>
 </section>
 
 <section class="panel">
     <h2>Sauvegarde</h2>
-    <p>La base SQLite est dans <code>@Settings.DatabasePath</code> (volume Docker <code>recherche-logement-data</code>). Export JSON complet :</p>
+    <p>La base SQLite est dans <code>@Settings.DatabasePath</code> (volume Docker <code>recherche-logement-data</code>). Le bouton ci-dessous exporte toutes les données en JSON.</p>
     <button type="button" @onclick="Export">⬇ Exporter (JSON)</button>
 </section>
 

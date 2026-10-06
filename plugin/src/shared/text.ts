@@ -1,6 +1,6 @@
-/** Utilitaires texte/nombres génériques (aucune dépendance au DOM ni aux sites). */
+/** Utilitaires génériques pour le texte et les nombres. Aucune dépendance au DOM ni aux sites d'annonces. */
 
-/** Minuscules, sans accents, sans ponctuation, espaces compactés. */
+/** Convertit en minuscules. Retire les accents et la ponctuation. Réduit les espaces multiples à un espace. */
 export function normalizeText(input: string): string {
   return input
     .normalize('NFD')
@@ -13,7 +13,7 @@ export function normalizeText(input: string): string {
     .replace(/\s+/g, ' ');
 }
 
-/** "1 400,50 €" -> 1400.5 ; "88,32 m²" -> 88.32. Renvoie undefined si aucun nombre. */
+/** "1 400,50 €" -> 1400.5. "88,32 m²" -> 88.32. Renvoie undefined si le texte ne contient aucun nombre. */
 export function parseNumber(input: string | null | undefined): number | undefined {
   if (!input) return undefined;
   const m = input.replace(/[\s\u00a0\u202f]/g, '').match(/\d+(?:[.,]\d+)?/);
@@ -22,14 +22,14 @@ export function parseNumber(input: string | null | undefined): number | undefine
   return Number.isFinite(n) ? n : undefined;
 }
 
-/** Référence d'agence comparable entre sites : majuscules alphanumériques. */
+/** Référence d'agence en majuscules, lettres et chiffres uniquement. Permet de comparer les sites d'annonces. */
 export function normalizeRef(ref: string | undefined): string | undefined {
   if (!ref) return undefined;
   const r = ref.toUpperCase().replace(/[^A-Z0-9]/g, '');
   return r.length >= 3 ? r : undefined;
 }
 
-/** Ensemble des trigrammes de mots-caractères d'un texte normalisé. */
+/** Ensemble des trigrammes de caractères d'un texte normalisé. */
 export function trigrams(text: string): Set<string> {
   const s = ` ${normalizeText(text)} `;
   const out = new Set<string>();
@@ -37,12 +37,12 @@ export function trigrams(text: string): Set<string> {
   return out;
 }
 
-/** Similarité de Jaccard entre deux textes (0..1), sur trigrammes. */
+/** Similarité de Jaccard entre deux textes (0..1), calculée sur les trigrammes. */
 export function textSimilarity(a: string | undefined, b: string | undefined): number | undefined {
   if (!a || !b) return undefined;
   const ta = trigrams(a);
   const tb = trigrams(b);
-  if (ta.size < 20 || tb.size < 20) return undefined; // trop court pour être significatif
+  if (ta.size < 20 || tb.size < 20) return undefined; // texte trop court pour une comparaison fiable
   let inter = 0;
   for (const t of ta) if (tb.has(t)) inter++;
   return inter / (ta.size + tb.size - inter);

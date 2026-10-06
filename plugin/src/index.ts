@@ -1,13 +1,16 @@
 /**
- * Point d'entrée, bundlé par esbuild -> dist/recherche-logement.js, exposé
- * sur window.TMRechercheLogement (voir scripts/build.mjs).
+ * Point d'entrée du plugin.
  *
- * Le script installé (dist/recherche-logement.user.js, généré depuis
- * userscripts/recherche-logement.mjs) se résume à :
+ * esbuild produit le bundle dist/recherche-logement.js. Le bundle expose ce
+ * module sur window.TMRechercheLogement (voir scripts/build.mjs).
+ *
+ * Le script installé (dist/recherche-logement.user.js) est généré depuis
+ * userscripts/recherche-logement.mjs. Il contient seulement cet appel :
  *   window.TMRechercheLogement.init({ serverUrl: 'http://localhost:5080' });
  *
- * Le token n'est PAS passé ici (le script est publié) : il est saisi dans le
- * panneau 🏠 > Connexion et gardé dans le stockage Tampermonkey.
+ * Le token n'est PAS transmis ici, car GitHub publie le script. L'utilisateur
+ * saisit le token dans le panneau 🏠 > Connexion. Le plugin garde le token
+ * dans le stockage Tampermonkey.
  */
 import { Tracker } from './app/tracker';
 import { ApiClient, type ServerInfo } from './core/api';
@@ -22,26 +25,26 @@ import { isModalOpen } from './ui/modal';
 import { showPanel } from './ui/views';
 import { THEME } from './ui/theme';
 
-/** Version de la release, injectée au build (= @version du script installé). */
+/** Version de la release. Le build injecte cette valeur (= @version du script installé). */
 export const VERSION: string = typeof __PLUGIN_VERSION__ === 'string' ? __PLUGIN_VERSION__ : 'dev';
 
 export interface InitConfig {
-  /** URL du site local. Default: 'http://localhost:5080'. Modifiable dans le panneau. */
+  /** URL du serveur local. Default: 'http://localhost:5080'. Le panneau permet de la modifier. */
   serverUrl?: string;
   /**
-   * Ancien mode (script collé à la main) : token passé dans la config.
-   * Préférer la saisie dans le panneau, qui prime sur cette valeur.
+   * Ancien mode (script collé à la main) : token transmis dans la config.
+   * Utiliser de préférence le panneau. La valeur du panneau a priorité sur cette valeur.
    */
   apiToken?: string;
   /** Statuts masqués. Default: ['rejected']. */
   hideStatuses?: PropertyStatus[];
-  /** Masquer aussi les doublons PROBABLES (non confirmés) de biens ayant ces statuts. Default: []. */
+  /** Statuts dont les doublons PROBABLES (non confirmés) sont aussi masqués. Default: []. */
   hideSuggestedDuplicatesOf?: PropertyStatus[];
   buttonOffset?: { right?: number; bottom?: number };
   debug?: boolean;
 }
 
-/** Accès de débogage depuis la console : window.TMRechercheLogement.instance. */
+/** Pour le débogage dans la console : window.TMRechercheLogement.instance. */
 export interface PluginHandle {
   sync: SyncEngine;
   tracker: Tracker;
@@ -56,7 +59,7 @@ export function init(config: InitConfig = {}): PluginHandle | undefined {
 
   const adapter = findAdapter(location);
   if (!adapter) {
-    if (config.debug) console.debug('[RechercheLogement] site non supporté', location.hostname);
+    if (config.debug) console.debug('[RechercheLogement] site d\'annonces non compatible', location.hostname);
     return undefined;
   }
 
@@ -111,12 +114,12 @@ export function init(config: InitConfig = {}): PluginHandle | undefined {
   sync.onChange(refreshBadge);
 
   registerMenuCommand('Ouvrir le panneau (connexion, réglages)', openPanel);
-  registerMenuCommand('Afficher / cacher les annonces masquées', () => tracker.setShowHidden(!tracker.showHidden));
-  registerMenuCommand('Ouvrir le site local', () => window.open(connection.get().serverUrl, '_blank'));
+  registerMenuCommand('Afficher / masquer les annonces masquées', () => tracker.setShowHidden(!tracker.showHidden));
+  registerMenuCommand('Ouvrir le serveur local', () => window.open(connection.get().serverUrl, '_blank'));
 
   tracker.start();
 
-  // Première installation : pas encore de token -> on ouvre directement le panneau.
+  // Première installation : le token est absent. Le plugin ouvre alors le panneau.
   if (!connection.isConfigured()) setTimeout(() => !isModalOpen() && openPanel(), 800);
 
   instance = { sync, tracker, connection };

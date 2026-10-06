@@ -1,7 +1,9 @@
 /**
- * Contenus des modales du plugin. Le plugin reste volontairement léger :
- * la vue complète (comparaison détaillée, suivi des contacts, historique)
- * est sur le site local, vers lequel chaque vue propose un lien.
+ * Contenu des modales du plugin.
+ *
+ * Le plugin reste léger par choix. La vue complète (comparaison détaillée,
+ * suivi des contacts, historique) est sur le serveur local. Chaque vue du
+ * plugin contient un lien vers le serveur local.
  */
 import type { ConnectionSettings, ConnectionStore } from '../core/connection';
 import type { SyncEngine } from '../core/sync';
@@ -31,7 +33,7 @@ function link(ref: ListingRef): HTMLElement {
   return ref.url ? h('a', { href: ref.url, target: '_blank', rel: 'noopener', style: { color: '#93c5fd' } }, `${label} ↗`) : h('span', null, label);
 }
 
-function webLink(url: string | undefined, label = 'Ouvrir sur le site local ↗'): HTMLElement | null {
+function webLink(url: string | undefined, label = 'Ouvrir sur le serveur local ↗'): HTMLElement | null {
   return url ? h('a', { href: url, target: '_blank', rel: 'noopener', style: { color: '#93c5fd' } }, label) : null;
 }
 
@@ -53,7 +55,7 @@ export function showSuggestion(sync: SyncEngine, key: ListingKey, s: SuggestionV
       h(
         'div',
         { style: { display: 'flex', gap: '8px', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' } },
-        webLink(sync.view(key)?.webUrl, 'Comparer en détail sur le site local ↗'),
+        webLink(sync.view(key)?.webUrl, 'Comparer en détail sur le serveur local ↗'),
         h(
           'div',
           { style: { display: 'flex', gap: '8px' } },
@@ -78,7 +80,7 @@ export function showDetails(sync: SyncEngine, key: ListingKey): void {
   const status = v?.status ?? 'none';
   const note = h('textarea', {
     value: v?.note ?? '',
-    placeholder: 'Note personnelle (contact, visite, impressions...)',
+    placeholder: 'Note personnelle (contact, visite, avis...)',
     rows: 4,
     style: { width: '100%', boxSizing: 'border-box', background: THEME.bgSoft, color: THEME.fg, border: `1px solid ${THEME.border}`, borderRadius: '6px', padding: '8px', font: THEME.font },
   });
@@ -97,7 +99,7 @@ export function showDetails(sync: SyncEngine, key: ListingKey): void {
             showDetails(sync, key);
           }, s === status ? THEME.accent : undefined),
         )),
-        status === 'toContact' && h('div', { style: { marginTop: '8px' } }, `Suivi : ${CONTACT_STAGE_LABEL[v?.contactStage ?? 'pending']} (à mettre à jour sur le site local)`),
+        status === 'toContact' && h('div', { style: { marginTop: '8px' } }, `Suivi : ${CONTACT_STAGE_LABEL[v?.contactStage ?? 'pending']}. Modifier l'étape sur le serveur local.`),
       ),
       section('Note', note, h('div', { style: { marginTop: '6px', textAlign: 'right' } }, button('Enregistrer la note', () => {
         sync.act({ type: 'setNote', key, note: note.value.trim() });
@@ -114,7 +116,7 @@ export function showDetails(sync: SyncEngine, key: ListingKey): void {
         })),
       ),
       !!v?.suggestions.length && section(
-        `Doublons possibles (${v.suggestions.length})`,
+        `Doublons probables (${v.suggestions.length})`,
         h('ul', { style: { margin: '0', paddingLeft: '18px' } }, v.suggestions.map((s) =>
           h('li', { style: { marginBottom: '4px' } }, link(s.other), ` — ${Math.round(s.score * 100)} % `, statusBadge(s.otherStatus), ' ',
             button('Décider', () => showSuggestion(sync, key, s))),
@@ -130,7 +132,7 @@ export function showDetails(sync: SyncEngine, key: ListingKey): void {
 export interface PanelContext {
   sync: SyncEngine;
   connection: ConnectionStore;
-  /** Teste un couple URL + token sans l'enregistrer. */
+  /** Teste une URL et un token sans les enregistrer. */
   testConnection(settings: ConnectionSettings): Promise<string>;
   version: string;
   pageCounts(): { total: number; hidden: number; seen: number; toContact: number; suggested: number };
@@ -145,10 +147,10 @@ export function showPanel(ctx: PanelContext): void {
   const toggle = h('input', { type: 'checkbox', checked: ctx.showHidden, on: { change: () => ctx.setShowHidden(toggle.checked) } });
 
   const stateText = {
-    online: ['🟢', 'Connecté au site local'],
-    offline: ['🟠', 'Site local injoignable — les actions sont gardées et seront envoyées à son retour'],
-    unauthorized: ['🔴', 'Token refusé — recopier le token depuis Paramètres du site local'],
-    unconfigured: ['🔴', 'Token non renseigné — le coller ci-dessous (Paramètres du site local)'],
+    online: ['🟢', 'Connecté au serveur local.'],
+    offline: ['🟠', 'Le serveur local ne répond pas. Le plugin garde les actions. Il les envoie quand le serveur répond de nouveau.'],
+    unauthorized: ['🔴', 'Le serveur local refuse le token. Copier de nouveau le token depuis la page Paramètres du serveur local.'],
+    unconfigured: ['🔴', 'Token absent. Coller le token ci-dessous (page Paramètres du serveur local).'],
     unknown: ['⚪', 'Connexion en cours...'],
   }[sync.state];
 
@@ -161,7 +163,7 @@ export function showPanel(ctx: PanelContext): void {
       style: { width: '100%', boxSizing: 'border-box', background: THEME.bgSoft, color: THEME.fg, border: `1px solid ${THEME.border}`, borderRadius: '6px', padding: '7px 8px', font: THEME.font },
     });
   const urlInput = input(conn.serverUrl, 'http://localhost:5080');
-  const tokenInput = input(conn.token, 'Token (Paramètres du site local)', 'password');
+  const tokenInput = input(conn.token, 'Token (page Paramètres du serveur local)', 'password');
   const feedback = h('div', { style: { minHeight: '18px', marginTop: '6px', fontSize: '12px' } });
   const current = (): ConnectionSettings => ({ serverUrl: urlInput.value, token: tokenInput.value });
   const say = (text: string, color: string) => {
@@ -175,7 +177,7 @@ export function showPanel(ctx: PanelContext): void {
       'div',
       null,
       section(
-        'Connexion au site local',
+        'Connexion au serveur local',
         h('div', null, `${stateText[0]} ${stateText[1]}`),
         sync.lastError && !['online', 'unconfigured'].includes(sync.state) && h('div', { style: { color: THEME.muted, fontSize: '11px' } }, sync.lastError),
         h('div', { style: { marginTop: '4px', color: THEME.muted } }, `${sync.pendingCount()} élément(s) en attente d'envoi`),
@@ -191,20 +193,20 @@ export function showPanel(ctx: PanelContext): void {
           }),
           button('Enregistrer', () => {
             ctx.connection.save(current());
-            say('Enregistré — synchronisation relancée.', THEME.ok);
+            say('Réglages enregistrés. Synchronisation relancée.', THEME.ok);
             setTimeout(() => showPanel(ctx), 1500);
           }, THEME.ok),
-          webLink(`${conn.serverUrl}/parametres`, 'Récupérer le token ↗'),
+          webLink(`${conn.serverUrl}/parametres`, 'Obtenir le token ↗'),
         ),
       ),
       section(
         'Cette page',
-        h('div', null, `${page.total} annonces · ${page.hidden} masquées · ${page.seen} vues · ${page.toContact} à contacter · ${page.suggested} doublons possibles`),
+        h('div', null, `${page.total} annonces · ${page.hidden} masquées · ${page.seen} vues · ${page.toContact} à contacter · ${page.suggested} doublons probables`),
         h('label', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px', cursor: 'pointer' } }, toggle, 'Afficher les annonces masquées (en pointillés)'),
       ),
       h('div', { style: { display: 'flex', justifyContent: 'space-between', color: THEME.muted, fontSize: '11px' } },
         `Plugin v${ctx.version}`,
-        webLink(conn.serverUrl, 'Ouvrir le site local ↗') ?? '',
+        webLink(conn.serverUrl, 'Ouvrir le serveur local ↗') ?? '',
       ),
     ),
   });

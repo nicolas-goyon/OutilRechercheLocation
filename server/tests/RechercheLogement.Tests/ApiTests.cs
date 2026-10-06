@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace RechercheLogement.Tests;
 
-/// <summary>Tests d'intégration HTTP : token et format JSON attendu par le plugin.</summary>
+/// <summary>Tests d'intégration HTTP : token, et format JSON que le plugin attend.</summary>
 public class ApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
 {
     private const string Token = "integration-token";

@@ -17,6 +17,6 @@ test('défauts, repli sur la config, puis réglage saisi prioritaire', () => {
   assert.equal(notified, 1);
   assert.ok(conn.isConfigured());
 
-  // Un "nouveau" script (mise à jour auto, sans token dans la config) garde le token saisi.
+  // Un "nouveau" script (mise à jour auto, sans token dans la config) garde le token saisi par l'utilisateur.
   assert.equal(new ConnectionStore(store, { serverUrl: 'http://localhost:5080' }).get().token, 'nouveau');
 });

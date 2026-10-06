@@ -19,7 +19,7 @@ public class DedupScorerTests
         DescriptionExcerpt = "exclusivite sia immobilier nous vous proposons a la location ce spacieux appartement 3 pieces de 88 32 m2 situe au 1er etage sans ascenseur au 86 avenue de flandre paris 19e",
     };
 
-    // Le même bien sur un autre portail : prix hors charges, référence préfixée.
+    // Le même bien sur un autre site d'annonces : prix hors charges, référence avec un préfixe.
     internal static readonly ListingData SeLoger = new()
     {
         Transaction = TransactionType.Rent,

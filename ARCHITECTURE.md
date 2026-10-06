@@ -4,61 +4,67 @@
  Navigateur (bienici.com, ... )                         Machine locale (Docker)
 ┌──────────────────────────────────┐   POST /api/sync   ┌───────────────────────────────────┐
 │ plugin/ (Tampermonkey)           │  Bearer <token>    │ server/ (ASP.NET Core 10)          │
-│  adaptateur du site -> cartes    │ ─────────────────▶ │  ApiTokenMiddleware                │
+│  adaptateur de site -> cartes    │ ─────────────────▶ │  ApiTokenMiddleware                │
 │  SyncEngine : file + cache       │ ◀───────────────── │  Catalog (métier, en mémoire)      │
 │  barre d'actions, masquage       │   ListingView      │   ├ DedupScorer (doublons)         │
 └──────────────────────────────────┘                    │   └ IPersistence -> SQLite (/data) │
-                                                        │  Site Blazor (tableau de bord...)  │
+                                                        │  Pages Blazor (tableau de bord...) │
                                                         └───────────────────────────────────┘
 ```
 
+Termes : voir le glossaire au début de [`README.md`](./README.md). Dans ce document, « serveur »
+signifie toujours le serveur local, et « site » signifie toujours un site d'annonces.
+
 ## Principes
 
-- **Le serveur est la source de vérité** : annonces, biens, doublons, statuts, historique.
-- **Le plugin reste léger et autonome** : il observe, envoie, affiche. Hors ligne, il garde une
-  file d'actions et un cache d'états (stockage Tampermonkey) pour continuer à masquer.
-- **La décision porte sur le bien, pas sur l'annonce** : « pas intéressé » sur Bien'ici masque
-  aussi l'annonce SeLoger reconnue comme le même bien.
-- **Générique au centre, spécifique aux bords** : seul `plugin/src/sites/<site>/` connaît un site.
+- **Le serveur est la source de vérité.** Il garde les annonces, les biens, les doublons, les
+  statuts et l'historique.
+- **Le plugin reste léger et autonome.** Il observe, il envoie, il affiche. Hors ligne, il garde
+  une file d'actions et un cache d'états (stockage Tampermonkey). Il continue ainsi de masquer les
+  annonces.
+- **La décision s'applique au bien, pas à l'annonce.** Exemple : « pas intéressé » sur Bien'ici
+  masque aussi l'annonce SeLoger que le serveur reconnaît comme le même bien.
+- **Code générique au centre, code spécifique aux bords.** Seul `plugin/src/sites/<site>/` connaît
+  un site.
 
 ## Arborescence
 
 ```
 plugin/
-  userscripts/            Script installable, un fichier par instance (template v2) :
+  userscripts/            Script installable. Un fichier par instance (template v2).
     recherche-logement.mjs  { headers, config } -> dist/recherche-logement.user.js + .meta.js
     types.d.ts              Type UserscriptInstance (refuse apiToken dans config)
-  scripts/build.mjs       Bundle esbuild + génération des userscripts (@version, @require épinglé
-                          sur plugin-vX.Y.Z, @updateURL/@downloadURL sur releases/latest)
-  src/index.ts            init({ serverUrl }) : adaptateur + SyncEngine + Tracker + UI ; VERSION
-  src/core/connection.ts  URL + token du site local, saisis dans le panneau, stockés dans Tampermonkey
-  src/core/types.ts       Types + contrat d'API (miroir de server/.../Contracts)
-  src/core/api.ts         Client HTTP (GM_xmlhttpRequest, header Authorization)
-  src/core/sync.ts        SyncEngine : observations + actions en file, envoi par lots,
+  scripts/build.mjs       Bundle esbuild. Génère les userscripts : @version, @require épinglé
+                          sur plugin-vX.Y.Z, @updateURL/@downloadURL sur releases/latest.
+  src/index.ts            init({ serverUrl }) : adaptateur + SyncEngine + Tracker + UI. VERSION.
+  src/core/connection.ts  URL et token du serveur. Saisis dans le panneau, stockés dans Tampermonkey.
+  src/core/types.ts       Types et contrat d'API (copie de server/.../Contracts)
+  src/core/api.ts         Client HTTP (GM_xmlhttpRequest, en-tête Authorization)
+  src/core/sync.ts        SyncEngine : file d'observations et d'actions, envoi par lots,
                           cache des ListingView, application optimiste, backoff hors ligne
   src/core/storage.ts     Wrapper GM_getValue / GM_setValue
-  src/sites/              Adaptateurs (bienici/ : parsing carte + JSON API)
-  src/app/tracker.ts      Cartes de la page -> observations ; état -> attributs data-tmrl-*
+  src/sites/              Adaptateurs (bienici/ : lecture des cartes + JSON de l'API)
+  src/app/tracker.ts      Cartes de la page -> observations. État -> attributs data-tmrl-*.
   src/ui/                 Barre par carte, modales, bouton 🏠, CSS injecté
-  tests/                  node:test (parsing sur fixtures réelles, SyncEngine hors ligne)
+  tests/                  node:test (lecture de fixtures réelles, SyncEngine hors ligne)
 
 server/
   src/RechercheLogement.Core/      Métier pur, sans dépendance NuGet
     Model/                Listing, Property, DuplicateLink, PropertyEvent, statuts, libellés
-    Dedup/DedupScorer.cs  Score de doublon explicable
+    Dedup/DedupScorer.cs  Score de doublon avec ses raisons
     Contracts/            DTO de /api/sync
-    Services/Catalog.cs   Toutes les opérations (sync, statuts, fusion, requêtes du site)
+    Services/Catalog.cs   Toutes les opérations (sync, statuts, fusion, requêtes des pages)
     Services/Persistence.cs  IPersistence + ChangeSet + InMemoryPersistence
   src/RechercheLogement.Server/    Hôte web
     Program.cs, ServerSettings.cs
     Api/                  /api/ping, /api/sync, /api/listings/{key}, /api/export + token
-    Storage/SqlitePersistence.cs   Schéma, migrations (PRAGMA user_version), écriture transactionnelle
+    Storage/SqlitePersistence.cs   Schéma, migrations (PRAGMA user_version), écriture en transaction
     Components/           Pages Blazor (interactive server) : tableau de bord, à contacter,
                           biens, fiche, doublons, paramètres
   tests/RechercheLogement.Tests/   xUnit : DedupScorer, Catalog, API (WebApplicationFactory)
   Dockerfile
 docker-compose.yml
-.github/workflows/        plugin.yml (tag plugin-v* + jsDelivr + GitHub Release = mise à jour auto),
+.github/workflows/        plugin.yml (tag plugin-v* + jsDelivr + GitHub Release = mise à jour auto)
                           server.yml (tests + image GHCR)
 ```
 
@@ -66,69 +72,103 @@ docker-compose.yml
 
 | Entité | Rôle | Champs clés |
 | --- | --- | --- |
-| **Listing** | Une annonce sur un site, clé `site:siteId` | `PropertyId`, `Data` (prix, surface, pièces, CP, GPS, réf. agence, `PhotoKeys`, extrait de description…), `FirstSeenAt`, `LastSeenAt`, `PriceHistory`, `Sources` (`card`/`api`) |
+| **Listing** | Une annonce sur un site. Clé `site:siteId`. | `PropertyId`, `Data` (prix, surface, pièces, CP, GPS, réf. agence, `PhotoKeys`, extrait de description…), `FirstSeenAt`, `LastSeenAt`, `PriceHistory`, `Sources` (`card`/`api`) |
 | **Property** | Le bien réel | `Status` (`None`, `Seen`, `Rejected`, `ToContact`), `ContactStage` (`Pending` → `Contacted` → `VisitScheduled` → `Visited` → `ApplicationSent` → `Accepted`/`Declined`), `Note`, `StatusChangedAt` |
-| **DuplicateLink** | Paire candidate | `Score`, `Reasons`, `State` (`Suggested`, `Confirmed`, `Dismissed`), `DecidedBy` (`auto`/`user`) |
-| **PropertyEvent** | Historique d'un bien | changement de statut / d'étape, note, fusion, dissociation, commentaire |
+| **DuplicateLink** | Paire candidate de doublons | `Score`, `Reasons`, `State` (`Suggested`, `Confirmed`, `Dismissed`), `DecidedBy` (`auto`/`user`) |
+| **PropertyEvent** | Historique d'un bien | changement de statut ou d'étape, note, fusion, dissociation, commentaire |
 
 Règles :
 
-- Chaque annonce a exactement un bien ; une nouvelle annonce crée un bien `None`.
-- Confirmer un doublon fusionne les biens : on garde **le plus ancien** (URL et historique stables)
-  et le statut de la décision la plus récente.
-- Dissocier remet l'annonce dans un nouveau bien et marque les liens `Dismissed` (plus jamais
-  proposés).
-- Un statut envoyé par le plugin avec un horodatage **antérieur** au dernier changement fait sur le
-  site est ignoré (cas d'une action restée en file pendant une coupure).
-- Les données d'une carte HTML ne remplacent pas celles, plus précises, du JSON du site.
+- Chaque annonce a exactement un bien. Une nouvelle annonce crée un bien de statut `None`.
+- Confirmer un doublon fusionne les deux biens. Le serveur garde **le bien le plus ancien** (son URL
+  et son historique ne changent pas). Le serveur garde le statut de la décision la plus récente.
+- Dissocier une annonce la place dans un nouveau bien. Le serveur marque ses liens `Dismissed` et ne
+  les propose plus jamais.
+- Le serveur ignore un statut du plugin si l'horodatage du statut est **antérieur** au dernier
+  changement fait sur le serveur. Ce cas arrive quand une action reste en file pendant une coupure.
+- Les données d'une carte HTML ne remplacent pas les données du JSON du site, qui sont plus
+  précises.
 
 ## Synchronisation (`POST /api/sync`)
 
-Détail dans [`docs/api.md`](./docs/api.md). En résumé, un seul appel par lot :
+Détail dans [`docs/api.md`](./docs/api.md). Le plugin envoie un seul appel par lot. Cet appel
+contient :
 
-- `observations` : annonces vues (données carte ou API) ;
-- `actions` : `setStatus`, `setNote`, `confirmDuplicate`, `dismissDuplicate`, `detach`, chacune
-  avec un `id` unique et un horodatage `at` ;
-- réponse : `appliedActionIds` / `rejectedActionIds` et une `ListingView` par annonce concernée
-  (statut, étape, note, annonces sœurs, suggestions, lien vers la fiche).
+- `observations` : les annonces vues (données de la carte ou de l'API du site).
+- `actions` : `setStatus`, `setNote`, `confirmDuplicate`, `dismissDuplicate`, `detach`. Chaque
+  action a un `id` unique et un horodatage `at`.
 
-Les actions sont **idempotentes** : le serveur mémorise leurs `id` (90 jours), un renvoi après
-une coupure réseau n'est pas réappliqué.
+La réponse contient :
+
+- `appliedActionIds` et `rejectedActionIds`.
+- Une `ListingView` par annonce concernée (statut, étape, note, annonces sœurs, suggestions, lien
+  vers la fiche).
+
+Les actions sont **idempotentes**. Le serveur garde leurs `id` pendant 90 jours. Si le plugin
+renvoie une action après une coupure réseau, le serveur ne l'applique pas une deuxième fois.
 
 ## Sécurité
 
-- Le script du plugin est public (GitHub Release) : il ne contient jamais le token. Celui-ci est
-  saisi dans le panneau 🏠 et stocké par Tampermonkey (`GM_setValue`), hors du script.
-- Toutes les routes `/api/*` exigent `Authorization: Bearer <token>` (comparaison à temps
-  constant). Token : `RechercheLogement__ApiToken` s'il est défini, sinon généré au premier
-  démarrage (32 octets aléatoires) et stocké en base ; régénérable dans Paramètres.
-- Le plugin appelle le serveur via `GM_xmlhttpRequest` (`@connect localhost`) : pas d'en-têtes CORS
-  à ouvrir côté serveur, donc aucune autre page web ne peut lire l'API depuis le navigateur.
-- Le site web lui-même n'a pas d'authentification : Docker le lie à `127.0.0.1` uniquement.
+- Le script du plugin est public (GitHub Release). Il ne contient donc jamais le token. Vous saisissez
+  le token dans le panneau 🏠. Tampermonkey le stocke hors du script (`GM_setValue`).
+- Toutes les routes `/api/*` exigent `Authorization: Bearer <token>`. Le serveur compare le token en
+  temps constant.
+- Origine du token :
+  1. `RechercheLogement__ApiToken`, si cette variable est définie.
+  2. Sinon, le serveur génère un token au premier démarrage (32 octets aléatoires) et le stocke en
+     base.
+
+  La page Paramètres permet de régénérer le token.
+- Le plugin appelle le serveur avec `GM_xmlhttpRequest` (`@connect localhost`). Le serveur n'ouvre
+  donc pas d'en-têtes CORS. Aucune autre page web ne peut lire l'API depuis le navigateur.
+- Les pages web du serveur n'ont pas d'authentification. Docker lie donc le serveur à `127.0.0.1`
+  uniquement.
 
 ## Détection de doublons (`DedupScorer`)
 
-1. **Blocage** : comparaison uniquement entre annonces du même code postal (75116 ≡ 75016).
-2. **Rejets durs** : transaction ou type différents, CP différents (sauf GPS < 300 m), distance
-   > 1,5 km (+ flou), surface à plus de 10 %, ≥ 2 pièces d'écart.
-3. **Points** (score = points / 10, plafonné à 1) : même réf. agence +6 (compatible +4) ; ≥ 2 photos
-   d'origine identiques +6 (1 : +4) ; description quasi identique +5 (proche +3) ; surface ±1 m²/2 %
-   +2 (5 % : +1) ; prix ≤ 2 % +2 (≤ 8 % : +1) ; GPS ≤ 150 m +2 (≤ 400 m : +1) sinon même CP +1 ;
-   pièces +1 ; étage +1 ; chambres +0,5 ; meublé ≠ −1.
-4. **Seuils** : ≥ 0,8 fusion automatique (réversible) ; ≥ 0,5 suggestion.
+1. **Blocage** : le serveur compare uniquement les annonces du même code postal (75116 ≡ 75016).
+2. **Rejets durs**. Chacune de ces différences exclut le même bien :
+   - transaction différente ou type de bien différent.
+   - codes postaux différents (sauf si les points GPS sont à moins de 300 m).
+   - distance supérieure à 1,5 km (plus la marge de précision du GPS).
+   - écart de surface supérieur à 10 %.
+   - écart de 2 pièces ou plus.
+3. **Points**. Score = points / 10, avec un maximum de 1.
+
+   | Critère | Points |
+   | --- | --- |
+   | Même réf. agence | +6 (réf. compatible : +4) |
+   | Photos d'origine identiques | ≥ 2 photos : +6 (1 photo : +4) |
+   | Description | quasi identique : +5 (proche : +3) |
+   | Surface | écart ≤ 1 m² ou ≤ 2 % : +2 (≤ 5 % : +1) |
+   | Prix | écart ≤ 2 % : +2 (≤ 8 % : +1) |
+   | Position | GPS ≤ 150 m : +2 (≤ 400 m : +1), plus la marge de précision du GPS. Sans GPS, même CP : +1 |
+   | Pièces identiques | +1 |
+   | Étage identique | +1 |
+   | Chambres identiques | +0,5 |
+   | Meublé différent | −1 |
+
+4. **Seuils** :
+   - score ≥ 0,8 : fusion automatique (réversible).
+   - score ≥ 0,5 : suggestion.
+
+Un critère absent d'une des deux annonces ne compte ni pour ni contre.
 
 ## Ajouter un site
 
-1. `plugin/src/sites/<site>/parse.ts` (fonctions pures + fixture HTML réelle + test) et
-   `adapter.ts` (sélecteurs, enrichissement éventuel via le JSON du site).
-2. L'enregistrer dans `plugin/src/sites/index.ts`, ajouter son `@match` dans
-   `plugin/userscripts/recherche-logement.mjs` (la mise à jour auto le déploie) et
-   son libellé dans `server/.../Model/Labels.cs`.
+1. Créer `plugin/src/sites/<site>/parse.ts`. Ce fichier contient des fonctions pures. Ajouter une
+   fixture HTML réelle et un test.
+2. Créer `plugin/src/sites/<site>/adapter.ts`. Ce fichier contient les sélecteurs. Il peut aussi
+   enrichir les données avec le JSON du site.
+3. Enregistrer l'adaptateur dans `plugin/src/sites/index.ts`.
+4. Ajouter la ligne `@match` du site dans `plugin/userscripts/recherche-logement.mjs`. La mise à
+   jour automatique déploie ce changement.
+5. Ajouter le libellé du site dans `server/.../Model/Labels.cs`.
 
 ## Pistes
 
-- **Collecte automatique** : un service d'arrière-plan côté serveur (`IHostedService`) qui
-  interroge les recherches enregistrées et appelle `Catalog.Sync` avec des observations — même
-  chemin que le plugin, donc doublons et statuts gérés sans code supplémentaire.
-- Fiche d'annonce sur le site d'origine (barre de statut + enrichissement).
-- Hash perceptuel des photos pour les sites qui ré-hébergent les images.
+- **Collecte automatique** : un service d'arrière-plan sur le serveur (`IHostedService`). Il lit
+  les recherches enregistrées et appelle `Catalog.Sync` avec des observations. C'est le même chemin
+  que le plugin. Les doublons et les statuts fonctionnent donc sans code supplémentaire.
+- Page d'une annonce sur le site d'origine (barre de statut + enrichissement).
+- Hash perceptuel des photos, pour les sites qui hébergent une nouvelle copie des images.

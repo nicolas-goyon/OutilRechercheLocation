@@ -1,36 +1,38 @@
 import type { ListingData, SiteId } from '../core/types';
 
-/** Une carte d'annonce présente dans la page. */
+/** Une carte d'annonce dans la page. */
 export interface CardRef {
-  /** Identifiant de l'annonce sur le site (stable entre les visites). */
+  /** Identifiant de l'annonce sur le site d'annonces. Il ne change pas entre les visites. */
   siteId: string;
-  /** Élément racine de la carte : c'est lui qu'on masque/atténue. */
+  /** Élément racine de la carte. Le plugin masque ou atténue cet élément. */
   element: HTMLElement;
 }
 
 /**
- * Tout ce qui est propre à un site. Ajouter un site = écrire un adaptateur
- * (sites/<site>/) et l'enregistrer dans sites/index.ts ; le reste du plugin
- * (stockage, doublons, UI) est générique.
+ * Tout le code spécifique à un site d'annonces.
+ *
+ * Pour ajouter un site, écrire un adaptateur (sites/<site>/) et l'enregistrer
+ * dans sites/index.ts. Le reste du plugin (stockage, doublons, UI) est
+ * générique.
  */
 export interface SiteAdapter {
   id: SiteId;
   /** Nom affiché à l'utilisateur. */
   label: string;
   matches(location: Location): boolean;
-  /** Cartes d'annonces actuellement dans le DOM. */
+  /** Cartes d'annonces présentes dans le DOM. */
   findCards(root: ParentNode): CardRef[];
-  /** Données lisibles sur la carte elle-même. */
+  /** Données lisibles sur la carte. */
   parseCard(card: CardRef): ListingData;
-  /** Élément à observer pour détecter les changements de page (SPA). Default: document.body. */
+  /** Élément à observer pour trouver les changements de page (SPA). Default: document.body. */
   observeRoot?(): Element | null;
   /**
-   * Source de données complémentaire (ex. JSON de l'API du site), appelée
-   * avec un callback à invoquer pour chaque annonce enrichie.
+   * Source de données supplémentaire (par exemple le JSON de l'API du site).
+   * L'adaptateur appelle onData pour chaque annonce enrichie.
    */
   startEnrichment?(onData: (siteId: string, data: ListingData) => void): void;
-  /** URL de miniature pour une photo stockée (évite de charger l'image pleine taille). */
+  /** URL de miniature pour une photo stockée. Le plugin ne charge donc pas l'image en pleine taille. */
   thumbnailUrl?(photoUrl: string): string;
-  /** Où placer la barre d'actions dans la carte. Default: la carte elle-même. */
+  /** Élément de la carte qui reçoit la barre d'actions. Default: la carte. */
   toolbarAnchor?(card: CardRef): HTMLElement;
 }

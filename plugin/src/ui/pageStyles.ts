@@ -1,8 +1,10 @@
 /**
- * Seul CSS injecté dans la page elle-même : il agit uniquement via nos
- * attributs data-tmrl-* posés sur les cartes (le site, Vue.js pour
- * Bien'ici, ne touche pas à ces attributs inconnus lors de ses re-rendus,
- * contrairement à `style` ou `class`).
+ * Seul CSS injecté directement dans la page. Il agit uniquement sur les
+ * attributs data-tmrl-* que le plugin ajoute aux cartes.
+ *
+ * Le framework du site d'annonces (Vue.js pour Bien'ici) ne change pas ces
+ * attributs inconnus pendant un nouveau rendu. Il change par contre `style`
+ * et `class`.
  */
 const STYLE_ID = 'tmrl-page-styles';
 

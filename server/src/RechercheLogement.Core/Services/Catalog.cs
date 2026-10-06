@@ -7,7 +7,7 @@ namespace RechercheLogement.Core.Services;
 public sealed class CatalogOptions
 {
     public DedupThresholds Thresholds { get; init; } = new();
-    /// <summary>URL publique du site local, pour les liens "ouvrir sur le site" renvoyés au plugin.</summary>
+    /// <summary>URL publique du serveur local. Sert aux liens "ouvrir sur le serveur local" renvoyés au plugin.</summary>
     public string PublicUrl { get; init; } = "http://localhost:5080";
     public Func<long> Now { get; init; } = () => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 }
@@ -15,10 +15,10 @@ public sealed class CatalogOptions
 /// <summary>
 /// Cœur du serveur : annonces, biens, doublons, statuts.
 ///
-/// Toutes les données sont en mémoire (quelques milliers d'annonces au plus) et
-/// chaque opération écrit ses modifications via <see cref="IPersistence"/> dans
-/// une transaction. Les opérations sont sérialisées par un verrou : usage local,
-/// un seul utilisateur, le plugin et le site web en parallèle.
+/// Toutes les données sont en mémoire (quelques milliers d'annonces au maximum).
+/// Chaque opération écrit ses modifications dans une transaction, avec
+/// <see cref="IPersistence"/>. Un verrou exécute les opérations une par une.
+/// Cas d'usage : local, un seul utilisateur, le plugin et les pages web en parallèle.
 /// </summary>
 public sealed class Catalog
 {
@@ -37,7 +37,7 @@ public sealed class Catalog
     private readonly Dictionary<string, List<DuplicateLink>> _linksByListing = [];
     private long _nextEventId = 1;
 
-    /// <summary>Déclenché après chaque modification (le site web se rafraîchit en direct).</summary>
+    /// <summary>Déclenché après chaque modification. Les pages web se mettent à jour en direct.</summary>
     public event Action? Changed;
 
     public Catalog(IPersistence persistence, CatalogOptions? options = null)
@@ -68,7 +68,7 @@ public sealed class Catalog
 
         Mutate(c =>
         {
-            // 1. Observations d'abord : une action peut viser une annonce vue dans le même lot.
+            // 1. Observations en premier. Une action peut viser une annonce observée dans le même lot.
             foreach (var obs in request.Observations ?? [])
             {
                 if (string.IsNullOrWhiteSpace(obs.Site) || string.IsNullOrWhiteSpace(obs.SiteId)) continue;
@@ -76,7 +76,7 @@ public sealed class Catalog
                 keys.Add(l.Key);
             }
 
-            // 2. Actions, dans l'ordre chronologique, idempotentes (identifiant unique).
+            // 2. Actions, dans l'ordre chronologique. Elles sont idempotentes (identifiant unique).
             foreach (var a in (request.Actions ?? []).OrderBy(a => a.At))
             {
                 keys.Add(a.Key);
@@ -122,7 +122,7 @@ public sealed class Catalog
         }
 
         var oldBlock = DedupScorer.BlockingKey(l.Data);
-        // L'API du site est plus précise que la carte HTML : une carte ne l'écrase pas.
+        // L'API du site d'annonces est plus précise que la carte HTML. Une carte ne remplace donc pas les données de l'API.
         var fillOnly = obs.Source == "card" && l.Sources.Contains("api");
         var merged = l.Data.Merge(obs.Data, fillOnly);
         if (!merged.SameAs(l.Data))
@@ -140,7 +140,7 @@ public sealed class Catalog
             l.Sources.Add(obs.Source);
             changed = true;
         }
-        // Granularité d'une heure pour lastSeenAt : pas de réécriture à chaque affichage.
+        // lastSeenAt change au maximum une fois par heure. Le serveur n'écrit donc pas en base à chaque affichage.
         if (now - l.LastSeenAt > 3_600_000)
         {
             l.LastSeenAt = now;
@@ -166,7 +166,7 @@ public sealed class Catalog
         switch (a.Type)
         {
             case ActionType.SetStatus when a.Status is not null:
-                // Dernière décision gagnante : une action plus ancienne qu'un changement fait sur le site est ignorée.
+                // La décision la plus récente gagne. Le serveur ignore une action plus ancienne qu'un changement fait sur les pages web.
                 if (p.StatusChangedAt > a.At) return true;
                 SetStatusCore(c, p, a.Status.Value, a.At, "plugin");
                 return true;
@@ -188,7 +188,7 @@ public sealed class Catalog
     }
 
     // =====================================================================
-    // Opérations du site web
+    // Opérations des pages web
     // =====================================================================
 
     public void SetStatus(string propertyId, PropertyStatus status) => Mutate(c =>
@@ -241,7 +241,7 @@ public sealed class Catalog
     }, notify: false);
 
     // =====================================================================
-    // Lecture (site web)
+    // Lecture (pages web)
     // =====================================================================
 
     public IReadOnlyList<PropertySummary> QueryProperties(PropertyQuery q)
@@ -407,7 +407,7 @@ public sealed class Catalog
             }
             else if (existing is not null)
             {
-                // Les données ont changé, ce n'est plus crédible : on retire la suggestion.
+                // Les données ont changé et la suggestion n'est plus fiable. Le serveur retire la suggestion.
                 existing.State = LinkState.Dismissed;
                 existing.DecidedBy = "auto";
                 existing.UpdatedAt = now;
@@ -426,7 +426,7 @@ public sealed class Catalog
         var pa = _listings[a].PropertyId;
         var pb = _listings[b].PropertyId;
         if (pa == pb) return;
-        // On garde le bien le plus ancien : son URL sur le site local et son historique restent stables.
+        // Le serveur garde le bien le plus ancien. Son URL sur le serveur local et son historique ne changent donc pas.
         var (keep, drop) = _properties[pa].CreatedAt <= _properties[pb].CreatedAt ? (pa, pb) : (pb, pa);
         MergeProperties(c, keep, drop, decidedBy);
     }
@@ -464,7 +464,7 @@ public sealed class Catalog
         AddEvent(c, old, PropertyEventKind.Detached, $"Annonce {key} dissociée");
     }
 
-    /// <summary>Fusionne le bien <paramref name="drop"/> dans <paramref name="keep"/>. Statut : la décision la plus récente.</summary>
+    /// <summary>Fusionne le bien <paramref name="drop"/> dans <paramref name="keep"/>. Le statut final est celui de la décision la plus récente.</summary>
     private void MergeProperties(ChangeSet c, string keep, string drop, string decidedBy)
     {
         var pk = _properties[keep];
@@ -487,7 +487,7 @@ public sealed class Catalog
             AddTo(_byProperty, keep, k);
             c.Touch(l);
         }
-        // L'historique suit le bien conservé.
+        // L'historique passe au bien conservé.
         for (var i = 0; i < _events.Count; i++)
         {
             if (_events[i].PropertyId != drop) continue;
@@ -579,7 +579,7 @@ public sealed class Catalog
         AddTo(_byBlock, DedupScorer.BlockingKey(l.Data), l.Key);
         if (!_properties.ContainsKey(l.PropertyId))
         {
-            // Réparation : annonce orpheline (base modifiée à la main...).
+            // Réparation : annonce sans bien (par exemple après une modification manuelle de la base).
             _properties[l.PropertyId] = new Property { Id = l.PropertyId, CreatedAt = l.FirstSeenAt, UpdatedAt = l.UpdatedAt };
         }
     }

@@ -1,11 +1,11 @@
 namespace RechercheLogement.Core.Model;
 
-/// <summary>Libellés français affichés sur le site et dans l'historique.</summary>
+/// <summary>Libellés français des pages web et de l'historique.</summary>
 public static class Labels
 {
     public static string Of(PropertyStatus s) => s switch
     {
-        PropertyStatus.None => "Non qualifiée",
+        PropertyStatus.None => "Aucun statut",
         PropertyStatus.Seen => "Vue",
         PropertyStatus.Rejected => "Pas intéressé",
         PropertyStatus.ToContact => "À contacter",

@@ -1,23 +1,23 @@
 export {};
 
 declare global {
-  /** Remplacé au build par esbuild (`define` dans scripts/build.mjs). */
+  /** esbuild remplace cette valeur au build (`define` dans scripts/build.mjs). */
   const __PLUGIN_VERSION__: string;
 
   /**
-   * Provided by Tampermonkey/Greasemonkey via @grant unsafeWindow. Absent
-   * outside a userscript context, hence the optional typing.
+   * Fourni par Tampermonkey/Greasemonkey avec @grant unsafeWindow. Absent hors
+   * d'un userscript. Le type est donc optionnel.
    */
   const unsafeWindow: (Window & typeof globalThis) | undefined;
 
-  /** Provided by @grant GM_registerMenuCommand. Adds an entry to the Tampermonkey menu. */
+  /** Fourni par @grant GM_registerMenuCommand. Ajoute une entrée au menu Tampermonkey. */
   function GM_registerMenuCommand(name: string, callback: () => void, accessKey?: string): number;
 
-  /** @grant GM_getValue / GM_setValue — stockage persistant propre au script (partagé entre tous ses @match). */
+  /** @grant GM_getValue / GM_setValue. Stockage persistant du script. Tous les @match du script partagent ce stockage. */
   function GM_getValue<T>(name: string, defaultValue: T): T;
   function GM_setValue<T>(name: string, value: T): void;
 
-  /** @grant GM_addValueChangeListener — synchronisation entre onglets. */
+  /** @grant GM_addValueChangeListener. Synchronise les onglets. */
   function GM_addValueChangeListener(
     name: string,
     listener: (name: string, oldValue: unknown, newValue: unknown, remote: boolean) => void,
@@ -25,8 +25,9 @@ declare global {
   function GM_removeValueChangeListener(listenerId: number): void;
 
   /**
-   * @grant GM_xmlhttpRequest (+ @connect localhost) — requêtes vers le serveur
-   * local sans être bloqué par le CORS / le contenu mixte de la page (https -> http).
+   * @grant GM_xmlhttpRequest (+ @connect localhost). Envoie des requêtes au
+   * serveur local. Le CORS et le contenu mixte (https -> http) ne bloquent pas
+   * ces requêtes.
    */
   function GM_xmlhttpRequest(details: {
     method: 'GET' | 'POST' | 'PUT' | 'DELETE';

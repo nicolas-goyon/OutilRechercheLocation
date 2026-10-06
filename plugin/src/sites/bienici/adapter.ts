@@ -1,13 +1,16 @@
 /**
  * Adaptateur Bien'ici.
  *
- * Deux sources de données, fusionnées dans la même annonce :
- *  - la carte HTML (titre, adresse, prix, photo, description) : toujours là ;
- *  - le JSON `realEstateAds.json` que le site charge lui-même pour afficher
- *    la liste : il contient en plus la référence agence, la position GPS
- *    (floutée), l'étage, les photos d'origine... Ce sont les meilleurs
- *    signaux de doublon inter-sites. On détecte ces requêtes via la
- *    Performance API (sans patcher XHR) et on relit la même URL.
+ * L'adaptateur fusionne deux sources de données dans la même annonce :
+ *  - La carte HTML (titre, adresse, prix, photo, description). Elle est
+ *    toujours présente.
+ *  - Le JSON `realEstateAds.json`. Le site le charge pour afficher la liste.
+ *    Ce JSON contient aussi la référence agence, la position GPS (floue),
+ *    l'étage, les photos d'origine... Ces données sont les meilleurs indices
+ *    de doublon entre sites.
+ *
+ * L'adaptateur trouve ces requêtes avec la Performance API (sans modifier
+ * XHR). Il lit ensuite de nouveau la même URL.
  */
 import { getRootWindow } from '../../shared/dom/root';
 import type { CardRef, SiteAdapter } from '../types';
@@ -50,13 +53,13 @@ export const bieniciAdapter: SiteAdapter = {
           if (ad?.id) onData(ad.id, parseBieniciApiAd(ad));
         }
       } catch (error) {
-        console.warn('[RechercheLogement] enrichissement Bien\'ici impossible', error);
+        console.warn('[RechercheLogement] Échec de l\'enrichissement Bien\'ici', error);
       }
     };
 
-    // Requêtes déjà faites avant le chargement du script...
+    // Requêtes faites avant le chargement du script...
     for (const e of win.performance.getEntriesByType('resource')) void handle(e.name);
-    // ...et les suivantes (changement de page, de filtre, de zone de carte).
+    // ...et requêtes suivantes (changement de page, de filtre ou de zone de carte).
     if (typeof win.PerformanceObserver === 'function') {
       new win.PerformanceObserver((list) => {
         for (const e of list.getEntries()) void handle(e.name);

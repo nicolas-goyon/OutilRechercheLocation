@@ -1,7 +1,7 @@
 /**
- * Parsing Bien'ici, sans effet de bord (testable sur un HTML extrait).
+ * Lecture des données Bien'ici. Fonctions sans effet de bord (les tests utilisent un HTML extrait).
  *
- * Structure observée (octobre 2026) d'une carte de résultats :
+ * Structure d'une carte de résultats (observée en octobre 2026) :
  *
  *   <article data-id="hektor-sia-immo-2342" class="ad-overview search-results-list__ad-overview ...">
  *     <a href="/annonce/location/paris-19e/appartement/3pieces/hektor-sia-immo-2342?q=..." class="detailedSheetLink">
@@ -12,8 +12,8 @@
  *       <span class="ad-price__per-month">par mois charges comprises</span>
  *       <div class="ad-overview-description" style="display:none">…description…</div>
  *
- * Les annonces "mises en avant" (leading ads) utilisent la même carte, dans
- * .search-results-list__leading-ads-box.
+ * Les annonces "mises en avant" (leading ads) utilisent la même carte. Elles
+ * sont dans .search-results-list__leading-ads-box.
  */
 import type { ListingData } from '../../core/types';
 import { normalizeText, parseNumber } from '../../shared/text';
@@ -86,32 +86,32 @@ export function parseAddress(address: string | undefined): ListingData {
 }
 
 /**
- * Empreinte d'une photo d'origine : nom de fichier sans extension ni
- * paramètres, en minuscules ("photo_3c9c36dc663b54820545f52f6aef3a1e").
- * Ignorée si trop générique (ex. "1", "photo").
+ * Empreinte d'une photo d'origine : nom de fichier en minuscules, sans
+ * extension ni paramètres ("photo_3c9c36dc663b54820545f52f6aef3a1e").
+ * Renvoie undefined si le nom est trop générique (par exemple "1", "photo").
  */
 export function photoKey(url: string | undefined): string | undefined {
   if (!url) return undefined;
   const name = url.split('?')[0].split('/').pop()?.toLowerCase().replace(/\.(jpe?g|png|webp|gif)$/, '');
-  // "image0001", "photo_2" : trop génériques, risque de collision entre agences.
+  // "image0001", "photo_2" : noms trop génériques. Deux agences peuvent utiliser le même nom.
   const significant = name?.replace(/image|photo|img|pic|[_\-.\s]/g, '') ?? '';
   return name && significant.length >= 8 ? name : undefined;
 }
 
-/** URL absolue de la fiche, sans les paramètres de recherche (?q=...). */
+/** URL absolue de l'annonce, sans les paramètres de recherche (?q=...). */
 export function canonicalUrl(href: string): string {
   const u = new URL(href, 'https://www.bienici.com');
   return u.origin + u.pathname;
 }
 
-/** Retire les paramètres de redimensionnement (?width=300&...) pour une URL stable. */
+/** Retire les paramètres de taille (?width=300&...). L'URL ne change donc pas. */
 export function stripPhotoParams(url: string): string {
   return url.split('?')[0];
 }
 
 // ------------------------------------------------------------------ API JSON
 
-/** Sous-ensemble des champs utiles d'une annonce de realEstateAds.json. */
+/** Champs utiles d'une annonce de realEstateAds.json. */
 export interface BieniciApiAd {
   id: string;
   adType?: string;

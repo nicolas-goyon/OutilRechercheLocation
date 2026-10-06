@@ -7,19 +7,19 @@
 <div class="stats">
     <a class="stat tocontact" href="/a-contacter"><b>@Count(PropertyStatus.ToContact)</b><span>📞 à contacter</span></a>
     <a class="stat seen" href="/biens?statut=seen"><b>@Count(PropertyStatus.Seen)</b><span>👁 vus</span></a>
-    <a class="stat rejected" href="/biens?statut=rejected"><b>@Count(PropertyStatus.Rejected)</b><span>✕ écartés</span></a>
-    <a class="stat" href="/biens?statut=none"><b>@Count(PropertyStatus.None)</b><span>non qualifiés</span></a>
+    <a class="stat rejected" href="/biens?statut=rejected"><b>@Count(PropertyStatus.Rejected)</b><span>✕ pas intéressé</span></a>
+    <a class="stat" href="/biens?statut=none"><b>@Count(PropertyStatus.None)</b><span>sans statut</span></a>
     <a class="stat suggest" href="/doublons"><b>@_stats.PendingDuplicates</b><span>≈ doublons à vérifier</span></a>
 </div>
 <p class="muted">
-    @_stats.Listings annonces pour @_stats.Properties biens —
-    @string.Join(" · ", _stats.BySite.Select(kv => $"{Labels.Site(kv.Key)} : {kv.Value}"))
+    @_stats.Listings annonces pour @_stats.Properties biens.
+    Par site : @string.Join(" · ", _stats.BySite.Select(kv => $"{Labels.Site(kv.Key)} : {kv.Value}"))
 </p>
 
 <h2>📞 Suivi des contacts</h2>
 @if (_toContact.Count == 0)
 {
-    <p class="muted">Aucun bien à contacter pour l'instant : utiliser le bouton 📞 dans le plugin.</p>
+    <p class="muted">Aucun bien à contacter. Pour ajouter un bien, cliquer sur le bouton 📞 dans le plugin.</p>
 }
 else
 {

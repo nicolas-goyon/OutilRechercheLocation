@@ -1,18 +1,18 @@
-# Site local de suivi de recherche logement.
-#   docker compose up -d --build     puis http://localhost:5080
-#   docker compose logs server | grep "Token API"   (token à coller dans le plugin : panneau 🏠 > Connexion)
+# Serveur local de suivi de recherche logement.
+#   docker compose up -d --build     puis ouvrir http://localhost:5080
+#   docker compose logs server | grep "Token API"   (affiche le token. Le coller dans le plugin : panneau 🏠 > Connexion.)
 services:
   server:
     build: ./server
-    # Ou l'image publiée par la CI : image: ghcr.io/nicolas-goyon/outilrecherchelocation-server:latest
+    # Autre choix : l'image publiée par la CI. image: ghcr.io/nicolas-goyon/outilrecherchelocation-server:latest
     image: recherche-logement-server:local
     container_name: recherche-logement
     ports:
-      # Lié à 127.0.0.1 uniquement : le site n'est pas exposé sur le réseau.
+      # Lié à 127.0.0.1 uniquement. Le réseau n'a donc pas accès au serveur local.
       - "127.0.0.1:5080:8080"
     environment:
       RechercheLogement__PublicUrl: "http://localhost:5080"
-      # Token fixe (sinon généré au premier démarrage, visible dans Paramètres) :
+      # Token fixe. Sans cette variable, le serveur génère un token au premier démarrage (visible dans Paramètres).
       # RechercheLogement__ApiToken: "change-moi"
     volumes:
       - recherche-logement-data:/data

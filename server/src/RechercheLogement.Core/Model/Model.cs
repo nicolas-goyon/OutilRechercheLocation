@@ -1,15 +1,15 @@
 namespace RechercheLogement.Core.Model;
 
-/// <summary>Statut d'un bien (porté par le bien, donc partagé par toutes ses annonces).</summary>
+/// <summary>Statut d'un bien. Le statut appartient au bien. Toutes les annonces du bien ont donc le même statut.</summary>
 public enum PropertyStatus
 {
-    /// <summary>Jamais qualifié.</summary>
+    /// <summary>Aucun statut.</summary>
     None,
-    /// <summary>Vu, gardé visible mais atténué.</summary>
+    /// <summary>Vu : reste visible, mais atténué.</summary>
     Seen,
-    /// <summary>Vu, pas intéressé : masqué dans le plugin.</summary>
+    /// <summary>Pas intéressé : masqué dans le plugin.</summary>
     Rejected,
-    /// <summary>Me plaît : à contacter, avec suivi <see cref="ContactStage"/>.</summary>
+    /// <summary>Me plaît : à contacter. L'étape de suivi est dans <see cref="ContactStage"/>.</summary>
     ToContact,
 }
 
@@ -29,17 +29,17 @@ public enum TransactionType { Rent, Buy }
 
 public enum LinkState
 {
-    /// <summary>Doublon probable, à valider.</summary>
+    /// <summary>Doublon probable, à confirmer.</summary>
     Suggested,
-    /// <summary>Même bien : les deux annonces partagent le même <see cref="Property"/>.</summary>
+    /// <summary>Même bien : les deux annonces ont le même <see cref="Property"/>.</summary>
     Confirmed,
-    /// <summary>Pas le même bien : ne plus jamais proposer.</summary>
+    /// <summary>Pas le même bien. Le serveur ne propose plus jamais cette paire.</summary>
     Dismissed,
 }
 
 public sealed record GeoPoint(double Lat, double Lon, double? PrecisionM = null);
 
-/// <summary>Données descriptives d'une annonce. Toutes optionnelles : chaque site en expose plus ou moins.</summary>
+/// <summary>Données d'une annonce. Toutes sont optionnelles, car la quantité de données change selon le site d'annonces.</summary>
 public sealed record ListingData
 {
     public string? Url { get; init; }
@@ -65,8 +65,8 @@ public sealed record ListingData
     public string? PublishedAt { get; init; }
 
     /// <summary>
-    /// Fusionne <paramref name="incoming"/> dans ces données. Si <paramref name="fillOnly"/>,
-    /// seuls les champs encore vides sont remplis (une carte HTML n'écrase pas les données API).
+    /// Fusionne <paramref name="incoming"/> dans ces données. Si <paramref name="fillOnly"/> est vrai,
+    /// la méthode remplit uniquement les champs vides. (Une carte HTML ne remplace pas les données de l'API.)
     /// </summary>
     public ListingData Merge(ListingData incoming, bool fillOnly) => new()
     {
@@ -93,7 +93,7 @@ public sealed record ListingData
         PublishedAt = Pick(PublishedAt, incoming.PublishedAt, fillOnly),
     };
 
-    /// <summary>Égalité de contenu (les listes sont comparées élément par élément).</summary>
+    /// <summary>Égalité de contenu. La méthode compare les listes élément par élément.</summary>
     public bool SameAs(ListingData other) =>
         this with { Photos = null, PhotoKeys = null } == other with { Photos = null, PhotoKeys = null }
         && SeqEq(Photos, other.Photos) && SeqEq(PhotoKeys, other.PhotoKeys);
@@ -115,7 +115,7 @@ public sealed record ListingData
 
 public sealed record PricePoint(long At, decimal Price);
 
-/// <summary>Une annonce publiée sur UN site. Clé : "site:siteId".</summary>
+/// <summary>Une annonce publiée sur UN site d'annonces. Clé : "site:siteId".</summary>
 public sealed class Listing
 {
     public required string Key { get; init; }
@@ -132,7 +132,7 @@ public sealed class Listing
     public static string MakeKey(string site, string siteId) => $"{site}:{siteId}";
 }
 
-/// <summary>Le bien réel (l'appartement), qui regroupe une ou plusieurs annonces.</summary>
+/// <summary>Le bien réel (l'appartement). Il regroupe une ou plusieurs annonces.</summary>
 public sealed class Property
 {
     public required string Id { get; init; }
@@ -146,7 +146,7 @@ public sealed class Property
     public static string NewId() => $"p_{Guid.NewGuid():N}"[..14];
 }
 
-/// <summary>Paire d'annonces candidates au doublon. (A, B) triés : une paire n'existe qu'une fois.</summary>
+/// <summary>Paire d'annonces candidate au doublon. A et B sont triés. Chaque paire existe donc une seule fois.</summary>
 public sealed class DuplicateLink
 {
     public required string A { get; init; }
@@ -154,7 +154,7 @@ public sealed class DuplicateLink
     public double Score { get; set; }
     public List<string> Reasons { get; set; } = [];
     public LinkState State { get; set; }
-    /// <summary>"auto" (fusion au-dessus du seuil) ou "user".</summary>
+    /// <summary>"auto" (fusion au-dessus du seuil) ou "user" (décision de l'utilisateur).</summary>
     public string? DecidedBy { get; set; }
     public long CreatedAt { get; set; }
     public long UpdatedAt { get; set; }
@@ -166,5 +166,5 @@ public sealed class DuplicateLink
 
 public enum PropertyEventKind { StatusChanged, ContactStageChanged, Note, Merged, Detached, Comment }
 
-/// <summary>Historique d'un bien (affiché en frise sur le site local).</summary>
+/// <summary>Historique d'un bien. Le serveur local l'affiche sous forme de frise.</summary>
 public sealed record PropertyEvent(long Id, string PropertyId, long At, PropertyEventKind Kind, string Text);

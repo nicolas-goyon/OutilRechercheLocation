@@ -1,4 +1,4 @@
-/** Couleurs et polices partagées par toute l'UI injectée. */
+/** Couleurs et polices de toute l'UI injectée. */
 const fontFamily = 'system-ui, -apple-system, "Segoe UI", sans-serif';
 
 export const THEME = {
@@ -18,10 +18,10 @@ export const THEME = {
 } as const;
 
 export const STATUS_LABEL = {
-  none: 'Non qualifiée',
+  none: 'Aucun statut',
   seen: 'Vue',
   rejected: 'Pas intéressé (masquée)',
-  toContact: 'Me plaît — à contacter',
+  toContact: 'Me plaît : à contacter',
 } as const;
 
 export const CONTACT_STAGE_LABEL = {

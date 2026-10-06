@@ -1,6 +1,6 @@
 import type { InitConfig } from '../src/index';
 
-/** Valeur d'en-tête : `true` -> drapeau seul (`// @noframes`), tableau -> une ligne par valeur. */
+/** Valeur d'en-tête. `true` -> drapeau seul (`// @noframes`). Tableau -> une ligne par valeur. */
 type HeaderValue = string | boolean | string[];
 
 /** Forme de l'export par défaut de chaque userscripts/<id>.mjs. */
@@ -16,12 +16,12 @@ export interface UserscriptInstance {
     connect?: string | string[];
     noframes?: boolean;
     'run-at'?: 'document-start' | 'document-body' | 'document-end' | 'document-idle' | 'context-menu';
-    // version / updateURL / downloadURL sont générés — le build les refuse.
+    // Le build génère version, updateURL et downloadURL. Il refuse ces clés ici.
     version?: never;
     updateURL?: never;
     downloadURL?: never;
     [header: string]: HeaderValue | undefined;
   };
-  /** Le token n'a rien à faire ici : le .user.js généré est publié. */
+  /** Interdit : le token. Le .user.js généré est public. */
   config: Omit<InitConfig, 'apiToken'> & { apiToken?: never };
 }

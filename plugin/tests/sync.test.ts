@@ -5,7 +5,7 @@ import { createStore } from '../src/core/storage';
 import { SyncEngine } from '../src/core/sync';
 import type { ListingView, SyncRequest, SyncResponse } from '../src/core/types';
 
-/** Faux serveur : enregistre les requêtes, peut être "éteint". */
+/** Faux serveur. Il enregistre les requêtes. Le test peut l'"éteindre". */
 class FakeApi {
   online = true;
   requests: SyncRequest[] = [];
@@ -17,7 +17,7 @@ class FakeApi {
   }
 
   async sync(req: SyncRequest): Promise<SyncResponse> {
-    if (!this.online) throw new ApiError('Serveur injoignable', 0);
+    if (!this.online) throw new ApiError('Le serveur ne répond pas.', 0);
     this.requests.push(structuredClone(req));
     for (const a of req.actions) if (a.type === 'setStatus') this.status[a.key] = a.status;
     const keys = new Set([...req.observations.map((o) => `${o.site}:${o.siteId}`), ...req.actions.map((a) => a.key), ...req.want]);
@@ -48,7 +48,7 @@ test('envoie observations et actions, met en cache la réponse', async () => {
 test('hors ligne : action appliquée tout de suite, gardée puis envoyée au retour du serveur', async () => {
   const api = new FakeApi();
   api.online = false;
-  const store = createStore(`t-${Math.random()}`); // = le stockage Tampermonkey, qui survit au rechargement
+  const store = createStore(`t-${Math.random()}`); // = le stockage Tampermonkey, qui reste après un rechargement
   const sync = newEngine(api, store);
   sync.act({ type: 'setStatus', key: 'bienici:b', status: 'toContact' });
   await sync.flush();
@@ -57,7 +57,7 @@ test('hors ligne : action appliquée tout de suite, gardée puis envoyée au ret
   assert.equal(sync.view('bienici:b')?.contactStage, 'pending');
   assert.equal(sync.pendingCount(), 1);
 
-  // Rechargement de la page pendant la coupure : la file est persistée.
+  // Rechargement de la page pendant la coupure. La file reste dans le stockage.
   const reloaded = newEngine(api, store);
   assert.equal(reloaded.pendingCount(), 1);
   assert.equal(reloaded.view('bienici:b')?.status, 'toContact');
@@ -72,7 +72,7 @@ test('hors ligne : action appliquée tout de suite, gardée puis envoyée au ret
 test('token refusé : état "unauthorized", rien n\'est perdu', async () => {
   const api = new FakeApi();
   api.sync = async () => {
-    throw new ApiError('Token refusé', 401);
+    throw new ApiError('Le serveur refuse le token.', 401);
   };
   const sync = newEngine(api);
   sync.act({ type: 'setStatus', key: 'bienici:c', status: 'seen' });

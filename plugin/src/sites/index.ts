@@ -1,8 +1,11 @@
 /**
- * Registre des sites supportés. Pour ajouter SeLoger, LeBonCoin, PAP... :
- * créer sites/<site>/adapter.ts implémentant SiteAdapter, l'ajouter ici,
- * et ajouter le @match correspondant dans userscripts/recherche-logement.mjs (le MÊME
- * script, pour partager la base).
+ * Liste des sites d'annonces compatibles.
+ *
+ * Pour ajouter un site (SeLoger, LeBonCoin, PAP...) :
+ *  1. Créer sites/<site>/adapter.ts. Ce fichier implémente SiteAdapter.
+ *  2. Ajouter l'adaptateur dans ADAPTERS ci-dessous.
+ *  3. Ajouter la ligne @match du site dans userscripts/recherche-logement.mjs.
+ *     Utiliser le MÊME script : tous les sites partagent alors la même base.
  */
 import { bieniciAdapter } from './bienici/adapter';
 import type { SiteAdapter } from './types';

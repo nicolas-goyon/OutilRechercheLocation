@@ -3,25 +3,25 @@ using System.Text.Json.Serialization;
 
 namespace RechercheLogement.Server;
 
-/// <summary>Section "RechercheLogement" de appsettings.json (surchargeable par variables d'environnement RechercheLogement__*).</summary>
+/// <summary>Section "RechercheLogement" de appsettings.json. Les variables d'environnement RechercheLogement__* peuvent remplacer ces valeurs.</summary>
 public sealed class ServerSettings
 {
     public const string Section = "RechercheLogement";
 
-    /// <summary>Chemin du fichier SQLite (relatif au dossier de travail). Docker : /data/recherche-logement.db.</summary>
+    /// <summary>Chemin du fichier SQLite, relatif au dossier de travail. Docker : /data/recherche-logement.db.</summary>
     public string DatabasePath { get; set; } = "data/recherche-logement.db";
 
-    /// <summary>URL par laquelle le navigateur atteint le site (liens renvoyés au plugin).</summary>
+    /// <summary>URL du serveur local dans le navigateur. Sert aux liens renvoyés au plugin.</summary>
     public string PublicUrl { get; set; } = "http://localhost:5080";
 
-    /// <summary>Token imposé par configuration. Vide : généré au premier démarrage et stocké en base.</summary>
+    /// <summary>Token fixé par la configuration. Si vide, le serveur génère un token au premier démarrage et le stocke en base.</summary>
     public string? ApiToken { get; set; }
 
-    /// <summary>Lien d'installation du plugin (script auto-mis à jour publié par la CI).</summary>
+    /// <summary>Lien d'installation du plugin. La CI publie ce script, et Tampermonkey le met à jour automatiquement.</summary>
     public string PluginInstallUrl { get; set; } =
         "https://github.com/nicolas-goyon/OutilRechercheLocation/releases/latest/download/recherche-logement.user.js";
 
-    /// <summary>"memory" pour une base non persistante (démo, tests).</summary>
+    /// <summary>"memory" : base en mémoire, perdue à l'arrêt (démo, tests).</summary>
     public string Storage { get; set; } = "sqlite";
 }
 

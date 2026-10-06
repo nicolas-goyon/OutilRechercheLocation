@@ -1,4 +1,7 @@
-/** Mini helper de création d'éléments (évite innerHTML et donc toute injection depuis les données des sites). */
+/**
+ * Petit helper qui crée des éléments DOM. Il n'utilise pas innerHTML. Les données
+ * des sites d'annonces ne peuvent donc pas injecter du HTML.
+ */
 type Child = Node | string | number | null | undefined | false;
 
 export interface HProps {

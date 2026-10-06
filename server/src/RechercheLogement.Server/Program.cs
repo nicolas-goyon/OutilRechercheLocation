@@ -20,7 +20,7 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
 var app = builder.Build();
 
-// Crée / affiche le token au démarrage (journal du conteneur).
+// Au démarrage : crée le token si nécessaire et l'écrit dans le journal du conteneur.
 app.Services.GetRequiredService<ApiTokenService>().EnsureToken();
 
 if (!app.Environment.IsDevelopment()) app.UseExceptionHandler("/erreur", createScopeForErrors: true);

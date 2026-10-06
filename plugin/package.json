@@ -2,7 +2,7 @@
   "name": "tm-recherche-logement",
   "version": "0.2.0",
   "private": true,
-  "description": "Plugin Tampermonkey : masque / étiquette les annonces immobilières et les synchronise avec le site local (../server).",
+  "description": "Plugin Tampermonkey. Masque et étiquette les annonces immobilières. Synchronise les annonces avec le serveur local (../server).",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",

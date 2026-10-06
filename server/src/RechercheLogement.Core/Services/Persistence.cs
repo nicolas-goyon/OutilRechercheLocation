@@ -2,7 +2,7 @@ using RechercheLogement.Core.Model;
 
 namespace RechercheLogement.Core.Services;
 
-/// <summary>Tout le contenu de la base, chargé en mémoire au démarrage (usage local mono-utilisateur).</summary>
+/// <summary>Tout le contenu de la base. Le serveur le charge en mémoire au démarrage (usage local, un seul utilisateur).</summary>
 public sealed class StoreSnapshot
 {
     public List<Listing> Listings { get; init; } = [];
@@ -13,7 +13,7 @@ public sealed class StoreSnapshot
     public Dictionary<string, string> Settings { get; init; } = [];
 }
 
-/// <summary>Modifications d'une opération, écrites de façon atomique.</summary>
+/// <summary>Modifications d'une opération. La persistance les écrit en une seule fois (atomique).</summary>
 public sealed class ChangeSet
 {
     public Dictionary<string, Listing> Listings { get; } = [];
@@ -49,7 +49,7 @@ public interface IPersistence
     void Commit(ChangeSet changes);
 }
 
-/// <summary>Persistance en mémoire : tests et démonstration.</summary>
+/// <summary>Persistance en mémoire, pour les tests et la démonstration.</summary>
 public sealed class InMemoryPersistence : IPersistence
 {
     private readonly StoreSnapshot _data = new();
@@ -59,7 +59,7 @@ public sealed class InMemoryPersistence : IPersistence
 
     public void Commit(ChangeSet c)
     {
-        // Le catalogue manipule déjà les mêmes instances ; on tient juste les listes à jour.
+        // Le catalogue utilise déjà les mêmes instances. Cette méthode met seulement les listes à jour.
         foreach (var l in c.Listings.Values) if (!_data.Listings.Contains(l)) _data.Listings.Add(l);
         foreach (var p in c.Properties.Values) if (!_data.Properties.Contains(p)) _data.Properties.Add(p);
         _data.Properties.RemoveAll(p => c.DeletedProperties.Contains(p.Id));

@@ -6,7 +6,7 @@
 @if (_detail is null)
 {
     <h1>Bien introuvable</h1>
-    <p class="muted">Il a peut-être été fusionné avec un autre bien. <a href="/biens">Retour à la liste</a></p>
+    <p class="muted">Le serveur a peut-être fusionné ce bien avec un autre bien. <a href="/biens">Retour à la liste</a></p>
 }
 else
 {
@@ -82,7 +82,7 @@ else
             @if (_detail.Suggestions.Count > 0)
             {
                 <section class="panel">
-                    <h2>≈ Doublons possibles</h2>
+                    <h2>≈ Doublons probables</h2>
                     @foreach (var d in _detail.Suggestions)
                     {
                         <div class="dup-mini">
@@ -136,7 +136,7 @@ else
     private void Detach(string key)
     {
         Catalog.Detach(key);
-        // L'annonce dissociée a maintenant son propre bien ; on reste sur celui-ci.
+        // L'annonce dissociée a maintenant son propre bien. La page reste sur le bien actuel.
     }
 
     private void AddComment()

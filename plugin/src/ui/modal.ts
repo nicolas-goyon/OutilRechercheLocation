@@ -1,6 +1,7 @@
 /**
- * Modale centrée générique : titre + contenu + "✕". Se ferme sur la croix,
- * un clic sur le fond ou Échap. Montée dans le shadow root commun.
+ * Modale générique centrée : titre + contenu + "✕".
+ * Trois actions ferment la modale : clic sur la croix, clic sur le fond, touche Échap.
+ * La modale est dans le shadow root commun.
  */
 import { getUIRoot } from '../shared/dom/uiRoot';
 import { THEME } from './theme';
@@ -19,7 +20,7 @@ let backdropEl: HTMLDivElement | null = null;
 let keydownHandler: ((event: KeyboardEvent) => void) | null = null;
 let onCloseCb: (() => void) | undefined;
 
-/** Ouvre la modale, en remplaçant celle éventuellement ouverte. */
+/** Ouvre la modale. Si une modale est déjà ouverte, la nouvelle modale la remplace. */
 export function showModal(options: ShowModalOptions): void {
   closeModal();
   const root = getUIRoot();

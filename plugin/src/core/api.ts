@@ -1,13 +1,15 @@
 /**
  * Client HTTP vers le serveur local.
  *
- * Les pages des sites sont en https et le serveur local en http://localhost :
- * un fetch() depuis la page serait bloqué (contenu mixte, CORS, Private
- * Network Access). GM_xmlhttpRequest passe par l'extension et n'a pas ces
- * restrictions — d'où `@grant GM_xmlhttpRequest` et `@connect localhost`
- * dans le script Tampermonkey.
+ * Les pages des sites d'annonces sont en https. Le serveur local est en
+ * http://localhost. Le navigateur bloque donc un fetch() depuis la page
+ * (contenu mixte, CORS, Private Network Access).
  *
- * Chaque requête porte `Authorization: Bearer <token>` : le serveur refuse
+ * GM_xmlhttpRequest passe par l'extension et n'a pas ces restrictions. Le
+ * script Tampermonkey déclare donc `@grant GM_xmlhttpRequest` et
+ * `@connect localhost`.
+ *
+ * Chaque requête contient `Authorization: Bearer <token>`. Le serveur refuse
  * tout appel /api/* sans le bon token.
  */
 import type { SyncRequest, SyncResponse } from './types';
@@ -15,7 +17,7 @@ import type { SyncRequest, SyncResponse } from './types';
 export class ApiError extends Error {
   constructor(
     message: string,
-    /** 0 = serveur injoignable / timeout. */
+    /** 0 = le serveur ne répond pas (erreur réseau ou délai dépassé). */
     readonly status: number,
   ) {
     super(message);
@@ -45,7 +47,7 @@ export class ApiClient {
     return this.options.baseUrl;
   }
 
-  /** Change l'URL / le token (réglages modifiés dans le panneau). */
+  /** Change l'URL et le token (après une modification des réglages dans le panneau). */
   configure(baseUrl: string, token: string): void {
     this.options = { ...this.options, baseUrl: baseUrl.replace(/\/+$/, ''), token };
   }
@@ -73,7 +75,7 @@ export class ApiClient {
     const timeout = this.options.timeoutMs ?? 10_000;
 
     const parse = (status: number, text: string): T => {
-      if (status === 401) throw new ApiError('Token refusé par le serveur', 401);
+      if (status === 401) throw new ApiError('Le serveur refuse le token.', 401);
       if (status < 200 || status >= 300) throw new ApiError(`HTTP ${status}: ${text.slice(0, 200)}`, status);
       return (text ? JSON.parse(text) : undefined) as T;
     };
@@ -93,19 +95,19 @@ export class ApiClient {
               reject(e);
             }
           },
-          onerror: () => reject(new ApiError('Serveur injoignable', 0)),
-          ontimeout: () => reject(new ApiError('Délai dépassé', 0)),
+          onerror: () => reject(new ApiError('Le serveur ne répond pas.', 0)),
+          ontimeout: () => reject(new ApiError('Le serveur ne répond pas (délai dépassé).', 0)),
         });
       });
     }
 
-    // Hors Tampermonkey (tests, page servie par le serveur lui-même).
+    // Hors Tampermonkey (tests, ou page fournie par le serveur lui-même).
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     return fetch(url, { method, headers, body: data, signal: controller.signal })
       .then(async (r) => parse(r.status, await r.text()))
       .catch((e) => {
-        throw e instanceof ApiError ? e : new ApiError('Serveur injoignable', 0);
+        throw e instanceof ApiError ? e : new ApiError('Le serveur ne répond pas.', 0);
       })
       .finally(() => clearTimeout(timer));
   }

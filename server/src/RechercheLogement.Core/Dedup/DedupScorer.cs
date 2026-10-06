@@ -9,11 +9,11 @@ public sealed record DedupThresholds(double AutoLink = 0.8, double Suggest = 0.5
 public sealed record DedupResult(double Score, IReadOnlyList<string> Reasons, string? RejectedBy = null);
 
 /// <summary>
-/// Détection de doublons entre deux annonces (même site ou sites différents).
+/// Détection de doublons entre deux annonces (même site d'annonces ou sites différents).
 ///
 /// 1. Rejets durs : différences qui excluent le même bien.
-/// 2. Points d'évidence pour chaque critère concordant ; score = points / 10, plafonné à 1.
-///    Un critère absent d'un des deux côtés ne compte ni pour ni contre.
+/// 2. Points pour chaque critère commun ou proche. Score = points / 10, avec un maximum de 1.
+///    Un critère absent d'une des deux annonces ne compte ni pour ni contre.
 ///
 /// Voir ARCHITECTURE.md pour le barème.
 /// </summary>
@@ -47,7 +47,7 @@ public static class DedupScorer
         if (a.Rooms is not null && b.Rooms is not null && Math.Abs(a.Rooms.Value - b.Rooms.Value) >= 2)
             return Rejected("nombre de pièces différent");
 
-        // --- 2. Évidences ---------------------------------------------------
+        // --- 2. Points -----------------------------------------------------
         var refA = NormalizeRef(a.AgencyRef);
         var refB = NormalizeRef(b.AgencyRef);
         if (refA is not null && refB is not null)
@@ -111,7 +111,7 @@ public static class DedupScorer
             }
             else if (d <= 0.08)
             {
-                // Écart typique charges comprises / hors charges selon le site.
+                // Écart typique entre prix charges comprises et hors charges, selon le site d'annonces.
                 points += 1;
                 reasons.Add($"prix proche ({Num(a.Price)} / {Num(b.Price)} €)");
             }
@@ -160,11 +160,11 @@ public static class DedupScorer
         DedupResult Rejected(string why) => new(0, [], why);
     }
 
-    /// <summary>Clé de blocage : une annonce n'est comparée qu'aux annonces du même bucket.</summary>
+    /// <summary>Clé de blocage. Le serveur compare une annonce uniquement aux annonces du même bucket.</summary>
     public static string BlockingKey(ListingData d) =>
         CanonicalPostalCode(d.PostalCode) ?? (d.City is not null ? $"city:{d.City.ToLowerInvariant()}" : "?");
 
-    /// <summary>75116 (Paris 16e nord) est souvent publié en 75016 par d'autres sites.</summary>
+    /// <summary>D'autres sites d'annonces publient souvent 75116 (Paris 16e nord) sous la forme 75016.</summary>
     public static string? CanonicalPostalCode(string? cp)
     {
         if (string.IsNullOrWhiteSpace(cp)) return null;
@@ -179,7 +179,7 @@ public static class DedupScorer
         return s.Length >= 3 ? s : null;
     }
 
-    /// <summary>Minuscules, sans accents ni ponctuation, espaces compactés.</summary>
+    /// <summary>Convertit en minuscules. Retire les accents et la ponctuation. Réduit les espaces multiples à un espace.</summary>
     public static string NormalizeText(string input)
     {
         var decomposed = input.Normalize(NormalizationForm.FormD);
@@ -203,7 +203,7 @@ public static class DedupScorer
         return sb.ToString().TrimEnd();
     }
 
-    /// <summary>Similarité de Jaccard sur trigrammes de caractères (null si un texte est trop court).</summary>
+    /// <summary>Similarité de Jaccard sur les trigrammes de caractères. Renvoie null si un texte est trop court.</summary>
     public static double? TextSimilarity(string? a, string? b)
     {
         if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b)) return null;

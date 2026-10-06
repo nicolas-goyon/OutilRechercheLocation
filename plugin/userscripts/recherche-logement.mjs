@@ -1,19 +1,21 @@
-// Devient dist/recherche-logement.user.js (+ .meta.js pour la vérification des
-// mises à jour), publié en asset de la GitHub Release à chaque version du plugin.
+// Le build transforme ce fichier en dist/recherche-logement.user.js. Il produit
+// aussi .meta.js, que Tampermonkey lit pour trouver les mises à jour. La CI
+// publie ces deux fichiers dans la GitHub Release de chaque version du plugin.
 // Le build ajoute @version, le @require du bundle, @updateURL et @downloadURL.
 //
-// Ne jamais changer name + namespace : Tampermonkey s'en sert pour reconnaître
-// le script lors des mises à jour.
+// Ne jamais changer name + namespace. Tampermonkey utilise ces deux valeurs
+// pour reconnaître le script pendant une mise à jour.
 //
-// UN SEUL script pour tous les sites : ajouter ici le @match de chaque nouveau
-// site (la file d'attente et le cache du plugin sont propres au script).
+// UN SEUL script pour tous les sites d'annonces. Ajouter ici le @match de
+// chaque nouveau site. La file d'attente et le cache du plugin appartiennent
+// au script, donc tous les sites les partagent.
 
 /** @type {import('./types').UserscriptInstance} */
 export default {
   headers: {
     name: 'Recherche logement — suivi multi-sites',
     namespace: 'local.recherche-logement',
-    description: 'Masque / étiquette les annonces immobilières et les synchronise avec le site local.',
+    description: 'Masque et étiquette les annonces immobilières. Synchronise les annonces avec le serveur local.',
     match: ['https://www.bienici.com/*'],
     grant: [
       'unsafeWindow',
@@ -22,15 +24,16 @@ export default {
       'GM_setValue',
       'GM_addValueChangeListener',
       'GM_removeValueChangeListener',
-      // Appels au site local depuis une page https, sans blocage CORS / contenu mixte.
+      // Appels au serveur local depuis une page https. Le CORS et le contenu mixte ne bloquent pas ces appels.
       'GM_xmlhttpRequest',
     ],
     connect: ['localhost', '127.0.0.1'],
   },
 
-  // Passé tel quel à window.TMRechercheLogement.init(...) — voir InitConfig dans
-  // src/index.ts. JSON uniquement, et JAMAIS de token (le fichier est public) :
-  // le token se saisit dans le plugin, bouton 🏠 > Connexion.
+  // Le script transmet cet objet sans modification à
+  // window.TMRechercheLogement.init(...). Voir InitConfig dans src/index.ts.
+  // JSON uniquement. JAMAIS de token, car ce fichier est public. L'utilisateur
+  // saisit le token dans le plugin (bouton 🏠 > Connexion).
   config: {
     serverUrl: 'http://localhost:5080',
     // hideStatuses: ['rejected'],

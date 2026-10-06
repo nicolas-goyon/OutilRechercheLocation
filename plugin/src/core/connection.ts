@@ -1,13 +1,16 @@
 /**
- * Réglages de connexion au site local (URL + token).
+ * Réglages de connexion au serveur local (URL + token).
  *
- * Le script installé est auto-mis à jour depuis une GitHub Release publique :
- * le token ne peut donc pas y figurer. Il est saisi une fois dans le plugin
- * (panneau 🏠 > Connexion) et gardé dans le stockage Tampermonkey, que les
- * mises à jour du script ne touchent pas.
+ * Tampermonkey met à jour le script installé depuis une GitHub Release
+ * publique. Le script ne peut donc pas contenir le token. L'utilisateur saisit
+ * le token une fois dans le plugin (panneau 🏠 > Connexion). Le plugin garde
+ * le token dans le stockage Tampermonkey. Les mises à jour du script ne
+ * changent pas ce stockage.
  *
- * Priorité : valeur saisie dans le plugin > config de init() (anciens scripts
- * collés à la main avec le token) > défauts.
+ * Ordre de priorité :
+ *  1. valeur saisie dans le plugin.
+ *  2. config de init() (anciens scripts collés à la main avec le token).
+ *  3. valeurs par défaut.
  */
 import type { KeyValueStore } from './storage';
 
@@ -26,7 +29,7 @@ export class ConnectionStore {
     private readonly store: KeyValueStore,
     private readonly fallback: Partial<ConnectionSettings>,
   ) {
-    // Réglage modifié dans un autre onglet : on suit.
+    // Si un autre onglet modifie le réglage, cet onglet applique la modification.
     store.onRemoteChange(KEY, () => this.emit());
   }
 

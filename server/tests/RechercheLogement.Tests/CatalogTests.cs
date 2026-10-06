@@ -135,7 +135,7 @@ public class CatalogTests
         Assert.Equal(PropertyStatus.Rejected, v.Status);
         Assert.Equal("Trop loin du métro", v.Note);
         Assert.Single(v.Siblings);
-        // L'idempotence survit aussi au redémarrage.
+        // L'idempotence reste valide après un redémarrage.
         Assert.Equal(new[] { "a1" }, restarted.Sync(Req(actions: [Status("a1", "bienici:hektor", PropertyStatus.Seen, _now)])).AppliedActionIds);
         Assert.Equal(PropertyStatus.Rejected, restarted.View("bienici:hektor")!.Status);
     }

@@ -1,17 +1,17 @@
 /**
- * Petit wrapper autour du stockage Tampermonkey (GM_getValue/GM_setValue).
+ * Wrapper autour du stockage Tampermonkey (GM_getValue/GM_setValue).
  *
- * - Le stockage GM est propre au SCRIPT (pas au site) : un seul script
- *   Tampermonkey avec plusieurs @match partage donc la même base entre
- *   Bien'ici, SeLoger, etc. C'est ce qui rend la détection inter-sites
- *   possible. (Deux scripts différents = deux bases séparées.)
- * - Hors Tampermonkey (tests, injection manuelle), repli sur localStorage
- *   puis sur la mémoire.
+ * - Le stockage GM appartient au SCRIPT, pas au site d'annonces. Un seul
+ *   script Tampermonkey avec plusieurs @match partage donc la même base entre
+ *   Bien'ici, SeLoger, etc. Cette base commune permet de trouver les doublons
+ *   entre sites. (Deux scripts différents ont deux bases séparées.)
+ * - Hors Tampermonkey (tests, injection manuelle), le wrapper utilise
+ *   localStorage. Si localStorage est absent, il utilise la mémoire.
  */
 export interface KeyValueStore {
   get<T>(key: string, fallback: T): T;
   set<T>(key: string, value: T): void;
-  /** Notifie quand un AUTRE onglet modifie la clé. Renvoie une fonction de désinscription. */
+  /** Appelle cb quand un AUTRE onglet modifie la clé. Renvoie une fonction qui arrête l'écoute. */
   onRemoteChange(key: string, cb: (value: unknown) => void): () => void;
 }
 

@@ -1,4 +1,4 @@
-/** Bouton flottant fixe qui ouvre le panneau, avec un badge (nombre d'annonces masquées sur la page). */
+/** Bouton fixe qui ouvre le panneau. Son badge affiche le nombre d'annonces masquées sur la page. */
 import { getUIRoot } from '../shared/dom/uiRoot';
 import { THEME } from './theme';
 
@@ -7,7 +7,7 @@ export interface FloatingButtonOptions {
   label: string;
   title?: string;
   onClick: () => void;
-  /** Distance from the bottom-right corner, in pixels. Default: 16/16. */
+  /** Distance au coin inférieur droit, en pixels. Default: 16/16. */
   offset?: { right?: number; bottom?: number };
 }
 

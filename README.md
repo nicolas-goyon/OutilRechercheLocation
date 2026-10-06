@@ -1,64 +1,94 @@
-# Recherche logement — plugin + site local
+# Recherche logement — plugin + serveur local
 
 Outil personnel pour suivre une recherche de logement sur plusieurs sites d'annonces.
 
+Termes utilisés dans ce dépôt :
+
+- **Site d'annonces** : un site externe qui publie des annonces (par exemple Bien'ici).
+- **Serveur local** : l'application web de ce dépôt (`server/`). Elle tourne sur votre machine.
+- **Plugin** : le script Tampermonkey de ce dépôt (`plugin/`). Il tourne sur les sites d'annonces.
+- **Annonce** : une publication sur un site d'annonces.
+- **Bien** : un logement réel. Un bien peut avoir plusieurs annonces (doublons).
+
 | Partie | Rôle | Techno |
 | --- | --- | --- |
-| [`plugin/`](./plugin) | Script Tampermonkey sur les sites d'annonces : boutons 👁 vue · ✕ pas intéressé (masquée) · 📞 me plaît / à contacter · note ; masquage automatique ; badges de doublons | TypeScript → bundle esbuild → `@require` jsDelivr |
-| [`server/`](./server) | Site web local : stocke toutes les annonces, regroupe les doublons en « biens », suivi des contacts (tableau par étape), historique, sauvegarde | ASP.NET Core 10 (API + Blazor) + SQLite, Docker |
+| [`plugin/`](./plugin) | Script Tampermonkey sur les sites d'annonces. Il ajoute des boutons à chaque annonce : 👁 vue, ✕ pas intéressé (masquée), 📞 me plaît / à contacter, note. Il masque des annonces automatiquement. Il affiche des badges de doublons. | TypeScript → bundle esbuild → `@require` jsDelivr |
+| [`server/`](./server) | Serveur local. Il stocke toutes les annonces. Il regroupe les doublons en « biens ». Il suit les contacts (un tableau par étape). Il garde l'historique. Il sauvegarde les données. | ASP.NET Core 10 (API + Blazor) + SQLite, Docker |
 
-Le plugin envoie ce qu'il voit et ce que tu fais au site local (`POST /api/sync`, protégé par un
-token) ; le site répond avec l'état de chaque annonce. Si le site n'est pas lancé, le plugin
-continue de masquer / étiqueter grâce à son cache et envoie les actions en attente au retour du
-serveur.
+Le plugin envoie au serveur local les annonces affichées et vos actions (`POST /api/sync`, protégé
+par un token). Le serveur local répond avec l'état de chaque annonce.
 
-Sites supportés : **Bien'ici**. Voir [`ARCHITECTURE.md`](./ARCHITECTURE.md) pour ajouter un site.
+Si le serveur local est arrêté, le plugin continue de masquer et d'étiqueter les annonces avec son
+cache. Il garde les actions en attente. Il les envoie quand le serveur local redémarre.
+
+Sites d'annonces compatibles : **Bien'ici**. Pour ajouter un site d'annonces, lire
+[`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ## Démarrage
 
-### 1. Le site local (Docker)
+### 1. Le serveur local (Docker)
 
 ```bash
 docker compose up -d --build
 ```
 
-Ouvrir <http://localhost:5080> → **Paramètres** : le token du plugin et le lien d'installation.
-(Le token est aussi écrit dans `docker compose logs server`.)
+1. Ouvrir <http://localhost:5080>.
+2. Ouvrir la page **Paramètres**. Elle affiche le token du plugin et le lien d'installation.
+
+La commande `docker compose logs server` affiche aussi le token.
 
 Les données sont dans le volume Docker `recherche-logement-data` (fichier SQLite). Le port est lié à
-`127.0.0.1` : le site n'est pas accessible depuis le réseau.
+`127.0.0.1`. Le réseau n'a donc pas accès au serveur local.
 
-Sans Docker : `cd server && dotnet run --project src/RechercheLogement.Server` (base dans
-`src/RechercheLogement.Server/data/`).
+Sans Docker : `cd server && dotnet run --project src/RechercheLogement.Server`. La base est alors
+dans `src/RechercheLogement.Server/data/`.
 
 ### 2. Le plugin (Tampermonkey, mise à jour automatique)
 
-1. Avec Tampermonkey installé, ouvrir
-   <https://github.com/nicolas-goyon/OutilRechercheLocation/releases/latest/download/recherche-logement.user.js>
-   et cliquer sur **Installer** (le lien est aussi dans **Paramètres** du site local).
-2. Ouvrir une recherche sur bienici.com : au premier lancement le panneau 🏠 s'ouvre sur
-   **Connexion au site local**. Coller le token (Paramètres du site), **Tester**, **Enregistrer**.
-3. La barre d'actions apparaît sur chaque annonce ; le bouton 🏠 (en bas à droite) indique l'état
-   de la connexion (badge `!` : token manquant ou refusé, `⚠` : site local arrêté).
+1. Installer Tampermonkey.
+2. Ouvrir
+   <https://github.com/nicolas-goyon/OutilRechercheLocation/releases/latest/download/recherche-logement.user.js>.
+   La page **Paramètres** du serveur local donne aussi ce lien.
+3. Cliquer sur **Installer**.
+4. Ouvrir une recherche sur bienici.com. Au premier lancement, le panneau 🏠 s'ouvre sur
+   **Connexion au serveur local**.
+5. Coller le token (page **Paramètres** du serveur local).
+6. Cliquer sur **Tester**, puis sur **Enregistrer**.
 
-**Mise à jour automatique** (mécanisme du template v2) : le script installé porte un `@updateURL`
-vers `releases/latest/download/recherche-logement.meta.js`. Tampermonkey le consulte
-périodiquement (*Paramètres → Mise à jour des scripts*, quotidien par défaut, ou « Rechercher des
-mises à jour » dans le tableau de bord) ; si son `@version` est plus élevé, il télécharge le nouveau
-script, dont le `@require` pointe vers le bundle du même tag sur jsDelivr. Ne pas modifier le script
-dans l'éditeur Tampermonkey : la mise à jour suivante l'écraserait.
+La barre d'actions apparaît alors sur chaque annonce. Le bouton 🏠 (en bas à droite) affiche l'état
+de la connexion :
 
-**Le token n'est jamais dans le script** (il est publié sur GitHub) : il est saisi dans le panneau
-🏠 et reste dans le stockage Tampermonkey, que les mises à jour ne touchent pas. Le build et la CI
-refusent un `apiToken` dans `plugin/userscripts/*.mjs`.
+- badge `!` : le token est absent ou le serveur local refuse le token.
+- badge `⚠` : le serveur local est arrêté.
 
-**Un seul script pour tous les sites** : chaque nouveau site s'ajoute en `@match` dans
+**Mise à jour automatique** (mécanisme du template v2) :
+
+1. Le script installé contient un `@updateURL` vers
+   `releases/latest/download/recherche-logement.meta.js`.
+2. Tampermonkey lit ce fichier à intervalles réguliers. Par défaut, il le lit une fois par jour
+   (*Paramètres → Mise à jour des scripts*). Le bouton « Rechercher des mises à jour » du tableau de
+   bord force une lecture.
+3. Si le `@version` de ce fichier est plus élevé, Tampermonkey télécharge le nouveau script.
+4. Le `@require` du nouveau script pointe vers le bundle du même tag sur jsDelivr.
+
+Ne pas modifier le script dans l'éditeur Tampermonkey. La mise à jour suivante écrase les
+modifications.
+
+**Le script ne contient jamais le token**, car GitHub publie ce script. Vous saisissez le token dans
+le panneau 🏠. Le plugin le garde dans le stockage Tampermonkey. Les mises à jour du script ne
+changent pas ce stockage. Le build et la CI refusent un `apiToken` dans `plugin/userscripts/*.mjs`.
+
+**Un seul script pour tous les sites d'annonces.** Pour ajouter un site d'annonces, ajouter une
+ligne `@match` dans
 [`plugin/userscripts/recherche-logement.mjs`](./plugin/userscripts/recherche-logement.mjs). Les
-`@connect localhost` / `127.0.0.1` autorisent le plugin à joindre le site local.
+lignes `@connect localhost` et `@connect 127.0.0.1` autorisent le plugin à contacter le serveur
+local.
 
-En développement : `cd plugin && npm run build` produit aussi `dist/recherche-logement.user.js`
-(version de `package.json`) ; pour tester un bundle local, remplacer son `@require` par
-`file:///…/plugin/dist/recherche-logement.js` (activer « Autoriser l'accès aux URL de fichiers »).
+En développement, `cd plugin && npm run build` produit aussi `dist/recherche-logement.user.js`
+(avec la version de `package.json`). Pour tester un bundle local :
+
+1. Remplacer le `@require` du script par `file:///…/plugin/dist/recherche-logement.js`.
+2. Activer « Autoriser l'accès aux URL de fichiers » dans l'extension.
 
 ## Utilisation
 
@@ -66,22 +96,23 @@ Dans le plugin, sur chaque annonce :
 
 | Bouton | Effet |
 | --- | --- |
-| 👁 | Vue : reste visible, atténuée |
-| ✕ | Pas intéressé : masquée (sur tous les sites si le doublon est reconnu) |
-| 📞 | Me plaît, à contacter : contour vert + étiquette d'étape (« À contacter », « Visite prévue »…) |
-| ⋯ / 📝 | Note, annonces associées, lien vers la fiche sur le site local |
-| 🔗 n | Même bien publié dans n autres annonces |
-| ≈ déjà vue ? 60 % | Doublon probable à confirmer (« Même bien » / « Pas le même ») |
+| 👁 | Vue : l'annonce reste visible, mais atténuée. |
+| ✕ | Pas intéressé : l'annonce est masquée. Si le serveur local reconnaît un doublon, ses doublons sont masqués sur tous les sites d'annonces. |
+| 📞 | Me plaît, à contacter : contour vert et étiquette d'étape (« À contacter », « Visite prévue »…). |
+| ⋯ / 📝 | Note, annonces associées, lien vers la fiche du bien sur le serveur local. |
+| 🔗 n | Le même bien a n autres annonces. |
+| ≈ déjà vue ? 60 % | Doublon probable à confirmer. Cliquer sur « Même bien » ou « Pas le même ». |
 
-Sur le site local :
+Pages du serveur local :
 
-- **Tableau de bord** : compteurs, biens à contacter, vus récemment ;
-- **📞 À contacter** : un tableau par étape (à contacter → contactée → visite prévue → visitée →
-  dossier envoyé → accepté / refusé), flèches pour avancer ;
-- **Tous les biens** : filtres (statut, texte, code postal, prix max, surface min) et tri ;
-- **Fiche d'un bien** : toutes ses annonces (tous sites), historique de prix, note, commentaires
-  datés (appels, visites…), dissociation d'un doublon erroné ;
-- **Doublons à vérifier** : comparaison côte à côte ;
+- **Tableau de bord** : compteurs, biens à contacter, biens vus récemment.
+- **📞 À contacter** : un tableau par étape. Les étapes sont : à contacter → agence contactée →
+  visite prévue → visitée → dossier envoyé → dossier accepté / refusé. Les flèches font passer un
+  bien à l'étape précédente ou suivante.
+- **Tous les biens** : filtres (statut, texte, code postal, prix max, surface min) et tri.
+- **Fiche d'un bien** : toutes ses annonces (tous sites d'annonces), historique de prix, note,
+  commentaires datés (appels, visites…). Un bouton dissocie une annonce liée par erreur.
+- **Doublons à vérifier** : comparaison côte à côte.
 - **Paramètres** : token (copier / régénérer), lien d'installation du plugin, export JSON.
 
 ## Développement
@@ -90,25 +121,28 @@ Sur le site local :
 # Plugin
 cd plugin && npm install && npm test && npm run build      # -> plugin/dist/recherche-logement.js + .user.js / .meta.js
 
-# Serveur
+# Serveur local
 cd server && dotnet test                                    # tests xUnit (métier + API)
 dotnet run --project src/RechercheLogement.Server           # http://localhost:5080
 ```
 
 ## CI/CD (GitHub Actions)
 
-- [`plugin.yml`](./.github/workflows/plugin.yml) : tests + build ; sur `main`, publie le bundle sur un
-  tag `plugin-vX.Y.Z` servi par jsDelivr **et** une GitHub Release portant `recherche-logement.user.js`
-  / `.meta.js` — c'est ce qui déclenche la mise à jour automatique des plugins installés
-  (`[minor]` / `[major]` dans un message de commit pour monter la version). Seul ce workflow crée des
-  GitHub Releases : « latest » est toujours la dernière version du plugin.
-- [`server.yml`](./.github/workflows/server.yml) : build + tests .NET ; sur `main`, publie l'image
-  `ghcr.io/nicolas-goyon/outilrecherchelocation-server:latest`.
+- [`plugin.yml`](./.github/workflows/plugin.yml) lance les tests et le build. Sur `main`, il publie :
+  - le bundle sur un tag `plugin-vX.Y.Z`, que jsDelivr sert.
+  - une GitHub Release avec `recherche-logement.user.js` et `.meta.js`.
+
+  Cette Release déclenche la mise à jour automatique des plugins installés. Pour monter la version,
+  écrire `[minor]` ou `[major]` dans un message de commit. Seul ce workflow crée des GitHub
+  Releases. La Release « latest » est donc toujours la dernière version du plugin.
+- [`server.yml`](./.github/workflows/server.yml) lance le build et les tests .NET. Sur `main`, il
+  publie l'image `ghcr.io/nicolas-goyon/outilrecherchelocation-server:latest`.
 
 ## Limites connues
 
-- Bien'ici : le plugin relit le JSON de la liste (une requête de plus par page) ; les deux annonces
-  « mises en avant » n'ont souvent que les données de la carte.
-- Pages de résultats uniquement (pas encore la fiche d'une annonce sur le site d'origine).
-- Le site local n'a pas de connexion utilisateur : il est prévu pour tourner sur ta machine, lié à
+- Bien'ici : le plugin relit le JSON de la liste. Cela fait une requête de plus par page. Les deux
+  annonces « mises en avant » n'ont souvent que les données de la carte.
+- Le plugin agit uniquement sur les pages de résultats. Il n'agit pas encore sur la page d'une
+  annonce du site d'annonces.
+- Le serveur local n'a pas de connexion utilisateur. Il doit tourner sur votre machine, lié à
   `127.0.0.1`.

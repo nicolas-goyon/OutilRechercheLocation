@@ -5,11 +5,14 @@ using RechercheLogement.Core.Services;
 namespace RechercheLogement.Server.Api;
 
 /// <summary>
-/// Token partagé entre le plugin et le serveur.
+/// Token commun au plugin et au serveur.
 ///
-/// Priorité : configuration (RechercheLogement__ApiToken) > valeur stockée en base >
-/// génération aléatoire au premier démarrage (32 octets, base64url) puis stockage.
-/// Le token est affiché dans Paramètres du site et dans le journal au démarrage.
+/// Ordre de priorité :
+///  1. configuration (RechercheLogement__ApiToken).
+///  2. valeur stockée en base.
+///  3. valeur aléatoire générée au premier démarrage (32 octets, base64url), puis stockée en base.
+///
+/// La page Paramètres affiche le token. Le journal l'affiche aussi au démarrage.
 /// </summary>
 public sealed class ApiTokenService(Catalog catalog, ServerSettings settings, ILogger<ApiTokenService> logger)
 {
@@ -21,7 +24,7 @@ public sealed class ApiTokenService(Catalog catalog, ServerSettings settings, IL
     public string EnsureToken()
     {
         var token = Current;
-        logger.LogInformation("Token API du plugin : {Token}  (à coller dans le plugin : panneau 🏠 > Connexion)", token);
+        logger.LogInformation("Token API du plugin : {Token}  (le coller dans le plugin : panneau 🏠 > Connexion)", token);
         return token;
     }
 
@@ -36,10 +39,10 @@ public sealed class ApiTokenService(Catalog catalog, ServerSettings settings, IL
         }
     }
 
-    /// <summary>Nouveau token : l'ancien est immédiatement refusé (à recoller dans le plugin).</summary>
+    /// <summary>Génère un nouveau token. Le serveur refuse immédiatement l'ancien token. Coller le nouveau token dans le plugin.</summary>
     public string Regenerate()
     {
-        if (FromConfiguration) throw new InvalidOperationException("Le token est fixé par configuration (RechercheLogement__ApiToken).");
+        if (FromConfiguration) throw new InvalidOperationException("La configuration fixe le token (RechercheLogement__ApiToken). Impossible de le régénérer.");
         var token = Base64Url(RandomNumberGenerator.GetBytes(32));
         catalog.SetSetting(SettingKey, token);
         _current = null;
@@ -57,7 +60,7 @@ public sealed class ApiTokenService(Catalog catalog, ServerSettings settings, IL
     private static string Base64Url(byte[] bytes) => Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }
 
-/// <summary>Toute route /api/* exige "Authorization: Bearer &lt;token&gt;".</summary>
+/// <summary>Chaque route /api/* exige "Authorization: Bearer &lt;token&gt;".</summary>
 public sealed class ApiTokenMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context, ApiTokenService tokens)
@@ -70,7 +73,7 @@ public sealed class ApiTokenMiddleware(RequestDelegate next)
             {
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 context.Response.Headers.WWWAuthenticate = "Bearer";
-                await context.Response.WriteAsJsonAsync(new { error = "Token API manquant ou invalide" });
+                await context.Response.WriteAsJsonAsync(new { error = "Token API absent ou incorrect." });
                 return;
             }
         }

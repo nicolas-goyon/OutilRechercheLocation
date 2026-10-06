@@ -1,16 +1,19 @@
 /**
- * Synchronisation plugin <-> serveur, avec fonctionnement hors ligne.
+ * Synchronisation plugin <-> serveur. Fonctionne aussi hors ligne.
  *
- *  - observe() : une annonce vue à l'écran (données carte ou API du site).
- *  - act()     : une action utilisateur (statut, note, doublon...).
+ *  - observe() : une annonce affichée à l'écran (données de la carte ou de l'API du site).
+ *  - act()     : une action de l'utilisateur (statut, note, doublon...).
  *
- * Les deux sont mis en file (persistée dans le stockage Tampermonkey) puis
- * envoyés par lots à POST /api/sync. Le serveur répond avec l'état de
- * chaque annonce concernée (ListingView), gardé en cache local.
+ * Le moteur met les observations et les actions dans une file. Il garde la
+ * file dans le stockage Tampermonkey. Il envoie la file par lots à
+ * POST /api/sync. Le serveur répond avec l'état de chaque annonce concernée
+ * (ListingView). Le moteur garde cet état dans un cache local.
  *
- * Serveur arrêté ? Les actions sont appliquées tout de suite au cache
- * (masquage immédiat) et restent dans la file jusqu'au retour du serveur
- * (nouvelle tentative avec délai croissant, 5 s -> 2 min).
+ * Si le serveur est arrêté :
+ *  1. Le moteur applique tout de suite les actions au cache. La carte est donc
+ *     masquée immédiatement.
+ *  2. Les actions restent dans la file jusqu'au redémarrage du serveur.
+ *  3. Le moteur essaie de nouveau avec un délai croissant (5 s -> 2 min).
  */
 import { ApiError, type ApiClient } from './api';
 import type { KeyValueStore } from './storage';
@@ -31,7 +34,7 @@ const MAX_BACKOFF_MS = 120_000;
 
 export interface SyncOptions {
   clientVersion: string;
-  /** Délai de regroupement des envois. Default 300 ms. */
+  /** Délai pendant lequel le moteur regroupe les envois. Default 300 ms. */
   debounceMs?: number;
   now?: () => number;
 }
@@ -60,7 +63,7 @@ export class SyncEngine {
     this.cache = store.get<Record<ListingKey, CachedView>>(CACHE_KEY, {});
     this.queue = store.get<Action[]>(QUEUE_KEY, []);
     this.pendingObs = store.get<Record<ListingKey, Observation>>(OBS_KEY, {});
-    // Un autre onglet a vidé / rempli la file : on la relit.
+    // Si un autre onglet modifie la file, le moteur fusionne les deux files.
     store.onRemoteChange(QUEUE_KEY, (v) => {
       this.queue = mergeQueues(this.queue, (v as Action[]) ?? []);
     });
@@ -86,7 +89,7 @@ export class SyncEngine {
   observe(obs: Observation): void {
     const key = `${obs.site}:${obs.siteId}`;
     const prev = this.pendingObs[key];
-    // Fusion : une observation 'api' (plus riche) n'est pas écrasée par une 'card' ultérieure.
+    // Fusion : une observation 'card' plus récente ne remplace pas une observation 'api' (plus complète).
     this.pendingObs[key] =
       prev && prev.source === 'api' && obs.source === 'card'
         ? { ...prev, data: { ...obs.data, ...prev.data }, seenAt: obs.seenAt }
@@ -97,7 +100,7 @@ export class SyncEngine {
     this.schedule();
   }
 
-  /** Demande l'état à jour de ces annonces au prochain envoi. */
+  /** Demande l'état actuel de ces annonces au prochain envoi. */
   refresh(keys: ListingKey[]): void {
     for (const k of keys) this.want.add(k);
     this.schedule();
@@ -112,7 +115,7 @@ export class SyncEngine {
     this.schedule(0);
   }
 
-  /** Force un envoi immédiat (bouton "Réessayer"). */
+  /** Envoie immédiatement (bouton "Réessayer"). */
   retryNow(): void {
     this.backoffMs = 0;
     this.schedule(0);
@@ -123,13 +126,13 @@ export class SyncEngine {
   private schedule(delay = this.options.debounceMs ?? 300): void {
     if (this.timer) clearTimeout(this.timer);
     this.timer = setTimeout(() => void this.flush(), Math.max(delay, this.backoffMs));
-    // Sous Node (tests), ne retient pas le processus ; sans effet dans le navigateur.
+    // Sous Node (tests), le timer ne bloque pas la fin du processus. Sans effet dans le navigateur.
     (this.timer as unknown as { unref?: () => void }).unref?.();
   }
 
   async flush(): Promise<void> {
     if (this.inflight) return;
-    // Pas encore de token : on garde tout en file sans appeler le serveur.
+    // Token absent : le moteur garde tout dans la file et n'appelle pas le serveur.
     if (!this.api.hasToken()) {
       if (this.state !== 'unconfigured') {
         this.state = 'unconfigured';
@@ -151,14 +154,14 @@ export class SyncEngine {
     };
     try {
       const res = await this.api.sync(request);
-      // Retire ce qui a été envoyé (sauf si une observation plus récente est arrivée entre-temps).
+      // Retire de la file les éléments envoyés. Garde une observation si une version plus récente est arrivée pendant l'envoi.
       for (const [k, o] of obsEntries) if (this.pendingObs[k] === o) delete this.pendingObs[k];
       const done = new Set([...res.appliedActionIds, ...res.rejectedActionIds]);
       this.queue = this.queue.filter((a) => !done.has(a.id));
       for (const k of want) this.want.delete(k);
       const now = this.now();
       for (const [k, v] of Object.entries(res.listings)) this.cache[k] = { ...v, cachedAt: now };
-      // Les actions encore en file (arrivées pendant l'envoi) restent prioritaires à l'affichage.
+      // Les actions encore dans la file (arrivées pendant l'envoi) ont priorité pour l'affichage.
       for (const a of this.queue) this.applyOptimistic(a);
       this.store.set(OBS_KEY, this.pendingObs);
       this.persistQueue(done);
@@ -181,7 +184,7 @@ export class SyncEngine {
 
   // ---------------------------------------------------------------- interne
 
-  /** Applique localement l'effet visible d'une action, en attendant la réponse du serveur. */
+  /** Applique au cache l'effet visible d'une action, avant la réponse du serveur. */
   private applyOptimistic(a: Action): void {
     const v = this.cache[a.key] ?? (this.cache[a.key] = emptyView(a.key, this.now()));
     const sameProperty = Object.values(this.cache).filter((c) => c.propertyId === v.propertyId);

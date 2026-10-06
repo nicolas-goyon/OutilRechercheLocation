@@ -2,8 +2,9 @@ using RechercheLogement.Core.Model;
 
 namespace RechercheLogement.Core.Contracts;
 
-// Contrat de POST /api/sync — miroir de plugin/src/core/types.ts.
-// JSON en camelCase, enums en camelCase ("toContact", "visitScheduled"...).
+// Contrat de POST /api/sync. Copie de plugin/src/core/types.ts.
+// Toute modification de ce fichier exige la même modification dans plugin/src/core/types.ts.
+// JSON en camelCase. Enums en camelCase ("toContact", "visitScheduled"...).
 
 public sealed record Observation(string Site, string SiteId, string Source, ListingData Data, long SeenAt);
 

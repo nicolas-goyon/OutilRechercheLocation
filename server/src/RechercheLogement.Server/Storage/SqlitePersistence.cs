@@ -6,11 +6,11 @@ using RechercheLogement.Core.Services;
 namespace RechercheLogement.Server.Storage;
 
 /// <summary>
-/// Stockage SQLite. Les annonces gardent leurs données descriptives en JSON
-/// (le schéma de ListingData évolue avec les sites) ; les colonnes servent au
-/// tri / filtrage et à l'inspection manuelle de la base.
+/// Stockage SQLite. Les données des annonces sont en JSON, car le schéma de
+/// ListingData change avec les sites d'annonces. Les colonnes servent au tri,
+/// au filtrage et à l'inspection manuelle de la base.
 ///
-/// Migrations : liste ordonnée de scripts SQL, numéro courant dans PRAGMA user_version.
+/// Migrations : liste ordonnée de scripts SQL. Le numéro actuel est dans PRAGMA user_version.
 /// </summary>
 public sealed class SqlitePersistence : IPersistence
 {
@@ -165,7 +165,7 @@ public sealed class SqlitePersistence : IPersistence
             snap.Events.Add(new PropertyEvent(r.GetInt64(0), r.GetString(1), r.GetInt64(2), Enum.Parse<PropertyEventKind>(r.GetString(3)), r.GetString(4)));
         }
 
-        // Seules les actions récentes servent à l'idempotence (un plugin ne renvoie pas une action vieille de 90 jours).
+        // Seules les actions récentes servent à l'idempotence. Un plugin ne renvoie pas une action de plus de 90 jours.
         var since = DateTimeOffset.UtcNow.AddDays(-90).ToUnixTimeMilliseconds();
         foreach (var r in Query(c, "SELECT id FROM applied_actions WHERE applied_at >= $since", ("$since", since)))
             snap.AppliedActionIds.Add(r.GetString(0));
