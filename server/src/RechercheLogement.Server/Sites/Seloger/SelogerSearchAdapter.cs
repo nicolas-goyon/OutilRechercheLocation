@@ -31,9 +31,13 @@ public sealed class SelogerSearchAdapter(IHttpClientFactory factory) : ISearchAd
         return PickPlace(json, query);
     }
 
-    /// <summary>Premier lieu proposé. Département : le libellé doit être le nom du département.</summary>
+    /// <summary>
+    /// Premier lieu proposé. Département : le libellé doit être le nom du département. Commune choisie dans les
+    /// suggestions : on préfère le lieu dont le libellé contient son code postal ou son département ("Rodez (12)").
+    /// </summary>
     public static CachedPlace? PickPlace(JsonNode json, PlaceQuery? query = null)
     {
+        CachedPlace? first = null;
         foreach (var item in json["items"] as JsonArray ?? new JsonArray())
         {
             if (item is null) continue;
@@ -41,9 +45,12 @@ public sealed class SelogerSearchAdapter(IHttpClientFactory factory) : ISearchAd
             if (ids.Count == 0) continue;
             var text = JsonRead.Str(item["text"]) ?? string.Join(", ", ids);
             if (query?.Kind == PlaceKind.Department && DedupScorer.NormalizeText(text) != DedupScorer.NormalizeText(query.Text)) continue;
-            return new CachedPlace(query?.Kind == PlaceKind.Department ? $"{text} (département)" : text, ids);
+            var place = new CachedPlace(query?.Kind == PlaceKind.Department ? $"{text} (département)" : text, ids);
+            if (query?.PostalCode is not { Length: 5 } cp) return place;
+            if (text.Contains(cp, StringComparison.Ordinal) || text.Contains($"({cp[..2]})", StringComparison.Ordinal)) return place;
+            first ??= place;
         }
-        return null;
+        return first;
     }
 
     public async Task<SearchOutcome> SearchAsync(SearchRequest request, CancellationToken ct)

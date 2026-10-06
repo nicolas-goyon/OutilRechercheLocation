@@ -3,6 +3,7 @@ using RechercheLogement.Core.Geo;
 using RechercheLogement.Core.Model;
 using RechercheLogement.Core.Projects;
 using RechercheLogement.Core.Text;
+using RechercheLogement.Server.Geo;
 using RechercheLogement.Server.Projects;
 using RechercheLogement.Server.Sites;
 using RechercheLogement.Server.Sites.Bienici;
@@ -312,5 +313,90 @@ public class ProjectTests
         Assert.Equal("407797521", RefExtractor.SirenFromText("SARL au capital de 50 000 € - RCS Rodez 407 797 521"));
         Assert.Equal("325539286", RefExtractor.SirenFromText("<b>SIRET:</b> 32553928600105"));
         Assert.Null(RefExtractor.SirenFromText("RCS 123456789"));
+    }
+
+    [Fact]
+    public void Geo_Suggestions_FromGeoApiAndGeocoding()
+    {
+        // Réponse réelle de geo.api.gouv.fr/communes?nom=rode&fields=nom,code,codesPostaux,centre,codeDepartement
+        var communes = GeoServices.ParseCommunes(JsonNode.Parse("""
+            [{"nom":"Rodez","code":"12202","codesPostaux":["12000"],"centre":{"type":"Point","coordinates":[2.5699,44.3591]},"codeDepartement":"12"},
+             {"nom":"Toulouse","code":"31555","codesPostaux":["31000","31100","31200"],"centre":{"type":"Point","coordinates":[1.4317,43.6007]},"codeDepartement":"31"},
+             {"nom":"Sans centre","code":"00000","codesPostaux":[]}]
+            """));
+        Assert.Equal(2, communes.Count);
+        Assert.Equal(new GeoPoint(44.3591, 2.5699), communes[0].Center);
+
+        var rodez = GeoServices.CommuneSuggestion(communes[0]);
+        Assert.Equal("Rodez (12000)", rodez.Label);
+        Assert.Equal(PlaceType.Commune, rodez.Location!.Type);
+        Assert.Equal("Rodez", rodez.Location.Query);
+        Assert.Equal("12202", rodez.Location.Code);
+        Assert.Equal("Toulouse (31000…)", GeoServices.CommuneSuggestion(communes[1]).Label);
+
+        var cp = GeoServices.PostalCodeSuggestion("12000", [communes[0]]);
+        Assert.Equal(PlaceType.PostalCode, cp.Location!.Type);
+        Assert.Equal("12000", cp.Location.Query);
+        Assert.Equal("12000 (Rodez)", cp.Location.Display());
+
+        var deps = GeoServices.ParseDepartments(JsonNode.Parse("""[{"nom":"Aveyron","code":"12"}]"""));
+        Assert.Equal("Aveyron (12)", deps.Single().Label);
+        Assert.Equal("Aveyron", deps[0].Location!.Query);
+
+        var addresses = GeoServices.ParseAddresses(JsonNode.Parse("""
+            { "type": "FeatureCollection", "features": [
+              { "geometry": { "type": "Point", "coordinates": [2.5734, 44.3506] },
+                "properties": { "label": "8 Boulevard Gally 12000 Rodez", "type": "housenumber", "context": "12, Aveyron, Occitanie" } } ] }
+            """));
+        Assert.Equal("8 Boulevard Gally 12000 Rodez", addresses.Single().Label);
+        Assert.Equal("Adresse · 12, Aveyron, Occitanie", addresses[0].Detail);
+        Assert.Equal(new GeoPoint(44.3506, 2.5734), addresses[0].Point);
+        Assert.Null(addresses[0].Location);
+    }
+
+    [Fact]
+    public void Locations_BecomeSiteQueries_WithAPostalCodeHint()
+    {
+        var commune = new ProjectLocation { Type = PlaceType.Commune, Query = "Onet-le-Château", Code = "12176", PostalCodes = ["12850"] };
+        var q = ProjectRunner.ToQuery(commune);
+        Assert.Equal(PlaceKind.Auto, q.Kind);
+        Assert.Equal("12850", q.PostalCode);
+        Assert.Equal("onet-le-château|12850", q.CacheKey);
+        Assert.Equal(PlaceKind.PostalCode, ProjectRunner.ToQuery(new ProjectLocation { Type = PlaceType.PostalCode, Query = "12850", Code = "12850" }).Kind);
+        Assert.Equal(new PlaceQuery(PlaceKind.Department, "Aveyron"), ProjectRunner.ToQuery(new ProjectLocation { Type = PlaceType.Department, Query = "Aveyron", Code = "12" }));
+        // Anciens projets : texte libre.
+        Assert.Equal(new PlaceQuery(PlaceKind.Auto, "Rodez"), ProjectRunner.ToQuery(new ProjectLocation { Query = "Rodez" }));
+        Assert.Equal("Rodez", new ProjectLocation { Query = "Rodez" }.Display());
+        Assert.Equal("commune:12176", commune.Key());
+
+        // Bien'ici : le lieu qui a le code postal de la commune, sinon le premier.
+        var places = JsonNode.Parse("""
+            [ { "name": "Saint-Martin", "type": "city", "postalCodes": ["05120"], "zoneIds": ["-1"] },
+              { "name": "Saint-Martin", "type": "city", "postalCodes": ["32300"], "zoneIds": ["-2"] } ]
+            """)!;
+        Assert.Equal("-2", BieniciSearchAdapter.PickPlace(places, new PlaceQuery(PlaceKind.Auto, "Saint-Martin", "32300"))!.Ids[0]);
+        Assert.Equal("-1", BieniciSearchAdapter.PickPlace(places, new PlaceQuery(PlaceKind.Auto, "Saint-Martin", "99999"))!.Ids[0]);
+
+        // SeLoger : le libellé qui contient le code postal ou le département.
+        var suggestion = JsonNode.Parse("""
+            { "items": [ { "text": "Saint-Martin (05)", "criteria": { "location": { "placeIds": ["A"] } } },
+                         { "text": "Saint-Martin (32)", "criteria": { "location": { "placeIds": ["B"] } } } ] }
+            """)!;
+        Assert.Equal("B", SelogerSearchAdapter.PickPlace(suggestion, new PlaceQuery(PlaceKind.Auto, "Saint-Martin", "32300"))!.Ids[0]);
+        Assert.Equal("A", SelogerSearchAdapter.PickPlace(suggestion, new PlaceQuery(PlaceKind.Auto, "Saint-Martin"))!.Ids[0]);
+    }
+
+    [Fact]
+    public void AreaFingerprint_FollowsTheChosenPoint()
+    {
+        var p = Project();
+        p.LocationMode = LocationMode.Radius;
+        p.CenterQuery = "Rodez";
+        var typed = p.AreaFingerprint();
+        Assert.Equal("radius|rodez|10", typed);
+        p.Center = new GeoPoint(44.35, 2.57);
+        Assert.Equal("radius|44.35,2.57|10", p.AreaFingerprint());
+        p.Center = new GeoPoint(44.36, 2.57);
+        Assert.NotEqual("radius|44.35,2.57|10", p.AreaFingerprint());
     }
 }

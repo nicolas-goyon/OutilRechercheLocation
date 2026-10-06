@@ -1,0 +1,208 @@
+@using RechercheLogement.Server.Geo
+@using RechercheLogement.Server.Sites
+@implements IDisposable
+
+@* Champ de saisie avec suggestions : flèches haut/bas pour choisir, Entrée pour valider, Échap pour fermer. *@
+<div class="suggest @Class">
+    <input value="@Value" placeholder="@Placeholder" autocomplete="off" spellcheck="false"
+           @oninput="OnInput" @onkeydown="OnKeyDown" @onblur="() => _open = false" @onfocus="OnFocus" />
+    @if (_loading) { <span class="suggest-spinner" title="Recherche…">⏳</span> }
+    @if (_open && (_items.Count > 0 || _message is not null))
+    {
+        <ul class="suggest-list" role="listbox">
+            @for (var i = 0; i < _items.Count; i++)
+            {
+                var index = i;
+                var item = _items[i];
+                <li class="@(i == _active ? "active" : "")" role="option"
+                    @onmousedown="() => Pick(item)" @onmousedown:preventDefault @onmouseover="() => _active = index">
+                    <span class="icon">@item.Icon</span>
+                    <span class="label">@item.Label</span>
+                    @if (item.Detail is not null) { <span class="detail">@item.Detail</span> }
+                </li>
+            }
+            @if (_message is not null) { <li class="message">@_message</li> }
+        </ul>
+    }
+</div>
+
+@code {
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    /// <summary>Recherche des suggestions pour le texte saisi.</summary>
+    [Parameter, EditorRequired] public Func<string, CancellationToken, Task<List<PlaceSuggestion>>> Search { get; set; } = default!;
+    [Parameter] public EventCallback<PlaceSuggestion> OnPick { get; set; }
+    /// <summary>Retour arrière dans le champ vide (supprime la dernière étiquette).</summary>
+    [Parameter] public EventCallback OnBackspaceEmpty { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string? Class { get; set; }
+    /// <summary>Vider le champ après un choix (saisie d'étiquettes).</summary>
+    [Parameter] public bool ClearOnPick { get; set; }
+    /// <summary>« ; » ou « , » valide la saisie comme Entrée (et un texte collé "Rodez; 12850" donne deux choix).</summary>
+    [Parameter] public bool SplitOnSeparators { get; set; }
+    [Parameter] public int MinLength { get; set; } = 1;
+
+    private static readonly char[] Separators = [';', ','];
+    private CancellationTokenSource? _cts;
+    private List<PlaceSuggestion> _items = [];
+    private string? _itemsFor;
+    private int _active;
+    private bool _open, _loading;
+    private string? _message;
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        var text = e.Value?.ToString() ?? "";
+        await SetValue(text);
+        _message = null;
+        if (SplitOnSeparators && text.IndexOfAny(Separators) >= 0)
+        {
+            await Commit();
+            return;
+        }
+        var ct = Restart();
+        if (text.Trim().Length < MinLength)
+        {
+            _items = [];
+            _itemsFor = null;
+            _open = false;
+            return;
+        }
+        try
+        {
+            await Task.Delay(250, ct);
+            await Load(text, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // Saisie suivante déjà en cours.
+        }
+    }
+
+    private void OnFocus()
+    {
+        if (_items.Count > 0 && _itemsFor == Value.Trim()) _open = true;
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown" when _items.Count > 0:
+                _active = _open ? Math.Min(_active + 1, _items.Count - 1) : 0;
+                _open = true;
+                break;
+            case "ArrowUp" when _open && _items.Count > 0:
+                _active = Math.Max(_active - 1, 0);
+                break;
+            case "Escape":
+                _open = false;
+                break;
+            case "Enter":
+                await Commit();
+                break;
+            case "Backspace" when Value.Length == 0:
+                await OnBackspaceEmpty.InvokeAsync();
+                break;
+        }
+    }
+
+    /// <summary>Entrée (ou séparateur) : choisit la suggestion en surbrillance, ou la première reconnue pour chaque morceau.</summary>
+    private async Task Commit()
+    {
+        var parts = SplitOnSeparators
+            ? Value.Split(Separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            : new[] { Value.Trim() };
+        parts = parts.Where(p => p.Length > 0).ToArray();
+        if (parts.Length == 0)
+        {
+            await SetValue("");
+            return;
+        }
+        var ct = Restart();
+        var unknown = new List<string>();
+        try
+        {
+            foreach (var part in parts)
+            {
+                if (_itemsFor != part) await Load(part, ct, open: false);
+                if (_itemsFor == part && _items.Count > 0)
+                {
+                    var item = _items[parts.Length == 1 ? Math.Clamp(_active, 0, _items.Count - 1) : 0];
+                    await OnPick.InvokeAsync(item);
+                    if (!ClearOnPick) await SetValue(item.Label);
+                }
+                else
+                {
+                    unknown.Add(part);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        _items = [];
+        _itemsFor = null;
+        if (ClearOnPick) await SetValue(string.Join("; ", unknown));
+        _message = unknown.Count == 0 ? null : $"Non reconnu : {string.Join(", ", unknown)}. Choisir une suggestion dans la liste.";
+        _open = _message is not null;
+    }
+
+    private async Task Pick(PlaceSuggestion item)
+    {
+        Restart();
+        _open = false;
+        _items = [];
+        _itemsFor = null;
+        _message = null;
+        await OnPick.InvokeAsync(item);
+        await SetValue(ClearOnPick ? "" : item.Label);
+    }
+
+    private async Task Load(string text, CancellationToken ct, bool open = true)
+    {
+        _loading = true;
+        try
+        {
+            var items = await Search(text.Trim(), ct);
+            ct.ThrowIfCancellationRequested();
+            _items = items;
+            _itemsFor = text.Trim();
+            _active = 0;
+            _message = items.Count == 0 ? "Aucune suggestion." : null;
+            _open = open;
+        }
+        catch (Exception e) when (e is SiteException or HttpRequestException)
+        {
+            _items = [];
+            _itemsFor = null;
+            _message = $"Suggestions indisponibles : {e.Message}";
+            _open = open;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private CancellationToken Restart()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        return _cts.Token;
+    }
+
+    private async Task SetValue(string value)
+    {
+        Value = value;
+        await ValueChanged.InvokeAsync(value);
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+    }
+}

@@ -8,7 +8,7 @@ namespace RechercheLogement.Server.Projects;
 
 /// <summary>
 /// Calcule la zone d'un projet en mode rayon ou temps de trajet :
-///  1. point de départ (géocodage de l'adresse ou de la ville saisie) ;
+///  1. point de départ (choisi sur la carte / dans les suggestions, sinon géocodage du texte saisi) ;
 ///  2. forme exacte : cercle, ou isochrone (Valhalla/OSM) ; si l'isochrone échoue, cercle estimé avec une
 ///     vitesse moyenne (zone marquée "approchée") ;
 ///  3. départements touchés (centre + points du bord) et communes de ces départements, marquées "dans la
@@ -30,10 +30,19 @@ public sealed class AreaPlanner(GeoServices geo)
 
     public async Task<AreaPlan> BuildAsync(SearchProject p, long now, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(p.CenterQuery)) throw new SiteException("Point de départ manquant (adresse ou ville).");
-        var place = await geo.GeocodeAsync(p.CenterQuery, ct) ?? throw new SiteException($"Adresse introuvable : « {p.CenterQuery} ».");
-        p.Center = place.Point;
-        p.CenterLabel = place.Label;
+        GeocodedPlace place;
+        if (p.Center is { } chosen)
+        {
+            // Point choisi dans les suggestions ou sur la carte (ou déjà géocodé) : pas de nouveau géocodage.
+            place = new GeocodedPlace(p.CenterLabel ?? p.CenterQuery ?? "point choisi", chosen);
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(p.CenterQuery)) throw new SiteException("Point de départ manquant (adresse ou ville).");
+            place = await geo.GeocodeAsync(p.CenterQuery, ct) ?? throw new SiteException($"Adresse introuvable : « {p.CenterQuery} ».");
+            p.Center = place.Point;
+            p.CenterLabel = place.Label;
+        }
 
         var plan = new AreaPlan { Fingerprint = p.AreaFingerprint(), ComputedAt = now };
         if (p.LocationMode == LocationMode.Radius)

@@ -170,10 +170,17 @@ annonces conformes, regroupe celles du même bien et suit leur vie (changements,
 sont **séparées** du suivi fait avec le plugin : autre base (`projets.db`, à côté de la base
 principale), autres pages.
 
-- **Zone**, trois modes :
-  - *Villes, codes postaux, départements* : transmis tels quels à chaque site.
-  - *Rayon autour d'un point* (adresse, ville…) : par exemple 15 km autour du travail.
-  - *Temps de trajet autour d'un point* : par exemple 30 min en voiture (aussi à vélo ou à pied).
+- **Zone**, trois modes, avec une carte (OpenStreetMap) pour pointer directement :
+  - *Villes, codes postaux, départements* : le champ propose des suggestions dès la saisie (« rod »
+    → Rodez, Rodelle… ; « 12850 » → le code postal et ses communes ; « avey » → Aveyron). Entrée (ou
+    un clic dans la liste) ajoute le lieu reconnu comme une étiquette ; × ou Retour arrière le retire.
+    Un clic sur la carte ajoute la commune cliquée. Le nom et le code postal de la commune sont transmis
+    à chaque site (les homonymes sont départagés par le code postal).
+  - *Rayon autour d'un point* : par exemple 15 km autour du travail. Le point se choisit dans les
+    suggestions d'adresses (IGN) ou d'un clic sur la carte ; le marqueur se déplace à la souris. Le
+    cercle s'affiche sur la carte.
+  - *Temps de trajet autour d'un point* : par exemple 30 min en voiture (aussi à vélo ou à pied). La
+    zone atteignable est calculée et affichée sur la carte dès que le point est choisi.
 
   Les sites ne cherchent ni dans un cercle ni par temps de trajet. Le serveur calcule la zone exacte
   (isochrone OpenStreetMap pour le temps de trajet), demande à chaque site les codes postaux qui la

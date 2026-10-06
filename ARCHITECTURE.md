@@ -201,20 +201,33 @@ Server/Sites/                     UN DOSSIER PAR SITE, chaque dossier regroupe l
             BieniciListingParser.cs   1. parser d'annonces : JSON de l'API -> ListingData
             BieniciSearchAdapter.cs   2. adaptateur de recherche : lieux (suggest.json) + recherche
   Seloger/  SelogerSite.cs, SelogerListingParser.cs, SelogerSearchAdapter.cs (même découpage)
-Server/Geo/GeoServices.cs         Géocodage (IGN), communes (geo.api.gouv.fr), isochrones (Valhalla/OSM)
+Server/Geo/GeoServices.cs         Géocodage (IGN), communes (geo.api.gouv.fr), isochrones (Valhalla/OSM),
+                                  suggestions de saisie (lieux, adresses) et point -> commune / adresse
 Server/Projects/AreaPlanner.cs    Zone d'un projet : point, forme exacte, départements, communes
 Server/Projects/ProjectRunner.cs  Lancement + ProjectScheduler (BackgroundService, chaque minute)
 Components/Pages/Projets.razor, ProjetEdit.razor, Projet.razor
+Components/Shared/SuggestInput.razor   Champ avec suggestions (flèches, Entrée, « ; » ou « , » valide)
+Components/Shared/ZoneMap.razor        Carte Leaflet (wwwroot/app.js : rl.zoneMap) : clic, marqueur
+                                       déplaçable, cercle, isochrone, lieux choisis
 ```
+
+Saisie de la zone (`ProjetEdit`) : en mode lieux, chaque suggestion choisie devient un
+`ProjectLocation` typé (commune avec code INSEE, codes postaux et centre ; code postal ; département),
+affiché en étiquette. Les projets plus anciens gardent des lieux « libres » (texte transmis tel quel).
+En modes rayon et temps de trajet, le point choisi (suggestion ou carte) est enregistré dans
+`SearchProject.Center` : il n'est plus géocodé au lancement, et l'empreinte de la zone suit ses
+coordonnées. Un texte non validé reste géocodé au lancement. Leaflet 1.9.4 est chargé depuis unpkg
+(avec contrôle d'intégrité) et le fond de carte vient des tuiles OpenStreetMap.
 
 Déroulement d'un lancement :
 
-1. **Zone** (modes rayon / temps de trajet) : géocodage du point, cercle ou isochrone (cercle estimé
+1. **Zone** (modes rayon / temps de trajet) : point choisi (sinon géocodage du texte), cercle ou isochrone (cercle estimé
    si l'isochrone échoue), départements touchés (centre + 24 points du bord), communes de ces
    départements avec leur centre (« dans la zone » si le centre y est, marge 1,5 km). Gardée dans le
    projet, recalculée si la zone change ou tous les 30 jours.
 2. **Lieux par site** : ce que chaque site sait chercher (`ISearchAdapter.SupportedPlaces`) décide.
-   Mode lieux : saisies telles quelles. Zone : codes postaux de la zone (≤ 80), sinon départements.
+   Mode lieux : commune (nom + code postal pour départager les homonymes), code postal ou département
+   choisis. Zone : codes postaux de la zone (≤ 80), sinon départements.
    Les lieux reconnus sont gardés dans `SearchProject.PlaceCache`.
 3. **Recherche** avec les filtres du site, plus récentes d'abord (Bien'ici : 100 par page ; SeLoger :
    30 par page puis `classifiedList`), jusqu'à 300 (lieux) ou 1 000 (zone) annonces.

@@ -1,0 +1,87 @@
+@using System.Text.Json
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@* Carte (Leaflet + OpenStreetMap) : point de départ déplaçable, cercle ou zone de trajet, lieux choisis. Un clic renvoie le point. *@
+<div class="zone-map-wrap">
+    <div class="zone-map" @ref="_element"></div>
+    @if (_failed)
+    {
+        <div class="zone-map-off muted">Carte indisponible : la bibliothèque Leaflet n'a pas pu être chargée (connexion internet ?).</div>
+    }
+</div>
+
+@code {
+    /// <summary>Lieu affiché par un point vert (mode lieux).</summary>
+    public sealed record Marker(GeoPoint Point, string Label);
+
+    /// <summary>Point de départ (marqueur déplaçable).</summary>
+    [Parameter] public GeoPoint? Center { get; set; }
+    /// <summary>Cercle autour du point de départ.</summary>
+    [Parameter] public double? RadiusKm { get; set; }
+    /// <summary>Zone exacte (isochrone).</summary>
+    [Parameter] public List<List<GeoPoint>>? Rings { get; set; }
+    [Parameter] public IReadOnlyList<Marker> Markers { get; set; } = [];
+    /// <summary>Changer cette valeur recadre la carte sur son contenu.</summary>
+    [Parameter] public string FitKey { get; set; } = "";
+    /// <summary>Clic sur la carte, ou marqueur déplacé.</summary>
+    [Parameter] public EventCallback<GeoPoint> OnPoint { get; set; }
+
+    private ElementReference _element;
+    private DotNetObjectReference<ZoneMap>? _self;
+    private bool _ready, _failed;
+    private string? _sent;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _self = DotNetObjectReference.Create(this);
+            try
+            {
+                _ready = await JS.InvokeAsync<bool>("rl.zoneMap.init", _element, _self);
+            }
+            catch (JSException)
+            {
+                _ready = false;
+            }
+            if (!_ready)
+            {
+                _failed = true;
+                StateHasChanged();
+                return;
+            }
+        }
+        if (!_ready) return;
+        var state = JsonSerializer.Serialize(new
+        {
+            center = Center is { } c ? new[] { c.Lat, c.Lon } : null,
+            radiusM = Center is not null && RadiusKm is > 0 ? RadiusKm * 1000 : null,
+            rings = Rings?.Select(r => r.Select(p => new[] { p.Lat, p.Lon })),
+            markers = Markers.Select(m => new { lat = m.Point.Lat, lon = m.Point.Lon, label = m.Label }),
+            fitKey = FitKey,
+        });
+        if (state == _sent) return;
+        _sent = state;
+        await JS.InvokeVoidAsync("rl.zoneMap.update", _element, state);
+    }
+
+    [JSInvokable]
+    public Task Point(double lat, double lon) => OnPoint.InvokeAsync(new GeoPoint(lat, lon));
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_ready)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("rl.zoneMap.dispose", _element);
+            }
+            catch (JSDisconnectedException)
+            {
+                // Page fermée : rien à nettoyer côté navigateur.
+            }
+        }
+        _self?.Dispose();
+    }
+}

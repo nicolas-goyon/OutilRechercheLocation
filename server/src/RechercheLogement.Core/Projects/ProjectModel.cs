@@ -34,10 +34,38 @@ public enum LocationMode
 
 public enum TravelMode { Car, Bike, Walk }
 
-/// <summary>Un lieu saisi en mode <see cref="LocationMode.Places"/> ("Rodez", "12850", "Aveyron").</summary>
+/// <summary>Nature d'un lieu du mode <see cref="LocationMode.Places"/>.</summary>
+public enum PlaceType
+{
+    /// <summary>Texte libre (anciens projets) : transmis tel quel aux sites.</summary>
+    Free,
+    Commune,
+    PostalCode,
+    Department,
+}
+
+/// <summary>
+/// Un lieu du mode <see cref="LocationMode.Places"/>, choisi dans les suggestions (commune, code postal,
+/// département) ou saisi librement. <see cref="Query"/> est le texte demandé aux sites.
+/// </summary>
 public sealed class ProjectLocation
 {
+    /// <summary>Texte demandé aux sites : nom de la commune ou du département, code postal.</summary>
     public string Query { get; set; } = "";
+    public PlaceType Type { get; set; }
+    /// <summary>Code INSEE de la commune, code postal ou code du département.</summary>
+    public string? Code { get; set; }
+    /// <summary>Libellé affiché ("Rodez (12000)", "Aveyron (12)").</summary>
+    public string? Label { get; set; }
+    /// <summary>Codes postaux de la commune (aide les sites à choisir la bonne commune en cas d'homonymes).</summary>
+    public List<string> PostalCodes { get; set; } = [];
+    /// <summary>Centre de la commune (ou de la première commune du code postal), pour la carte.</summary>
+    public GeoPoint? Center { get; set; }
+
+    public string Display() => string.IsNullOrWhiteSpace(Label) ? Query : Label;
+
+    /// <summary>Clé d'unicité dans un projet ("commune:12202", "free:rodez").</summary>
+    public string Key() => $"{Type}:{(Code ?? Query).Trim()}".ToLowerInvariant();
 }
 
 /// <summary>
@@ -86,7 +114,10 @@ public sealed class SearchProject
     public List<ProjectLocation> Locations { get; set; } = [];
     /// <summary>Modes rayon / temps de trajet : adresse ou ville saisie.</summary>
     public string? CenterQuery { get; set; }
-    /// <summary>Point trouvé pour <see cref="CenterQuery"/> (géocodage), et son libellé.</summary>
+    /// <summary>
+    /// Point de départ : choisi dans les suggestions ou sur la carte, sinon trouvé au lancement par géocodage de
+    /// <see cref="CenterQuery"/>. Son libellé est <see cref="CenterLabel"/>.
+    /// </summary>
     public GeoPoint? Center { get; set; }
     public string? CenterLabel { get; set; }
     public double RadiusKm { get; set; } = 10;
@@ -129,10 +160,15 @@ public sealed class SearchProject
     /// <summary>Empreinte de la zone (modes rayon / temps de trajet) : une zone modifiée doit être recalculée.</summary>
     public string AreaFingerprint() => LocationMode switch
     {
-        LocationMode.Radius => $"radius|{CenterQuery?.Trim().ToLowerInvariant()}|{RadiusKm}",
-        LocationMode.TravelTime => $"travel|{CenterQuery?.Trim().ToLowerInvariant()}|{TravelMinutes}|{TravelBy}",
+        LocationMode.Radius => FormattableString.Invariant($"radius|{CenterKey()}|{RadiusKm}"),
+        LocationMode.TravelTime => $"travel|{CenterKey()}|{TravelMinutes}|{TravelBy}",
         _ => "",
     };
+
+    /// <summary>Point de départ : coordonnées si connues (suggestion, clic sur la carte, géocodage), sinon texte saisi.</summary>
+    private string CenterKey() => Center is { } c
+        ? FormattableString.Invariant($"{c.Lat:0.#####},{c.Lon:0.#####}")
+        : CenterQuery?.Trim().ToLowerInvariant() ?? "";
 }
 
 // ------------------------------------------------------------------ résultats et suivi

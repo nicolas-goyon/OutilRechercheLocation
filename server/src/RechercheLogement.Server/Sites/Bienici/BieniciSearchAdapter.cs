@@ -31,13 +31,20 @@ public sealed class BieniciSearchAdapter(IHttpClientFactory factory) : ISearchAd
 
     /// <summary>
     /// Choix dans les suggestions : département demandé -> type "department" ; code postal -> lieu qui a ce code ;
-    /// texte libre -> premier lieu avec des zoneIds (un code postal saisi doit figurer dans le lieu).
+    /// texte libre -> premier lieu avec des zoneIds (un code postal saisi, ou celui de la commune choisie, doit figurer dans le lieu).
     /// </summary>
     public static CachedPlace? PickPlace(JsonNode json, PlaceQuery query)
     {
         if (json is not JsonArray places) return null;
         var text = query.Text.Trim();
-        var cp = Regex.IsMatch(text, @"^\d{5}$") ? text : null;
+        if (Regex.IsMatch(text, @"^\d{5}$")) return Pick(places, query, text);
+        // Commune choisie dans les suggestions : on préfère le lieu qui a son code postal, sinon le premier.
+        return (query.PostalCode is null ? null : Pick(places, query, query.PostalCode)) ?? Pick(places, query, null);
+    }
+
+    private static CachedPlace? Pick(JsonArray places, PlaceQuery query, string? cp)
+    {
+        var text = query.Text.Trim();
         foreach (var place in places)
         {
             if (place is null) continue;

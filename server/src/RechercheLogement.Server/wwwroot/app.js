@@ -77,4 +77,66 @@ window.rl = {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   },
+
+  /**
+   * Carte de la zone de recherche (composant ZoneMap). Leaflet est chargé depuis unpkg (App.razor),
+   * le fond de carte vient d'OpenStreetMap. Un clic ou le déplacement du marqueur renvoie le point à Blazor.
+   */
+  zoneMap: {
+    maps: new Map(),
+
+    init(el, dotnet) {
+      if (!window.L || !el) return false;
+      const map = L.map(el, { scrollWheelZoom: true }).setView([46.6, 2.4], 5);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">contributeurs OpenStreetMap</a>',
+      }).addTo(map);
+      const layer = L.featureGroup().addTo(map);
+      const state = { map, layer, dotnet, fitKey: null };
+      map.on('click', (e) => dotnet.invokeMethodAsync('Point', e.latlng.lat, e.latlng.lng));
+      rl.zoneMap.maps.set(el, state);
+      // Le bloc peut encore changer de taille juste après l'affichage.
+      setTimeout(() => map.invalidateSize(), 50);
+      return true;
+    },
+
+    update(el, json) {
+      const st = rl.zoneMap.maps.get(el);
+      if (!st) return;
+      const s = JSON.parse(json);
+      const color = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#2563eb';
+      st.layer.clearLayers();
+      for (const ring of s.rings ?? []) {
+        L.polygon(ring, { color, weight: 2, fillOpacity: 0.12 }).addTo(st.layer);
+      }
+      if (s.center) {
+        if (s.radiusM) L.circle(s.center, { radius: s.radiusM, color, weight: 2, fillOpacity: 0.1 }).addTo(st.layer);
+        const marker = L.marker(s.center, { draggable: true, title: 'Point de départ (glisser pour le déplacer)' }).addTo(st.layer);
+        marker.on('dragend', () => {
+          const p = marker.getLatLng();
+          st.dotnet.invokeMethodAsync('Point', p.lat, p.lng);
+        });
+      }
+      for (const m of s.markers ?? []) {
+        L.circleMarker([m.lat, m.lon], { radius: 7, color: '#16a34a', weight: 2, fillOpacity: 0.6 })
+          .bindTooltip(m.label)
+          .addTo(st.layer);
+      }
+      if (s.fitKey !== st.fitKey) {
+        st.fitKey = s.fitKey;
+        const b = st.layer.getBounds();
+        if (!b.isValid()) return;
+        if (b.getNorthEast().equals(b.getSouthWest())) st.map.setView(b.getCenter(), 12);
+        else st.map.fitBounds(b, { padding: [24, 24], maxZoom: 13 });
+      }
+    },
+
+    dispose(el) {
+      const st = rl.zoneMap.maps.get(el);
+      if (!st) return;
+      st.map.remove();
+      rl.zoneMap.maps.delete(el);
+    },
+  },
 };

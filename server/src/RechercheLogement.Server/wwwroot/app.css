@@ -179,3 +179,31 @@ ul.warn { color: var(--rejected); }
 .history .ev-reappeared, .history .ev-linked { color: var(--accent); }
 .history .ev-changed { color: var(--suggest); }
 .card-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+
+/* Saisie avec suggestions (SuggestInput) */
+.suggest { position: relative; max-width: 520px; }
+.suggest input { width: 100%; box-sizing: border-box; }
+.suggest-spinner { position: absolute; right: 8px; top: 6px; font-size: 12px; }
+.suggest-list { position: absolute; z-index: 1000; left: 0; right: 0; top: calc(100% + 2px); margin: 0; padding: 4px 0; list-style: none;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,.15); max-height: 320px; overflow-y: auto; }
+.suggest-list li { display: grid; grid-template-columns: 22px minmax(0, 1fr); column-gap: 6px; padding: 5px 10px; cursor: pointer; }
+.suggest-list li .detail { grid-column: 2; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.suggest-list li.active { background: var(--bg); }
+.suggest-list li.active .label { color: var(--accent); }
+.suggest-list li.message { display: block; cursor: default; color: var(--muted); font-size: 12px; }
+
+/* Lieux sous forme d'étiquettes */
+.tags-input { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; max-width: 520px; border: 1px solid var(--border); border-radius: 6px; padding: 4px; background: var(--panel); }
+.tags-input:focus-within { border-color: var(--accent); }
+.tags-input .suggest { flex: 1 1 160px; min-width: 160px; }
+.form-grid .tags-input .suggest input, .tags-input .suggest input { border: none; padding: 4px; outline: none; max-width: none; }
+.tag { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--accent); color: var(--accent); background: var(--bg); border-radius: 14px; padding: 2px 4px 2px 10px; font-size: 13px; }
+.tag.free { border-style: dashed; border-color: var(--muted); color: var(--fg); }
+.tag button { border: none; background: none; padding: 0 4px; color: inherit; font-size: 15px; line-height: 1; }
+.tag button:hover { color: var(--rejected); }
+
+/* Carte de la zone (ZoneMap) */
+.zone-map-wrap { grid-column: 1 / -1; }
+.zone-map { height: 360px; border: 1px solid var(--border); border-radius: 8px; z-index: 0; }
+.zone-map-off { padding: 8px 0; }
+.map-help { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0; }

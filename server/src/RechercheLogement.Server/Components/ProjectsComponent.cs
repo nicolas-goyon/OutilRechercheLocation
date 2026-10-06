@@ -84,7 +84,7 @@ public static class ProjectFormat
     {
         LocationMode.Radius => $"{p.RadiusKm.ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"))} km autour de {p.CenterLabel ?? p.CenterQuery}",
         LocationMode.TravelTime => $"{p.TravelMinutes} min {Travel(p.TravelBy)} depuis {p.CenterLabel ?? p.CenterQuery}",
-        _ => string.Join(", ", p.Locations.Select(l => l.Query)),
+        _ => string.Join(", ", p.Locations.Select(l => l.Display())),
     };
 
     public static string Travel(TravelMode m) => m switch { TravelMode.Bike => "à vélo", TravelMode.Walk => "à pied", _ => "en voiture" };

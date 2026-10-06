@@ -4,6 +4,9 @@
 @inject ProjectRunner Runner
 @inject SiteRegistry Sites
 @inject NavigationManager Nav
+@inject GeoServices Geo
+@using RechercheLogement.Server.Geo
+@implements IDisposable
 
 <PageTitle>@(_isNew ? "Nouveau projet" : $"Modifier « {_name} »") — Recherche logement</PageTitle>
 <h1>@(_isNew ? "Nouveau projet" : $"Modifier « {_name} »")</h1>
@@ -38,47 +41,82 @@
 <section class="panel">
     <h2>Zone de recherche</h2>
     <div class="mode-tabs">
-        <label class="chip @(_mode == LocationMode.Places ? "on" : "")"><input type="radio" name="mode" checked="@(_mode == LocationMode.Places)" @onchange="() => _mode = LocationMode.Places" />Villes, codes postaux, départements</label>
-        <label class="chip @(_mode == LocationMode.Radius ? "on" : "")"><input type="radio" name="mode" checked="@(_mode == LocationMode.Radius)" @onchange="() => _mode = LocationMode.Radius" />Rayon autour d'un point</label>
-        <label class="chip @(_mode == LocationMode.TravelTime ? "on" : "")"><input type="radio" name="mode" checked="@(_mode == LocationMode.TravelTime)" @onchange="() => _mode = LocationMode.TravelTime" />Temps de trajet autour d'un point</label>
+        <label class="chip @(_mode == LocationMode.Places ? "on" : "")"><input type="radio" name="mode" checked="@(_mode == LocationMode.Places)" @onchange="() => SetMode(LocationMode.Places)" />Villes, codes postaux, départements</label>
+        <label class="chip @(_mode == LocationMode.Radius ? "on" : "")"><input type="radio" name="mode" checked="@(_mode == LocationMode.Radius)" @onchange="() => SetMode(LocationMode.Radius)" />Rayon autour d'un point</label>
+        <label class="chip @(_mode == LocationMode.TravelTime ? "on" : "")"><input type="radio" name="mode" checked="@(_mode == LocationMode.TravelTime)" @onchange="() => SetMode(LocationMode.TravelTime)" />Temps de trajet autour d'un point</label>
     </div>
     <div class="form-grid">
         @if (_mode == LocationMode.Places)
         {
             <label>Lieux</label>
             <div>
-                <textarea rows="3" @bind="_locations" @bind:event="oninput" placeholder="Une ville, un code postal ou un département par ligne. Ex. :&#10;Rodez&#10;12850&#10;Aveyron"></textarea>
-                <div class="muted small">Transmis tels quels à chaque site. Le lieu reconnu par chaque site s'affiche après le premier lancement.</div>
+                <div class="tags-input">
+                    @foreach (var l in _places)
+                    {
+                        <span class="tag @(l.Type == PlaceType.Free ? "free" : "")" title="@PlaceTitle(l)">
+                            @PlaceIcon(l.Type) @l.Display()
+                            <button type="button" title="Retirer ce lieu" @onclick="() => RemovePlace(l)">×</button>
+                        </span>
+                    }
+                    <SuggestInput @bind-Value="_placeText" Search="Geo.SuggestPlacesAsync" OnPick="AddPlace" OnBackspaceEmpty="RemoveLastPlace"
+                                  ClearOnPick="true" SplitOnSeparators="true"
+                                  Placeholder="@(_places.Count == 0 ? "Ville, code postal ou département…" : "Ajouter un lieu…")" />
+                </div>
+                <div class="muted small">
+                    Taper puis Entrée (ou choisir dans la liste) : chaque lieu reconnu devient une étiquette. Un clic sur la carte ajoute
+                    la commune cliquée. Chaque site reçoit ces lieux ; celui qu'il a reconnu s'affiche après le premier lancement.
+                </div>
             </div>
         }
         else
         {
             <label>Point de départ</label>
             <div>
-                <input @bind="_center" @bind:event="oninput" placeholder="Adresse, ville ou code postal. Ex. « 8 boulevard Gally, Rodez »" />
-                <div class="muted small">Votre travail, une gare, un centre-ville… Localisé avec la base d'adresses nationale (IGN).</div>
+                <SuggestInput Value="@_center" ValueChanged="OnCenterText" Search="Geo.SuggestAddressesAsync" OnPick="PickCenter" MinLength="3"
+                              Placeholder="Adresse, ville… ou cliquer sur la carte" />
+                <div class="muted small">
+                    @if (_centerPoint is { } c)
+                    {
+                        <span>📍 Point validé (@c.Lat.ToString("0.####", CultureInfo.InvariantCulture), @c.Lon.ToString("0.####", CultureInfo.InvariantCulture)) : glisser le marqueur ou cliquer sur la carte pour le déplacer.</span>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(_center))
+                    {
+                        <span>Adresse non validée : elle sera localisée au lancement. Choisir une suggestion pour la valider tout de suite.</span>
+                    }
+                    else
+                    {
+                        <span>Choisir une suggestion (base d'adresses nationale IGN) ou cliquer directement sur la carte.</span>
+                    }
+                </div>
             </div>
             @if (_mode == LocationMode.Radius)
             {
                 <label>Rayon (km)</label>
-                <div class="range"><input type="number" min="1" max="200" step="0.5" @bind="_radiusKm" /></div>
+                <div class="range"><input type="number" min="1" max="200" step="0.5" @bind="_radiusKm" @bind:event="oninput" @bind:after="Refit" /></div>
             }
             else
             {
                 <label>Temps de trajet</label>
                 <div class="range">
-                    <input type="number" min="5" max="120" step="5" @bind="_travelMinutes" /> min
-                    <select @bind="_travelBy">
+                    <input type="number" min="5" max="120" step="5" @bind="_travelMinutes" @bind:after="PreviewTravel" /> min
+                    <select @bind="_travelBy" @bind:after="PreviewTravel">
                         <option value="@TravelMode.Car">en voiture</option>
                         <option value="@TravelMode.Bike">à vélo</option>
                         <option value="@TravelMode.Walk">à pied</option>
                     </select>
                 </div>
             }
-            <label></label>
-            <div class="muted small">
+        }
+        <ZoneMap Center="MapCenter" RadiusKm="MapRadiusKm" Rings="MapRings" Markers="MapMarkers" FitKey="@_fitKey.ToString(CultureInfo.InvariantCulture)" OnPoint="OnMapPoint" />
+        @if (_mapMessage is not null)
+        {
+            <div class="map-help muted small">@_mapMessage</div>
+        }
+        @if (_mode != LocationMode.Places)
+        {
+            <div class="map-help muted small">
                 Les sites ne cherchent pas dans un cercle ou par temps de trajet. Le serveur calcule la zone exacte
-                (isochrone OpenStreetMap pour le temps de trajet), demande à chaque site les codes postaux qui la
+                (isochrone OpenStreetMap pour le temps de trajet, affichée ci-dessus), demande à chaque site les codes postaux qui la
                 couvrent (ou les départements si elle est très grande), puis garde seulement les annonces situées dans
                 la zone exacte (position de l'annonce, sinon centre de sa commune).
             </div>
@@ -198,8 +236,18 @@
     private bool _flat = true;
     private bool _house;
     private LocationMode _mode = LocationMode.Places;
-    private string _locations = "";
+    private List<ProjectLocation> _places = [];
+    private string _placeText = "";
     private string _center = "";
+    /// <summary>Point de départ validé (suggestion, clic ou marqueur déplacé) ; null : texte libre, géocodé au lancement.</summary>
+    private GeoPoint? _centerPoint;
+    /// <summary>Texte affiché pour <see cref="_centerPoint"/> : le modifier à la main invalide le point.</summary>
+    private string? _centerPicked;
+    private int _fitKey;
+    private string? _mapMessage;
+    private List<List<GeoPoint>>? _previewRings;
+    private string? _previewKey;
+    private CancellationTokenSource? _previewCts;
     private double _radiusKm = 10;
     private int _travelMinutes = 30;
     private TravelMode _travelBy = TravelMode.Car;
@@ -228,8 +276,16 @@
         _flat = p.PropertyTypes.Contains("flat");
         _house = p.PropertyTypes.Contains("house");
         _mode = p.LocationMode;
-        _locations = string.Join("\n", p.Locations.Select(l => l.Query));
-        _center = p.CenterQuery ?? "";
+        _places = [.. p.Locations];
+        _center = p.CenterLabel ?? p.CenterQuery ?? "";
+        _centerPoint = p.Center;
+        _centerPicked = _centerPoint is null ? null : _center;
+        // Zone de trajet déjà calculée au dernier lancement : affichée telle quelle.
+        if (p.Area is { Shape.Rings.Count: > 0 } area && area.Fingerprint == p.AreaFingerprint() && p.LocationMode == LocationMode.TravelTime)
+        {
+            _previewRings = area.Shape.Rings;
+            _previewKey = TravelKey(p.Center, p.TravelMinutes, p.TravelBy);
+        }
         _radiusKm = p.RadiusKm;
         _travelMinutes = p.TravelMinutes;
         _travelBy = p.TravelBy;
@@ -243,6 +299,170 @@
         _active = p.Active;
     }
 
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender) PreviewTravel();
+    }
+
+    // ------------------------------------------------------------------ zone : lieux
+
+    private static string PlaceIcon(PlaceType type) => type switch
+    {
+        PlaceType.Commune => "🏘",
+        PlaceType.PostalCode => "📮",
+        PlaceType.Department => "🗺",
+        _ => "✎",
+    };
+
+    private static string PlaceTitle(ProjectLocation l) => l.Type switch
+    {
+        PlaceType.Commune => $"Commune {l.Query} · codes postaux {string.Join(", ", l.PostalCodes)}",
+        PlaceType.PostalCode => $"Code postal {l.Code}",
+        PlaceType.Department => $"Département {l.Query} ({l.Code})",
+        _ => "Saisi librement (ancien projet) : transmis tel quel aux sites",
+    };
+
+    private void AddPlace(PlaceSuggestion s)
+    {
+        if (s.Location is not { } l) return;
+        _mapMessage = null;
+        if (_places.Any(x => x.Key() == l.Key()))
+        {
+            _mapMessage = $"« {l.Display()} » est déjà dans la liste.";
+            return;
+        }
+        _places.Add(l);
+        _fitKey++;
+    }
+
+    private void RemovePlace(ProjectLocation l)
+    {
+        _places.Remove(l);
+        _mapMessage = null;
+    }
+
+    private void RemoveLastPlace()
+    {
+        if (_places.Count > 0) _places.RemoveAt(_places.Count - 1);
+    }
+
+    // ------------------------------------------------------------------ zone : point de départ et carte
+
+    private GeoPoint? MapCenter => _mode == LocationMode.Places ? null : _centerPoint;
+    private double? MapRadiusKm => _mode == LocationMode.Radius ? _radiusKm : null;
+    private List<List<GeoPoint>>? MapRings =>
+        _mode == LocationMode.TravelTime && _previewKey is not null && _previewKey == TravelKey(_centerPoint, _travelMinutes, _travelBy) ? _previewRings : null;
+    private List<ZoneMap.Marker> MapMarkers => _mode != LocationMode.Places ? [] :
+        _places.Where(l => l.Center is not null).Select(l => new ZoneMap.Marker(l.Center!, l.Display())).ToList();
+
+    private static string? TravelKey(GeoPoint? c, int minutes, TravelMode by) =>
+        c is null ? null : FormattableString.Invariant($"{c.Lat:0.#####},{c.Lon:0.#####}|{minutes}|{by}");
+
+    private void SetMode(LocationMode mode)
+    {
+        _mode = mode;
+        _mapMessage = null;
+        _fitKey++;
+        PreviewTravel();
+    }
+
+    private void Refit() => _fitKey++;
+
+    private void OnCenterText(string text)
+    {
+        _center = text;
+        // Texte modifié à la main : le point n'est plus celui choisi.
+        if (_centerPoint is not null && text != _centerPicked)
+        {
+            _centerPoint = null;
+            _centerPicked = null;
+        }
+    }
+
+    private void PickCenter(PlaceSuggestion s)
+    {
+        if (s.Point is null) return;
+        SetCenter(s.Point, s.Label);
+        _fitKey++;
+    }
+
+    private void SetCenter(GeoPoint point, string label)
+    {
+        _centerPoint = point;
+        _center = label;
+        _centerPicked = label;
+        _mapMessage = null;
+        PreviewTravel();
+    }
+
+    /// <summary>Clic sur la carte (ou marqueur déplacé) : commune ajoutée (mode lieux) ou point de départ déplacé.</summary>
+    private async Task OnMapPoint(GeoPoint point)
+    {
+        _mapMessage = null;
+        try
+        {
+            if (_mode == LocationMode.Places)
+            {
+                if (await Geo.CommuneAtAsync(point, CancellationToken.None) is { } commune) AddPlace(commune);
+                else _mapMessage = "Aucune commune française à cet endroit.";
+                return;
+            }
+            SetCenter(point, FormattableString.Invariant($"{point.Lat:0.#####}, {point.Lon:0.#####}"));
+            // Adresse la plus proche, si le point n'a pas encore changé entre-temps.
+            if (await Geo.ReverseAsync(point, CancellationToken.None) is { } place && _centerPoint == point)
+            {
+                _center = place.Label;
+                _centerPicked = place.Label;
+            }
+        }
+        catch (SiteException e)
+        {
+            _mapMessage = e.Message;
+        }
+    }
+
+    /// <summary>Mode temps de trajet : calcule et affiche la zone atteignable (après une courte pause de saisie).</summary>
+    private void PreviewTravel()
+    {
+        if (_mode != LocationMode.TravelTime || _travelMinutes is < 5 or > 120) return;
+        var key = TravelKey(_centerPoint, _travelMinutes, _travelBy);
+        if (key is null || key == _previewKey) return;
+        _previewCts?.Cancel();
+        _previewCts = new CancellationTokenSource();
+        _ = LoadTravelAsync(_centerPoint!, _travelMinutes, _travelBy, key, _previewCts.Token);
+    }
+
+    private async Task LoadTravelAsync(GeoPoint center, int minutes, TravelMode by, string key, CancellationToken ct)
+    {
+        _mapMessage = "Calcul de la zone de trajet…";
+        try
+        {
+            await Task.Delay(600, ct);
+            var shape = await Geo.IsochroneAsync(center, minutes, by, ct);
+            _previewRings = shape.Rings;
+            _previewKey = key;
+            _mapMessage = null;
+            _fitKey++;
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (SiteException e)
+        {
+            _mapMessage = $"Zone de trajet non affichée : {e.Message} Elle sera recalculée (ou estimée) au lancement.";
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        _previewCts?.Cancel();
+        _previewCts?.Dispose();
+    }
+
+    // ------------------------------------------------------------------ sites et enregistrement
+
     private void ToggleSite(string id, bool on)
     {
         if (on) _sites.Add(id);
@@ -252,13 +472,12 @@
     private void Save(bool run)
     {
         _errors.Clear();
-        var queries = _locations.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         var sites = _sites.Where(s => Sites.Get(s) is { Available: true }).ToList();
         if (string.IsNullOrWhiteSpace(_name)) _errors.Add("Donner un nom au projet.");
         if (!_flat && !_house) _errors.Add("Choisir au moins un type de bien.");
-        if (_mode == LocationMode.Places && queries.Count == 0) _errors.Add("Indiquer au moins un lieu (ville, code postal ou département).");
-        if (_mode != LocationMode.Places && string.IsNullOrWhiteSpace(_center)) _errors.Add("Indiquer le point de départ (adresse ou ville).");
+        if (_mode == LocationMode.Places && _places.Count == 0) _errors.Add("Indiquer au moins un lieu (ville, code postal ou département).");
+        if (_mode == LocationMode.Places && !string.IsNullOrWhiteSpace(_placeText)) _errors.Add($"Lieu non validé : « {_placeText.Trim()} ». Le choisir dans les suggestions (Entrée) ou l'effacer.");
+        if (_mode != LocationMode.Places && _centerPoint is null && string.IsNullOrWhiteSpace(_center)) _errors.Add("Indiquer le point de départ (adresse, ville ou clic sur la carte).");
         if (_mode == LocationMode.Radius && _radiusKm is <= 0 or > 200) _errors.Add("Rayon entre 1 et 200 km.");
         if (_mode == LocationMode.TravelTime && _travelMinutes is < 5 or > 120) _errors.Add("Temps de trajet entre 5 et 120 minutes.");
         if (sites.Count == 0) _errors.Add("Choisir au moins un site.");
@@ -272,9 +491,11 @@
         if (_existing is not null && _existing.Transaction != _transaction) p.PlaceCache.Clear();
         p.Transaction = _transaction;
         p.LocationMode = _mode;
-        p.Locations = queries.Select(q => new ProjectLocation { Query = q }).ToList();
-        if (!string.Equals(p.CenterQuery?.Trim(), _center.Trim(), StringComparison.OrdinalIgnoreCase)) p.Center = null;
+        p.Locations = [.. _places];
         p.CenterQuery = string.IsNullOrWhiteSpace(_center) ? null : _center.Trim();
+        // Point validé (suggestion ou carte) ; sinon le texte sera géocodé au lancement.
+        p.Center = _centerPoint;
+        p.CenterLabel = _centerPoint is null ? null : p.CenterQuery;
         p.RadiusKm = _radiusKm;
         p.TravelMinutes = _travelMinutes;
         p.TravelBy = _travelBy;
