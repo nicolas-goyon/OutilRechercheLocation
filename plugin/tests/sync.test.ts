@@ -10,6 +10,11 @@ class FakeApi {
   online = true;
   requests: SyncRequest[] = [];
   status: Record<string, ListingView['status']> = {};
+  token = 'ok';
+
+  hasToken(): boolean {
+    return this.token.length > 0;
+  }
 
   async sync(req: SyncRequest): Promise<SyncResponse> {
     if (!this.online) throw new ApiError('Serveur injoignable', 0);
@@ -99,4 +104,19 @@ test('une observation "card" ne remplace pas une observation "api" en attente', 
   assert.equal(pending.source, 'api');
   assert.equal(pending.data.surface, 30.4);
   assert.equal(pending.data.title, 'T');
+});
+
+test('sans token : rien n\'est envoyé, tout reste en file', async () => {
+  const api = new FakeApi();
+  api.token = '';
+  const sync = newEngine(api);
+  sync.act({ type: 'setStatus', key: 'bienici:d', status: 'rejected' });
+  await sync.flush();
+  assert.equal(sync.state, 'unconfigured');
+  assert.equal(api.requests.length, 0);
+  assert.equal(sync.view('bienici:d')?.status, 'rejected');
+  api.token = 'ok';
+  await sync.flush();
+  assert.equal(sync.state, 'online');
+  assert.equal(api.status['bienici:d'], 'rejected');
 });

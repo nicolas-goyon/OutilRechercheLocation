@@ -118,8 +118,8 @@ dd { margin: 0; }
 
 .token { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .token code { background: var(--bg); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); word-break: break-all; }
-.snippet { background: #0b1020; color: #e5e7eb; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 12px; }
 .warn { color: var(--suggest); font-weight: 600; }
 
 #blazor-error-ui { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #fef3c7; color: #78350f; padding: 10px 16px; z-index: 1000; }
 #blazor-error-ui .reload { margin-left: 8px; }
+.steps { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }

@@ -17,6 +17,10 @@ public sealed class ServerSettings
     /// <summary>Token imposé par configuration. Vide : généré au premier démarrage et stocké en base.</summary>
     public string? ApiToken { get; set; }
 
+    /// <summary>Lien d'installation du plugin (script auto-mis à jour publié par la CI).</summary>
+    public string PluginInstallUrl { get; set; } =
+        "https://github.com/nicolas-goyon/OutilRechercheLocation/releases/latest/download/recherche-logement.user.js";
+
     /// <summary>"memory" pour une base non persistante (démo, tests).</summary>
     public string Storage { get; set; } = "sqlite";
 }

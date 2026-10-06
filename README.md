@@ -22,8 +22,8 @@ Sites supportés : **Bien'ici**. Voir [`ARCHITECTURE.md`](./ARCHITECTURE.md) pou
 docker compose up -d --build
 ```
 
-Ouvrir <http://localhost:5080> → **Paramètres** : le token du plugin et le script Tampermonkey
-complet, prêt à copier. (Le token est aussi écrit dans `docker compose logs server`.)
+Ouvrir <http://localhost:5080> → **Paramètres** : le token du plugin et le lien d'installation.
+(Le token est aussi écrit dans `docker compose logs server`.)
 
 Les données sont dans le volume Docker `recherche-logement-data` (fichier SQLite). Le port est lié à
 `127.0.0.1` : le site n'est pas accessible depuis le réseau.
@@ -31,17 +31,34 @@ Les données sont dans le volume Docker `recherche-logement-data` (fichier SQLit
 Sans Docker : `cd server && dotnet run --project src/RechercheLogement.Server` (base dans
 `src/RechercheLogement.Server/data/`).
 
-### 2. Le plugin (Tampermonkey)
+### 2. Le plugin (Tampermonkey, mise à jour automatique)
 
-1. Tampermonkey → nouveau script → coller le script copié depuis **Paramètres**.
-2. Remplacer `plugin-vX.Y.Z` dans `@require` par le dernier tag
-   `plugin-v*` publié par la CI (en local : `@require file:///…/plugin/dist/recherche-logement.js`,
-   avec « Autoriser l'accès aux URL de fichiers » activé pour Tampermonkey).
-3. Ouvrir une recherche sur bienici.com : la barre d'actions apparaît sur chaque annonce et le
-   bouton 🏠 (en bas à droite) indique l'état de la connexion.
+1. Avec Tampermonkey installé, ouvrir
+   <https://github.com/nicolas-goyon/OutilRechercheLocation/releases/latest/download/recherche-logement.user.js>
+   et cliquer sur **Installer** (le lien est aussi dans **Paramètres** du site local).
+2. Ouvrir une recherche sur bienici.com : au premier lancement le panneau 🏠 s'ouvre sur
+   **Connexion au site local**. Coller le token (Paramètres du site), **Tester**, **Enregistrer**.
+3. La barre d'actions apparaît sur chaque annonce ; le bouton 🏠 (en bas à droite) indique l'état
+   de la connexion (badge `!` : token manquant ou refusé, `⚠` : site local arrêté).
 
-**Un seul script Tampermonkey pour tous les sites** (un `@match` par site). Les lignes
-`@connect localhost` / `@connect 127.0.0.1` autorisent le plugin à joindre le site local.
+**Mise à jour automatique** (mécanisme du template v2) : le script installé porte un `@updateURL`
+vers `releases/latest/download/recherche-logement.meta.js`. Tampermonkey le consulte
+périodiquement (*Paramètres → Mise à jour des scripts*, quotidien par défaut, ou « Rechercher des
+mises à jour » dans le tableau de bord) ; si son `@version` est plus élevé, il télécharge le nouveau
+script, dont le `@require` pointe vers le bundle du même tag sur jsDelivr. Ne pas modifier le script
+dans l'éditeur Tampermonkey : la mise à jour suivante l'écraserait.
+
+**Le token n'est jamais dans le script** (il est publié sur GitHub) : il est saisi dans le panneau
+🏠 et reste dans le stockage Tampermonkey, que les mises à jour ne touchent pas. Le build et la CI
+refusent un `apiToken` dans `plugin/userscripts/*.mjs`.
+
+**Un seul script pour tous les sites** : chaque nouveau site s'ajoute en `@match` dans
+[`plugin/userscripts/recherche-logement.mjs`](./plugin/userscripts/recherche-logement.mjs). Les
+`@connect localhost` / `127.0.0.1` autorisent le plugin à joindre le site local.
+
+En développement : `cd plugin && npm run build` produit aussi `dist/recherche-logement.user.js`
+(version de `package.json`) ; pour tester un bundle local, remplacer son `@require` par
+`file:///…/plugin/dist/recherche-logement.js` (activer « Autoriser l'accès aux URL de fichiers »).
 
 ## Utilisation
 
@@ -65,13 +82,13 @@ Sur le site local :
 - **Fiche d'un bien** : toutes ses annonces (tous sites), historique de prix, note, commentaires
   datés (appels, visites…), dissociation d'un doublon erroné ;
 - **Doublons à vérifier** : comparaison côte à côte ;
-- **Paramètres** : token (copier / régénérer), script Tampermonkey, export JSON.
+- **Paramètres** : token (copier / régénérer), lien d'installation du plugin, export JSON.
 
 ## Développement
 
 ```bash
 # Plugin
-cd plugin && npm install && npm test && npm run build      # -> plugin/dist/recherche-logement.js
+cd plugin && npm install && npm test && npm run build      # -> plugin/dist/recherche-logement.js + .user.js / .meta.js
 
 # Serveur
 cd server && dotnet test                                    # tests xUnit (métier + API)
@@ -81,8 +98,10 @@ dotnet run --project src/RechercheLogement.Server           # http://localhost:5
 ## CI/CD (GitHub Actions)
 
 - [`plugin.yml`](./.github/workflows/plugin.yml) : tests + build ; sur `main`, publie le bundle sur un
-  tag `plugin-vX.Y.Z` servi par jsDelivr (`[minor]` / `[major]` dans un message de commit pour monter
-  la version).
+  tag `plugin-vX.Y.Z` servi par jsDelivr **et** une GitHub Release portant `recherche-logement.user.js`
+  / `.meta.js` — c'est ce qui déclenche la mise à jour automatique des plugins installés
+  (`[minor]` / `[major]` dans un message de commit pour monter la version). Seul ce workflow crée des
+  GitHub Releases : « latest » est toujours la dernière version du plugin.
 - [`server.yml`](./.github/workflows/server.yml) : build + tests .NET ; sur `main`, publie l'image
   `ghcr.io/nicolas-goyon/outilrecherchelocation-server:latest`.
 

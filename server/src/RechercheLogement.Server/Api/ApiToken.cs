@@ -21,7 +21,7 @@ public sealed class ApiTokenService(Catalog catalog, ServerSettings settings, IL
     public string EnsureToken()
     {
         var token = Current;
-        logger.LogInformation("Token API du plugin : {Token}  (Paramètres du site pour le snippet Tampermonkey)", token);
+        logger.LogInformation("Token API du plugin : {Token}  (à coller dans le plugin : panneau 🏠 > Connexion)", token);
         return token;
     }
 
@@ -36,7 +36,7 @@ public sealed class ApiTokenService(Catalog catalog, ServerSettings settings, IL
         }
     }
 
-    /// <summary>Nouveau token : l'ancien est immédiatement refusé (à recopier dans le script Tampermonkey).</summary>
+    /// <summary>Nouveau token : l'ancien est immédiatement refusé (à recoller dans le plugin).</summary>
     public string Regenerate()
     {
         if (FromConfiguration) throw new InvalidOperationException("Le token est fixé par configuration (RechercheLogement__ApiToken).");

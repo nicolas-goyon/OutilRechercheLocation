@@ -16,7 +16,7 @@ import { ApiError, type ApiClient } from './api';
 import type { KeyValueStore } from './storage';
 import type { Action, ListingKey, ListingView, NewAction, Observation, SyncRequest } from './types';
 
-export type ConnectionState = 'unknown' | 'online' | 'offline' | 'unauthorized';
+export type ConnectionState = 'unknown' | 'online' | 'offline' | 'unauthorized' | 'unconfigured';
 
 interface CachedView extends ListingView {
   cachedAt: number;
@@ -129,6 +129,14 @@ export class SyncEngine {
 
   async flush(): Promise<void> {
     if (this.inflight) return;
+    // Pas encore de token : on garde tout en file sans appeler le serveur.
+    if (!this.api.hasToken()) {
+      if (this.state !== 'unconfigured') {
+        this.state = 'unconfigured';
+        this.emit();
+      }
+      return;
+    }
     const obsEntries = Object.entries(this.pendingObs).slice(0, MAX_BATCH_OBS);
     const actions = [...this.queue];
     const want = [...this.want];

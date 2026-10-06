@@ -1,6 +1,9 @@
 export {};
 
 declare global {
+  /** Remplacé au build par esbuild (`define` dans scripts/build.mjs). */
+  const __PLUGIN_VERSION__: string;
+
   /**
    * Provided by Tampermonkey/Greasemonkey via @grant unsafeWindow. Absent
    * outside a userscript context, hence the optional typing.

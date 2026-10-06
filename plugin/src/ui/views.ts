@@ -3,6 +3,7 @@
  * la vue complète (comparaison détaillée, suivi des contacts, historique)
  * est sur le site local, vers lequel chaque vue propose un lien.
  */
+import type { ConnectionSettings, ConnectionStore } from '../core/connection';
 import type { SyncEngine } from '../core/sync';
 import type { ListingKey, ListingRef, PropertyStatus, SuggestionView } from '../core/types';
 import { h } from '../shared/dom/h';
@@ -128,7 +129,10 @@ export function showDetails(sync: SyncEngine, key: ListingKey): void {
 
 export interface PanelContext {
   sync: SyncEngine;
-  serverUrl: string;
+  connection: ConnectionStore;
+  /** Teste un couple URL + token sans l'enregistrer. */
+  testConnection(settings: ConnectionSettings): Promise<string>;
+  version: string;
   pageCounts(): { total: number; hidden: number; seen: number; toContact: number; suggested: number };
   showHidden: boolean;
   setShowHidden(v: boolean): void;
@@ -137,14 +141,33 @@ export interface PanelContext {
 export function showPanel(ctx: PanelContext): void {
   const { sync } = ctx;
   const page = ctx.pageCounts();
+  const conn = ctx.connection.get();
   const toggle = h('input', { type: 'checkbox', checked: ctx.showHidden, on: { change: () => ctx.setShowHidden(toggle.checked) } });
 
   const stateText = {
-    online: ['🟢', 'Connecté au serveur local'],
-    offline: ['🟠', 'Serveur local injoignable — les actions sont gardées et seront envoyées à son retour'],
-    unauthorized: ['🔴', 'Token refusé — vérifier apiToken dans le script Tampermonkey (Paramètres du site local)'],
+    online: ['🟢', 'Connecté au site local'],
+    offline: ['🟠', 'Site local injoignable — les actions sont gardées et seront envoyées à son retour'],
+    unauthorized: ['🔴', 'Token refusé — recopier le token depuis Paramètres du site local'],
+    unconfigured: ['🔴', 'Token non renseigné — le coller ci-dessous (Paramètres du site local)'],
     unknown: ['⚪', 'Connexion en cours...'],
   }[sync.state];
+
+  const input = (value: string, placeholder: string, type = 'text') =>
+    h('input', {
+      value,
+      placeholder,
+      type,
+      spellcheck: false,
+      style: { width: '100%', boxSizing: 'border-box', background: THEME.bgSoft, color: THEME.fg, border: `1px solid ${THEME.border}`, borderRadius: '6px', padding: '7px 8px', font: THEME.font },
+    });
+  const urlInput = input(conn.serverUrl, 'http://localhost:5080');
+  const tokenInput = input(conn.token, 'Token (Paramètres du site local)', 'password');
+  const feedback = h('div', { style: { minHeight: '18px', marginTop: '6px', fontSize: '12px' } });
+  const current = (): ConnectionSettings => ({ serverUrl: urlInput.value, token: tokenInput.value });
+  const say = (text: string, color: string) => {
+    feedback.textContent = text;
+    feedback.style.color = color;
+  };
 
   showModal({
     title: '🏠 Suivi de recherche logement',
@@ -152,22 +175,36 @@ export function showPanel(ctx: PanelContext): void {
       'div',
       null,
       section(
-        'Serveur',
+        'Connexion au site local',
         h('div', null, `${stateText[0]} ${stateText[1]}`),
-        sync.lastError && sync.state !== 'online' && h('div', { style: { color: THEME.muted, fontSize: '11px' } }, sync.lastError),
-        h('div', { style: { marginTop: '4px' } }, `${sync.pendingCount()} élément(s) en attente d'envoi`),
-        h('div', { style: { display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' } },
-          button('Réessayer maintenant', () => {
-            sync.retryNow();
-            setTimeout(() => showPanel(ctx), 1500);
+        sync.lastError && !['online', 'unconfigured'].includes(sync.state) && h('div', { style: { color: THEME.muted, fontSize: '11px' } }, sync.lastError),
+        h('div', { style: { marginTop: '4px', color: THEME.muted } }, `${sync.pendingCount()} élément(s) en attente d'envoi`),
+        h('div', { style: { display: 'grid', gridTemplateColumns: '60px 1fr', gap: '6px 8px', alignItems: 'center', marginTop: '10px' } },
+          h('label', null, 'URL'), urlInput,
+          h('label', null, 'Token'), tokenInput,
+        ),
+        feedback,
+        h('div', { style: { display: 'flex', gap: '8px', marginTop: '4px', alignItems: 'center', flexWrap: 'wrap' } },
+          button('Tester', () => {
+            say('Test en cours...', THEME.muted);
+            ctx.testConnection(current()).then((ok) => say(`✔ ${ok}`, THEME.ok), (e: Error) => say(`✕ ${e.message}`, THEME.rejected));
           }),
-          webLink(ctx.serverUrl, 'Ouvrir le site local ↗'),
+          button('Enregistrer', () => {
+            ctx.connection.save(current());
+            say('Enregistré — synchronisation relancée.', THEME.ok);
+            setTimeout(() => showPanel(ctx), 1500);
+          }, THEME.ok),
+          webLink(`${conn.serverUrl}/parametres`, 'Récupérer le token ↗'),
         ),
       ),
       section(
         'Cette page',
         h('div', null, `${page.total} annonces · ${page.hidden} masquées · ${page.seen} vues · ${page.toContact} à contacter · ${page.suggested} doublons possibles`),
         h('label', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px', cursor: 'pointer' } }, toggle, 'Afficher les annonces masquées (en pointillés)'),
+      ),
+      h('div', { style: { display: 'flex', justifyContent: 'space-between', color: THEME.muted, fontSize: '11px' } },
+        `Plugin v${ctx.version}`,
+        webLink(conn.serverUrl, 'Ouvrir le site local ↗') ?? '',
       ),
     ),
   });

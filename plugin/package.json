@@ -16,5 +16,9 @@
     "tsx": "^4.19.0",
     "linkedom": "^0.18.5",
     "@types/node": "^20.14.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nicolas-goyon/OutilRechercheLocation.git"
   }
 }

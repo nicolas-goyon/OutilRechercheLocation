@@ -25,15 +25,22 @@
     }
     @if (_regenerated)
     {
-        <p class="warn">Nouveau token créé : l'ancien est refusé. Mets à jour <code>apiToken</code> dans le script Tampermonkey.</p>
+        <p class="warn">Nouveau token créé : l'ancien est refusé. Recolle-le dans le plugin (panneau 🏠 > Connexion).</p>
     }
 </section>
 
 <section class="panel">
-    <h2>Script Tampermonkey</h2>
-    <p>Crée un nouveau script dans Tampermonkey et colle ceci (le <code>@@require</code> pointe sur la dernière version publiée du plugin ; voir le README).</p>
-    <pre class="snippet">@Snippet</pre>
-    <button type="button" @onclick="() => Copy(Snippet)">Copier le script</button>
+    <h2>Installer le plugin</h2>
+    <ol class="steps">
+        <li>Avec Tampermonkey installé dans le navigateur, ouvrir
+            <a href="@Settings.PluginInstallUrl" target="_blank" rel="noopener">le script du plugin ↗</a>
+            puis cliquer sur <b>Installer</b>. Il se met ensuite à jour tout seul à chaque nouvelle version.</li>
+        <li>Ouvrir une recherche sur un site d'annonces (bienici.com…) : le panneau 🏠 s'ouvre au premier lancement.</li>
+        <li>Dans <b>Connexion au site local</b>, laisser l'URL <code>@Settings.PublicUrl</code>, coller le token ci-dessus
+            (<button type="button" class="link" @onclick="() => Copy(_token)">copier</button>), puis <b>Tester</b> et <b>Enregistrer</b>.</li>
+    </ol>
+    <p class="muted">Le token n'est jamais dans le script publié : il reste dans le stockage Tampermonkey de ton navigateur,
+        et survit aux mises à jour du plugin. Après une régénération, le recoller dans le panneau 🏠.</p>
 </section>
 
 <section class="panel">
@@ -51,35 +58,6 @@
 
     protected override void OnInitialized() => _token = Tokens.Current;
 
-    private string Snippet => $$"""
-        // ==UserScript==
-        // @name         Recherche logement — suivi multi-sites
-        // @namespace    local.recherche-logement
-        // @version      1.0.0
-        // @description  Masque / étiquette les annonces et les synchronise avec le site local.
-        // @match        https://www.bienici.com/*
-        // @noframes
-        // @run-at       document-idle
-        // @grant        unsafeWindow
-        // @grant        GM_registerMenuCommand
-        // @grant        GM_getValue
-        // @grant        GM_setValue
-        // @grant        GM_addValueChangeListener
-        // @grant        GM_removeValueChangeListener
-        // @grant        GM_xmlhttpRequest
-        // @connect      localhost
-        // @connect      127.0.0.1
-        // @require      https://cdn.jsdelivr.net/gh/nicolas-goyon/OutilRechercheLocation@plugin-vX.Y.Z/plugin/dist/recherche-logement.js
-        // ==/UserScript==
-
-        (function () {
-          'use strict';
-          window.TMRechercheLogement.init({
-            serverUrl: '{{Settings.PublicUrl}}',
-            apiToken: '{{_token}}',
-          });
-        })();
-        """;
 
     private void Regenerate()
     {

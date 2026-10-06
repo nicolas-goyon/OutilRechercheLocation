@@ -1,7 +1,7 @@
 /**
  * Registre des sites supportés. Pour ajouter SeLoger, LeBonCoin, PAP... :
  * créer sites/<site>/adapter.ts implémentant SiteAdapter, l'ajouter ici,
- * et ajouter le @match correspondant dans le script Tampermonkey (le MÊME
+ * et ajouter le @match correspondant dans userscripts/recherche-logement.mjs (le MÊME
  * script, pour partager la base).
  */
 import { bieniciAdapter } from './bienici/adapter';

@@ -25,7 +25,13 @@
 
 ```
 plugin/
-  src/index.ts            init({ serverUrl, apiToken }) : adaptateur + SyncEngine + Tracker + UI
+  userscripts/            Script installable, un fichier par instance (template v2) :
+    recherche-logement.mjs  { headers, config } -> dist/recherche-logement.user.js + .meta.js
+    types.d.ts              Type UserscriptInstance (refuse apiToken dans config)
+  scripts/build.mjs       Bundle esbuild + génération des userscripts (@version, @require épinglé
+                          sur plugin-vX.Y.Z, @updateURL/@downloadURL sur releases/latest)
+  src/index.ts            init({ serverUrl }) : adaptateur + SyncEngine + Tracker + UI ; VERSION
+  src/core/connection.ts  URL + token du site local, saisis dans le panneau, stockés dans Tampermonkey
   src/core/types.ts       Types + contrat d'API (miroir de server/.../Contracts)
   src/core/api.ts         Client HTTP (GM_xmlhttpRequest, header Authorization)
   src/core/sync.ts        SyncEngine : observations + actions en file, envoi par lots,
@@ -52,7 +58,8 @@ server/
   tests/RechercheLogement.Tests/   xUnit : DedupScorer, Catalog, API (WebApplicationFactory)
   Dockerfile
 docker-compose.yml
-.github/workflows/        plugin.yml (tag plugin-v* + jsDelivr), server.yml (tests + image GHCR)
+.github/workflows/        plugin.yml (tag plugin-v* + jsDelivr + GitHub Release = mise à jour auto),
+                          server.yml (tests + image GHCR)
 ```
 
 ## Modèle de données
@@ -90,6 +97,8 @@ une coupure réseau n'est pas réappliqué.
 
 ## Sécurité
 
+- Le script du plugin est public (GitHub Release) : il ne contient jamais le token. Celui-ci est
+  saisi dans le panneau 🏠 et stocké par Tampermonkey (`GM_setValue`), hors du script.
 - Toutes les routes `/api/*` exigent `Authorization: Bearer <token>` (comparaison à temps
   constant). Token : `RechercheLogement__ApiToken` s'il est défini, sinon généré au premier
   démarrage (32 octets aléatoires) et stocké en base ; régénérable dans Paramètres.
@@ -112,7 +121,8 @@ une coupure réseau n'est pas réappliqué.
 
 1. `plugin/src/sites/<site>/parse.ts` (fonctions pures + fixture HTML réelle + test) et
    `adapter.ts` (sélecteurs, enrichissement éventuel via le JSON du site).
-2. L'enregistrer dans `plugin/src/sites/index.ts`, ajouter son `@match` au script Tampermonkey et
+2. L'enregistrer dans `plugin/src/sites/index.ts`, ajouter son `@match` dans
+   `plugin/userscripts/recherche-logement.mjs` (la mise à jour auto le déploie) et
    son libellé dans `server/.../Model/Labels.cs`.
 
 ## Pistes

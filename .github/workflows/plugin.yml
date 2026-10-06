@@ -1,7 +1,13 @@
-name: Plugin — test & publication (jsDelivr)
+name: Plugin — test & publication (jsDelivr + GitHub Release, mise à jour auto)
 
-# Construit le bundle du plugin et le publie sur un tag `plugin-vX.Y.Z`, servi par jsDelivr :
-#   https://cdn.jsdelivr.net/gh/nicolas-goyon/OutilRechercheLocation@plugin-vX.Y.Z/plugin/dist/recherche-logement.js
+# À chaque nouvelle version `plugin-vX.Y.Z` :
+#   - plugin/dist/ (le bundle) est commité sur le tag, servi par jsDelivr :
+#       https://cdn.jsdelivr.net/gh/<owner>/<repo>@plugin-vX.Y.Z/plugin/dist/recherche-logement.js
+#   - plugin/dist/<id>.user.js + .meta.js (un par plugin/userscripts/<id>.mjs) sont
+#     attachés à une GitHub Release. Les scripts installés interrogent
+#       https://github.com/<owner>/<repo>/releases/latest/download/<id>.meta.js
+#     et se mettent à jour quand son @version est plus élevé.
+#     ⚠ Seul ce workflow publie des GitHub Releases dans ce dépôt : "latest" = dernier plugin.
 #
 # - Pull request / push touchant plugin/ : typecheck + tests + build.
 # - Push sur main : en plus, publication d'un nouveau tag (patch par défaut,
@@ -109,7 +115,27 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - run: npm run build
+      - name: Build (version = tag publié)
+        env:
+          RELEASE_VERSION: ${{ steps.tag.outputs.name }}
+        run: npm run build
+
+      - name: Vérifier le bundle et les userscripts
+        env:
+          TAG: ${{ steps.tag.outputs.name }}
+        run: |
+          set -euo pipefail
+          test -s dist/recherche-logement.js || { echo "::error::bundle absent"; exit 1; }
+          shopt -s nullglob
+          scripts=(dist/*.user.js)
+          [ ${#scripts[@]} -gt 0 ] || { echo "::error::aucun dist/*.user.js"; exit 1; }
+          for u in "${scripts[@]}"; do
+            grep -q "^// @version *${TAG#plugin-v}\$" "$u" || { echo "::error::$u : @version incorrect"; exit 1; }
+            grep -q "@${TAG}/plugin/dist/recherche-logement.js" "$u" || { echo "::error::$u ne @require pas le bundle ${TAG}"; exit 1; }
+            ! grep -qi 'apiToken' "$u" || { echo "::error::$u contient un token"; exit 1; }
+            test -s "${u%.user.js}.meta.js" || { echo "::error::${u%.user.js}.meta.js absent"; exit 1; }
+            echo "OK : $u"
+          done
 
       - name: Commiter dist/ sur le tag et le pousser
         working-directory: .
@@ -123,5 +149,28 @@ jobs:
           git commit -m "ci(build): plugin dist pour ${TAG}"
           git tag -f "${TAG}"
           git push origin "${TAG}" --force
-          echo "### ${TAG}" >> "$GITHUB_STEP_SUMMARY"
-          echo "https://cdn.jsdelivr.net/gh/${{ github.repository }}@${TAG}/plugin/dist/recherche-logement.js" >> "$GITHUB_STEP_SUMMARY"
+
+      # Seul le tag le plus élevé est marqué "latest" : les scripts installés suivent
+      # releases/latest, republier un ancien tag ne doit pas les faire revenir en arrière.
+      - name: Publier les userscripts en assets de GitHub Release
+        working-directory: .
+        env:
+          TAG: ${{ steps.tag.outputs.name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          assets=(plugin/dist/*.user.js plugin/dist/*.meta.js)
+          highest="$(git tag -l 'plugin-v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -n1)"
+          if [ "$highest" = "$TAG" ]; then latest=true; else latest=false; fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${assets[@]}" --clobber
+            gh release edit "$TAG" --latest="$latest"
+          else
+            gh release create "$TAG" "${assets[@]}" --verify-tag --title "Plugin ${TAG#plugin-}" --generate-notes --latest="$latest"
+          fi
+          {
+            echo "### ${TAG} (latest=${latest})"
+            echo "- Installation / mise à jour : https://github.com/${{ github.repository }}/releases/latest/download/recherche-logement.user.js"
+            echo "- Bundle : https://cdn.jsdelivr.net/gh/${{ github.repository }}@${TAG}/plugin/dist/recherche-logement.js"
+          } >> "$GITHUB_STEP_SUMMARY"

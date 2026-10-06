@@ -35,10 +35,23 @@ export interface ServerInfo {
 }
 
 export class ApiClient {
-  readonly baseUrl: string;
+  private options: ApiClientOptions;
 
-  constructor(private readonly options: ApiClientOptions) {
-    this.baseUrl = options.baseUrl.replace(/\/+$/, '');
+  constructor(options: ApiClientOptions) {
+    this.options = { ...options, baseUrl: options.baseUrl.replace(/\/+$/, '') };
+  }
+
+  get baseUrl(): string {
+    return this.options.baseUrl;
+  }
+
+  /** Change l'URL / le token (réglages modifiés dans le panneau). */
+  configure(baseUrl: string, token: string): void {
+    this.options = { ...this.options, baseUrl: baseUrl.replace(/\/+$/, ''), token };
+  }
+
+  hasToken(): boolean {
+    return this.options.token.length > 0;
   }
 
   sync(request: SyncRequest): Promise<SyncResponse> {

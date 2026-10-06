@@ -1,6 +1,6 @@
 # Site local de suivi de recherche logement.
 #   docker compose up -d --build     puis http://localhost:5080
-#   docker compose logs server | grep "Token API"   (token à mettre dans le script Tampermonkey)
+#   docker compose logs server | grep "Token API"   (token à coller dans le plugin : panneau 🏠 > Connexion)
 services:
   server:
     build: ./server
