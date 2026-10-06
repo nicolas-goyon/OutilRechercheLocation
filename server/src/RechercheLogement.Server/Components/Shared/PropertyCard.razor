@@ -34,6 +34,5 @@
     [Parameter, EditorRequired] public PropertySummary Item { get; set; } = default!;
 
     /// <summary>Miniature. Bien'ici fournit l'image à la taille demandée.</summary>
-    private static string Thumb(string url) =>
-        url.StartsWith("https://file.bienici.com/", StringComparison.Ordinal) ? $"{url}?width=400&height=240&fit=cover" : url;
+    private static string Thumb(string url) => Format.Thumb(url, 400, 240);
 }

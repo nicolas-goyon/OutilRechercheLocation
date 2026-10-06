@@ -20,6 +20,19 @@ import { normalizeText, parseNumber } from '../../shared/text';
 
 export const CARD_SELECTOR = 'article.ad-overview[data-id]';
 
+/** Fiche d'une annonce. Bien'ici l'affiche par-dessus la liste (SPA) ou seule (lien direct). */
+export const DETAIL_SELECTOR = 'section.section-detailedSheet[id^="section-detailedSheet_"]';
+
+/**
+ * Emplacements publicitaires. Avec un bloqueur de pub, ils restent vides
+ * (300×250 dans la liste carte, 1920×90 en haut) et laissent des trous.
+ */
+export const AD_SELECTORS = [
+  '.search-results-list__commercial-ad',
+  '.advertisement-container',
+  '.safeFrameContentFullWidth',
+];
+
 const PROPERTY_TYPES: [RegExp, string][] = [
   [/^appartement/, 'flat'],
   [/^studio/, 'flat'],
@@ -54,6 +67,63 @@ export function parseBieniciCard(card: Element): ListingData {
     descriptionExcerpt: description ? normalizeText(description).slice(0, 600) : undefined,
   };
   return data;
+}
+
+/**
+ * Fiche d'une annonce :
+ *
+ *   <section id="section-detailedSheet_century-21-202_2190_28251" class="section-detailedSheet">
+ *     <div class="detailedSheetFirstBlock">
+ *       <h1>Location appartement 2 pièces 49 m²<span class="fullAddress">12850 Onet-le-Château</span></h1>
+ *       <div class="detailedSheetPrice"> <span class="ad-price__the-price">605 €</span> ...
+ *     <div class="ad-detailed-sheet-main-info">Modifiée le 17 sept. 2026 | Réf. de l’annonce : 28251</div>
+ *     <span class="see-more-description__content">…description…</span>
+ */
+export function detailSiteId(section: Element): string | undefined {
+  return section.id.replace(/^section-detailedSheet_/, '') || undefined;
+}
+
+export function parseBieniciDetail(section: Element): ListingData {
+  const text = (sel: string) => section.querySelector(sel)?.textContent?.replace(/\s+/g, ' ').trim() || undefined;
+  const h1 = section.querySelector('h1');
+  const address = text('h1 .fullAddress');
+  let heading: string | undefined;
+  if (h1) {
+    const clone = h1.cloneNode(true) as Element;
+    clone.querySelector('.fullAddress')?.remove();
+    heading = clone.textContent?.replace(/\s+/g, ' ').trim() || undefined;
+  }
+  // "Location appartement 2 pièces 49 m²" -> "Appartement 2 pièces 49 m²" (même forme que le titre des cartes).
+  const transactionWord = heading?.match(/^(location|vente|achat)\s+/i)?.[1]?.toLowerCase();
+  const title = heading?.replace(/^(location|vente|achat)\s+/i, '').replace(/^./, (c) => c.toUpperCase());
+  const perMonth = text('.detailedSheetPrice .ad-price__per-month');
+  const ref = text('.ad-detailed-sheet-main-info')?.match(/R[ée]f\.? de l.annonce\s*:\s*(\S+)/i)?.[1];
+  const description = (section.querySelector('.see-more-description__content') ?? section.querySelector('section.description p'))?.textContent;
+  const photos = [...section.querySelectorAll<HTMLImageElement>('.slideshow img[u="image"], .slideshow img[src2]')]
+    .map((img) => img.getAttribute('src2') ?? img.getAttribute('src') ?? '')
+    .filter((u) => u.startsWith('https://file.bienici.com/'))
+    .map(stripPhotoParams);
+  const id = detailSiteId(section);
+
+  return {
+    ...parseTitle(title),
+    ...parseAddress(address),
+    title,
+    price: parseNumber(text('.detailedSheetPrice .ad-price__the-price')),
+    transaction: transactionWord === 'location' || perMonth ? 'rent' : transactionWord ? 'buy' : undefined,
+    agencyRef: ref,
+    photos: photos.length ? [...new Set(photos)].slice(0, 4) : undefined,
+    descriptionExcerpt: description ? normalizeText(description).slice(0, 600) : undefined,
+    url: id ? detailUrl(id, section) : undefined,
+  };
+}
+
+/** URL canonique de la fiche : celle de la page si elle porte le même identifiant. */
+function detailUrl(id: string, section: Element): string | undefined {
+  const loc = section.ownerDocument?.defaultView?.location;
+  if (loc && loc.pathname.endsWith(`/${id}`)) return canonicalUrl(loc.pathname);
+  const canonical = section.ownerDocument?.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.getAttribute('href');
+  return canonical && canonical.endsWith(`/${id}`) ? canonicalUrl(canonical) : undefined;
 }
 
 /** "Appartement meublé 2 pièces 40 m²" -> type, meublé, pièces, surface. */

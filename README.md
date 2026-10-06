@@ -21,7 +21,8 @@ par un token). Le serveur local répond avec l'état de chaque annonce.
 Si le serveur local est arrêté, le plugin continue de masquer et d'étiqueter les annonces avec son
 cache. Il garde les actions en attente. Il les envoie quand le serveur local redémarre.
 
-Sites d'annonces compatibles : **Bien'ici**. Pour ajouter un site d'annonces, lire
+Sites d'annonces compatibles : **Bien'ici** et **SeLoger** (pages de résultats et page d'une
+annonce). Pour ajouter un site d'annonces, lire
 [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ## Démarrage
@@ -50,7 +51,7 @@ dans `src/RechercheLogement.Server/data/`.
    <https://github.com/nicolas-goyon/OutilRechercheLocation/releases/latest/download/recherche-logement.user.js>.
    La page **Paramètres** du serveur local donne aussi ce lien.
 3. Cliquer sur **Installer**.
-4. Ouvrir une recherche sur bienici.com. Au premier lancement, le panneau 🏠 s'ouvre sur
+4. Ouvrir une recherche sur bienici.com ou seloger.com. Au premier lancement, le panneau 🏠 s'ouvre sur
    **Connexion au serveur local**.
 5. Coller le token (page **Paramètres** du serveur local).
 6. Cliquer sur **Tester**, puis sur **Enregistrer**.
@@ -103,6 +104,16 @@ Dans le plugin, sur chaque annonce :
 | 🔗 n | Le même bien a n autres annonces. |
 | ≈ déjà vue ? 60 % | Doublon probable à confirmer. Cliquer sur « Même bien » ou « Pas le même ». |
 
+Sur la page d'une annonce, le plugin affiche un bandeau **🏠 Suivi** au-dessus du titre, avec les
+mêmes boutons (en clair) et le statut actuel. La page d'une annonce n'est jamais masquée.
+
+Le plugin masque aussi les emplacements de pub des listes. Avec un bloqueur de pub, ces blocs
+restent vides et laissent des trous (liste à côté de la carte sur Bien'ici, liste SeLoger).
+
+Panneau 🏠, section **⭐ Recherches favorites** : sur une page de résultats, le bouton
+« Enregistrer cette recherche » envoie l'URL (avec tous les critères) au serveur local. La section
+liste aussi les recherches déjà enregistrées pour ce site.
+
 Pages du serveur local :
 
 - **Tableau de bord** : compteurs, biens à contacter, biens vus récemment.
@@ -113,6 +124,10 @@ Pages du serveur local :
 - **Fiche d'un bien** : toutes ses annonces (tous sites d'annonces), historique de prix, note,
   commentaires datés (appels, visites…). Un bouton dissocie une annonce liée par erreur.
 - **Doublons à vérifier** : comparaison côte à côte.
+- **⭐ Recherches** : liens de recherche favoris (Bien'ici, SeLoger…), avec vos critères dans l'URL.
+  Plusieurs recherches par site, même URL possible (doublons permis). Ajouter, modifier, dupliquer
+  (pour une variante avec d'autres critères), réordonner, ouvrir une ou toutes les recherches d'un
+  site. Le tableau de bord affiche des raccourcis.
 - **Paramètres** : token (copier / régénérer), lien d'installation du plugin, export JSON.
 
 ## Développement
@@ -142,7 +157,7 @@ dotnet run --project src/RechercheLogement.Server           # http://localhost:5
 
 - Bien'ici : le plugin relit le JSON de la liste. Cela fait une requête de plus par page. Les deux
   annonces « mises en avant » n'ont souvent que les données de la carte.
-- Le plugin agit uniquement sur les pages de résultats. Il n'agit pas encore sur la page d'une
-  annonce du site d'annonces.
+- SeLoger : le JSON de la liste ne contient ni position GPS ni photos d'origine (les photos sont
+  renommées). La position GPS et les charges viennent de la page de l'annonce, une fois ouverte.
 - Le serveur local n'a pas de connexion utilisateur. Il doit tourner sur votre machine, lié à
   `127.0.0.1`.

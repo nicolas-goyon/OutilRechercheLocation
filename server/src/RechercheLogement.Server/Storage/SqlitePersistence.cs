@@ -74,6 +74,20 @@ public sealed class SqlitePersistence : IPersistence
             value TEXT NOT NULL
         );
         """,
+        // v2 : recherches favorites (liens de recherche des sites d'annonces). Doublons permis.
+        """
+        CREATE TABLE saved_searches (
+            id             TEXT PRIMARY KEY,
+            name           TEXT NOT NULL,
+            url            TEXT NOT NULL,
+            site           TEXT NOT NULL,
+            note           TEXT NULL,
+            sort_order     INTEGER NOT NULL,
+            created_at     INTEGER NOT NULL,
+            updated_at     INTEGER NOT NULL,
+            last_opened_at INTEGER NULL
+        );
+        """,
     ];
 
     private readonly string _connectionString;
@@ -173,6 +187,22 @@ public sealed class SqlitePersistence : IPersistence
         foreach (var r in Query(c, "SELECT key, value FROM settings"))
             snap.Settings[r.GetString(0)] = r.GetString(1);
 
+        foreach (var r in Query(c, "SELECT id, name, url, site, note, sort_order, created_at, updated_at, last_opened_at FROM saved_searches"))
+        {
+            snap.Searches.Add(new SavedSearch
+            {
+                Id = r.GetString(0),
+                Name = r.GetString(1),
+                Url = r.GetString(2),
+                Site = r.GetString(3),
+                Note = r.IsDBNull(4) ? null : r.GetString(4),
+                Order = r.GetInt32(5),
+                CreatedAt = r.GetInt64(6),
+                UpdatedAt = r.GetInt64(7),
+                LastOpenedAt = r.IsDBNull(8) ? null : r.GetInt64(8),
+            });
+        }
+
         return snap;
     }
 
@@ -238,6 +268,21 @@ public sealed class SqlitePersistence : IPersistence
 
         foreach (var (k, v) in changes.Settings)
             Exec(c, tx, "INSERT INTO settings (key, value) VALUES ($k, $v) ON CONFLICT(key) DO UPDATE SET value = excluded.value", ("$k", k), ("$v", v));
+
+        foreach (var x in changes.Searches.Values)
+        {
+            Exec(c, tx, """
+                INSERT INTO saved_searches (id, name, url, site, note, sort_order, created_at, updated_at, last_opened_at)
+                VALUES ($id, $name, $url, $site, $note, $order, $created, $updated, $opened)
+                ON CONFLICT(id) DO UPDATE SET name = excluded.name, url = excluded.url, site = excluded.site, note = excluded.note,
+                    sort_order = excluded.sort_order, updated_at = excluded.updated_at, last_opened_at = excluded.last_opened_at
+                """,
+                ("$id", x.Id), ("$name", x.Name), ("$url", x.Url), ("$site", x.Site), ("$note", x.Note), ("$order", x.Order),
+                ("$created", x.CreatedAt), ("$updated", x.UpdatedAt), ("$opened", x.LastOpenedAt));
+        }
+
+        foreach (var id in changes.DeletedSearches)
+            Exec(c, tx, "DELETE FROM saved_searches WHERE id = $id", ("$id", id));
 
         tx.Commit();
     }

@@ -142,3 +142,22 @@ export interface SyncResponse {
   rejectedActionIds: string[];
   listings: Record<ListingKey, ListingView>;
 }
+
+// ------------------------------------------------------------------ contrat /api/searches (recherches favorites)
+
+/** Copie de server/.../Contracts/SearchContracts.cs. */
+export interface SavedSearchRequest {
+  name?: string;
+  url: string;
+  note?: string;
+}
+
+export interface SavedSearchView {
+  id: string;
+  name: string;
+  url: string;
+  site: string;
+  note?: string;
+  createdAt: number;
+  lastOpenedAt?: number;
+}

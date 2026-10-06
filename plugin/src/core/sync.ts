@@ -89,9 +89,9 @@ export class SyncEngine {
   observe(obs: Observation): void {
     const key = `${obs.site}:${obs.siteId}`;
     const prev = this.pendingObs[key];
-    // Fusion : une observation 'card' plus récente ne remplace pas une observation 'api' (plus complète).
+    // Fusion : une observation 'card' ou 'detail' (DOM) plus récente ne remplace pas une observation 'api' (plus complète).
     this.pendingObs[key] =
-      prev && prev.source === 'api' && obs.source === 'card'
+      prev && prev.source === 'api' && obs.source !== 'api'
         ? { ...prev, data: { ...obs.data, ...prev.data }, seenAt: obs.seenAt }
         : prev
           ? { ...obs, data: { ...prev.data, ...obs.data } }

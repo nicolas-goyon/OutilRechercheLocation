@@ -1,0 +1,170 @@
+@page "/recherches"
+@inherits LiveComponent
+@inject IJSRuntime JS
+
+<PageTitle>Recherches favorites — Recherche logement</PageTitle>
+<h1>⭐ Recherches favorites</h1>
+<p class="muted">
+    Les liens de recherche des sites d'annonces, avec vos critères (prix, surface, zone…) dans l'URL.
+    Plusieurs recherches par site sont possibles, même avec la même URL. Le plugin peut aussi enregistrer
+    la recherche affichée : bouton 🏠 &gt; <b>⭐ Enregistrer cette recherche</b>.
+</p>
+
+<section class="panel">
+    <h2>Ajouter une recherche</h2>
+    <div class="search-form">
+        <input placeholder="Nom (ex. « Rodez 2 pièces, 700 € max »)" @bind="_name" @bind:event="oninput" />
+        <input placeholder="URL de la recherche (copier depuis la barre d'adresse)" @bind="_url" @bind:event="oninput" @onkeydown="OnUrlKey" />
+        <input placeholder="Note (optionnel)" @bind="_note" @bind:event="oninput" />
+        <button type="button" class="primary" @onclick="Add">Ajouter</button>
+    </div>
+    @if (_error is not null) { <p class="warn">@_error</p> }
+</section>
+
+@if (_searches.Count == 0)
+{
+    <p class="muted">Aucune recherche enregistrée.</p>
+}
+@foreach (var group in _searches.GroupBy(s => s.Site))
+{
+    <section class="panel">
+        <div class="search-group-head">
+            <h2>@Labels.Site(group.Key) <span class="muted">(@group.Count())</span></h2>
+            @if (group.Count() > 1)
+            {
+                <button type="button" title="Ouvre chaque recherche dans un onglet. Le navigateur peut demander d'autoriser les fenêtres pop-up pour localhost."
+                        @onclick="() => OpenAll(group)">Ouvrir toutes ↗</button>
+            }
+        </div>
+        <ul class="searches">
+            @foreach (var s in group)
+            {
+                <li class="search" id="@s.Id">
+                    @if (_editing == s.Id)
+                    {
+                        <div class="search-form">
+                            <input @bind="_editName" placeholder="Nom" />
+                            <input @bind="_editUrl" placeholder="URL" />
+                            <input @bind="_editNote" placeholder="Note" />
+                            <button type="button" class="primary" @onclick="() => SaveEdit(s.Id)">Enregistrer</button>
+                            <button type="button" @onclick="() => _editing = null">Annuler</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="search-main">
+                            <a class="search-name" href="@s.Url" target="_blank" rel="noopener" @onclick="() => Catalog.MarkSearchOpened(s.Id)">@s.Name ↗</a>
+                            <div class="chips small">
+                                @foreach (var c in Criteria(s.Url)) { <span class="site">@c</span> }
+                            </div>
+                            @if (s.Note is not null) { <div class="note">@s.Note</div> }
+                            <div class="muted small">
+                                Ajoutée le @Format.Date(s.CreatedAt)@(s.LastOpenedAt is { } o ? $" · ouverte le {Format.DateTime(o)}" : "")
+                            </div>
+                        </div>
+                        <div class="search-actions">
+                            <button type="button" title="Monter" @onclick="() => Catalog.MoveSearch(s.Id, -1)">↑</button>
+                            <button type="button" title="Descendre" @onclick="() => Catalog.MoveSearch(s.Id, 1)">↓</button>
+                            <button type="button" title="Copier le lien" @onclick="() => Copy(s.Url)">📋</button>
+                            <button type="button" title="Modifier" @onclick="() => StartEdit(s)">✎</button>
+                            <button type="button" title="Dupliquer (pour une variante avec d'autres critères)" @onclick="() => Catalog.DuplicateSearch(s.Id)">⧉</button>
+                            @if (_confirmDelete == s.Id)
+                            {
+                                <button type="button" class="danger" @onclick="() => Delete(s.Id)">Confirmer la suppression</button>
+                                <button type="button" @onclick="() => _confirmDelete = null">Annuler</button>
+                            }
+                            else
+                            {
+                                <button type="button" class="danger" title="Supprimer" @onclick="() => _confirmDelete = s.Id">🗑</button>
+                            }
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+@code {
+    private IReadOnlyList<SavedSearch> _searches = [];
+    private string? _name, _url, _note, _error;
+    private string? _editing, _editName, _editUrl, _editNote, _confirmDelete;
+
+    protected override void Load() => _searches = Catalog.Searches();
+
+    private void Add()
+    {
+        try
+        {
+            Catalog.AddSearch(_name, _url, _note);
+            _name = _url = _note = _error = null;
+        }
+        catch (ArgumentException)
+        {
+            _error = "URL invalide. Coller l'adresse complète de la page de résultats (https://...).";
+        }
+    }
+
+    private void OnUrlKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") Add();
+    }
+
+    private void StartEdit(SavedSearch s)
+    {
+        _editing = s.Id;
+        _editName = s.Name;
+        _editUrl = s.Url;
+        _editNote = s.Note;
+        _error = null;
+    }
+
+    private void SaveEdit(string id)
+    {
+        try
+        {
+            Catalog.UpdateSearch(id, _editName, _editUrl, _editNote);
+            _editing = null;
+            _error = null;
+        }
+        catch (ArgumentException)
+        {
+            _error = "URL invalide : modification non enregistrée.";
+        }
+    }
+
+    private void Delete(string id)
+    {
+        Catalog.DeleteSearch(id);
+        _confirmDelete = null;
+    }
+
+    private async Task Copy(string url) => await JS.InvokeVoidAsync("rl.copy", url);
+
+    private async Task OpenAll(IEnumerable<SavedSearch> group)
+    {
+        var list = group.ToList();
+        await JS.InvokeVoidAsync("rl.openAll", list.Select(s => s.Url).ToArray());
+        foreach (var s in list) Catalog.MarkSearchOpened(s.Id);
+    }
+
+    /// <summary>Critères lisibles d'une URL de recherche : segments du chemin et paramètres ("prix-max = 700").</summary>
+    private static IEnumerable<string> Criteria(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var u)) yield break;
+        var segments = u.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        // Bien'ici : /recherche/location/<zone>/<pièces>. On garde ce qui suit "recherche".
+        foreach (var seg in segments.SkipWhile(s => s is "recherche" or "classified-search").Take(4))
+            yield return Uri.UnescapeDataString(seg);
+        var count = 0;
+        foreach (var pair in u.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (++count > 10) yield break;
+            var kv = pair.Split('=', 2);
+            var key = Uri.UnescapeDataString(kv[0].Replace('+', ' '));
+            if (key is "camera" or "page" or "mode") continue; // position de carte, pagination : pas des critères
+            var value = kv.Length > 1 ? Uri.UnescapeDataString(kv[1].Replace('+', ' ')) : "";
+            yield return value.Length > 40 ? $"{key} = {value[..40]}…" : $"{key} = {value}";
+        }
+    }
+}

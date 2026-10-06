@@ -16,6 +16,22 @@
     Par site : @string.Join(" · ", _stats.BySite.Select(kv => $"{Labels.Site(kv.Key)} : {kv.Value}"))
 </p>
 
+<h2>⭐ Recherches favorites</h2>
+@if (_searches.Count == 0)
+{
+    <p class="muted">Aucune recherche enregistrée. <a href="/recherches">Ajouter une recherche</a></p>
+}
+else
+{
+    <div class="quick-searches">
+        @foreach (var s in _searches)
+        {
+            <a href="@s.Url" target="_blank" rel="noopener" title="@s.Url" @onclick="() => Catalog.MarkSearchOpened(s.Id)">@Labels.Site(s.Site) · @s.Name ↗</a>
+        }
+        <a href="/recherches">Gérer…</a>
+    </div>
+}
+
 <h2>📞 Suivi des contacts</h2>
 @if (_toContact.Count == 0)
 {
@@ -37,10 +53,12 @@ else
     private CatalogStats _stats = default!;
     private IReadOnlyList<PropertySummary> _toContact = [];
     private IReadOnlyList<PropertySummary> _recent = [];
+    private IReadOnlyList<SavedSearch> _searches = [];
 
     protected override void Load()
     {
         _stats = Catalog.Stats();
+        _searches = Catalog.Searches();
         _toContact = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.ToContact }, Sort = PropertySort.LastUpdate, Take = 12 });
         _recent = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.None, PropertyStatus.Seen }, Take = 12 });
     }

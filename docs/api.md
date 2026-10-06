@@ -17,7 +17,8 @@ Formats :
 Le contrat existe en deux copies :
 
 - plugin : `plugin/src/core/types.ts`.
-- serveur : `server/src/RechercheLogement.Core/Contracts/SyncContracts.cs`.
+- serveur : `server/src/RechercheLogement.Core/Contracts/SyncContracts.cs` (et `SearchContracts.cs`
+  pour `/api/searches`).
 
 Toute modification d'une copie exige la même modification dans l'autre copie.
 
@@ -60,7 +61,7 @@ Requête. Un lot contient au maximum 1000 observations et 1000 actions.
 | --- | --- |
 | `card` | Données lues sur la carte HTML. Elles ne remplacent pas des données `api` déjà connues. |
 | `api` | JSON du site d'annonces (plus précis). |
-| `detail` | Page d'une annonce (réservé pour une version future). |
+| `detail` | Page d'une annonce, lue dans le DOM. Même règle que `card` : ne remplace pas des données `api`. |
 
 | `type` d'action | champs |
 | --- | --- |
@@ -108,12 +109,37 @@ retire alors l'action de sa file.
 
 Retourne la `ListingView` d'une annonce. Retourne `404` si l'annonce est inconnue.
 
+## `GET /api/searches`
+
+Retourne les recherches favorites, dans l'ordre d'affichage.
+
+```json
+[
+  { "id": "s_3f2a9c1b7d4e", "name": "Rodez 2 pièces, 700 € max", "site": "bienici", "note": null,
+    "url": "https://www.bienici.com/recherche/location/rodez-12000/2-pieces-et-plus?prix-max=700",
+    "createdAt": 1791217372725, "lastOpenedAt": null }
+]
+```
+
+## `POST /api/searches`
+
+Ajoute une recherche favorite (bouton « ⭐ Enregistrer cette recherche » du panneau 🏠). Les doublons
+sont permis : la même URL peut être enregistrée plusieurs fois (par exemple avec une note différente).
+
+```json
+{ "name": "Bordeaux T3", "url": "https://www.seloger.com/classified-search?…", "note": "optionnel" }
+```
+
+- `name` est optionnel. Nom par défaut : « Recherche <site> ».
+- Le serveur déduit `site` de l'URL (`bienici`, `seloger`, `leboncoin`, `pap`, `logicimmo`, sinon l'hôte).
+- Réponse `201` avec la recherche créée. URL absente ou pas en `http(s)` : `400 {"error": "…"}`.
+
 ## `GET /api/export`
 
-Retourne une sauvegarde complète (annonces, biens, liens, historique).
+Retourne une sauvegarde complète (annonces, biens, liens, historique, recherches favorites).
 
 ## Hors API
 
 - `GET /health` (sans token) retourne `{"status":"ok"}`.
-- Les pages web du serveur (`/`, `/biens`, `/a-contacter`, `/doublons`, `/parametres`) n'utilisent
+- Les pages web du serveur (`/`, `/biens`, `/a-contacter`, `/doublons`, `/recherches`, `/parametres`) n'utilisent
   pas l'API. Elles appellent directement le service métier sur le serveur (Blazor).

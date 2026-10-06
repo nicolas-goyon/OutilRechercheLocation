@@ -60,4 +60,23 @@ public class ApiTests(WebApplicationFactory<Program> factory) : IClassFixture<We
         Assert.Equal("pending", view["contactStage"]!.GetValue<string>());
         Assert.NotNull(view["siblings"]);
     }
+
+    [Fact]
+    public async Task Searches_CanBeAddedFromThePlugin()
+    {
+        var client = Client(Token);
+        var url = "https://www.seloger.com/classified-search?distributionTypes=Rent&locations=AD08FR13100";
+        var res = await client.PostAsJsonAsync("/api/searches", new { name = "Bordeaux", url });
+        Assert.Equal(HttpStatusCode.Created, res.StatusCode);
+        var created = JsonNode.Parse(await res.Content.ReadAsStringAsync())!;
+        Assert.Equal("seloger", created["site"]!.GetValue<string>());
+
+        // Doublon permis : même URL, deuxième entrée.
+        (await client.PostAsJsonAsync("/api/searches", new { name = "Bordeaux bis", url })).EnsureSuccessStatusCode();
+        var list = JsonNode.Parse(await client.GetStringAsync("/api/searches"))!.AsArray();
+        Assert.True(list.Count(x => x!["url"]!.GetValue<string>() == url) >= 2);
+
+        var bad = await client.PostAsJsonAsync("/api/searches", new { name = "x", url = "pas une url" });
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+    }
 }

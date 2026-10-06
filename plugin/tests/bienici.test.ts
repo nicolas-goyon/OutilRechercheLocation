@@ -2,7 +2,18 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { parseHTML } from 'linkedom';
-import { CARD_SELECTOR, parseAddress, parseBieniciApiAd, parseBieniciCard, parseTitle, photoKey } from '../src/sites/bienici/parse';
+import {
+  AD_SELECTORS,
+  CARD_SELECTOR,
+  DETAIL_SELECTOR,
+  detailSiteId,
+  parseAddress,
+  parseBieniciApiAd,
+  parseBieniciCard,
+  parseBieniciDetail,
+  parseTitle,
+  photoKey,
+} from '../src/sites/bienici/parse';
 
 const html = readFileSync(new URL('./fixtures/bienici-cards.html', import.meta.url), 'utf8');
 const { document } = parseHTML(`<html><body>${html}</body></html>`);
@@ -59,4 +70,39 @@ test('photoKey ignore les noms génériques', () => {
   assert.equal(photoKey('https://photos.ubiflow.net/751558/552433229/photos/1.jpg'), undefined);
   assert.equal(photoKey('https://x/image0001.jpg'), undefined);
   assert.equal(photoKey('https://media.studio-net.fr/biens/33564802/6a5662c07a9db'), '6a5662c07a9db');
+});
+
+// ------------------------------------------------------------------ page d'un bien
+
+const detailHtml = readFileSync(new URL('./fixtures/bienici-detail.html', import.meta.url), 'utf8');
+const detailDoc = parseHTML(`<html><head><link rel="canonical" href="https://www.bienici.com/annonce/location/onet-le-chateau/appartement/2pieces/century-21-202_2190_28251"></head><body>${detailHtml}</body></html>`).document;
+
+test('page d\'un bien : identifiant et données de la fiche', () => {
+  const section = detailDoc.querySelector(DETAIL_SELECTOR)!;
+  assert.ok(section);
+  assert.equal(detailSiteId(section), 'century-21-202_2190_28251');
+  const d = parseBieniciDetail(section);
+  assert.equal(d.title, 'Appartement 2 pièces 49 m²');
+  assert.equal(d.propertyType, 'flat');
+  assert.equal(d.rooms, 2);
+  assert.equal(d.surface, 49);
+  assert.equal(d.price, 605);
+  assert.equal(d.transaction, 'rent');
+  assert.equal(d.postalCode, '12850');
+  assert.equal(d.city, 'Onet-le-Château');
+  assert.equal(d.agencyRef, '28251');
+  assert.equal(d.url, 'https://www.bienici.com/annonce/location/onet-le-chateau/appartement/2pieces/century-21-202_2190_28251');
+  assert.equal(d.photos?.length, 2);
+  assert.ok(!d.photos?.[0]?.includes('?'));
+  assert.ok(d.descriptionExcerpt?.startsWith('onet le chateau secteur les balquieres'));
+});
+
+test('emplacements de pub : sélecteurs présents dans la liste réelle', () => {
+  const { document } = parseHTML(`<html><body><div class="search-results-list">
+    <article class="ad-overview" data-id="a"></article>
+    <div class="advertisement-container search-results-list__commercial-ad search-results-list__commercial-ad--map"><iframe></iframe></div>
+    <article class="ad-overview" data-id="b"></article></div></body></html>`);
+  const ads = document.querySelectorAll(AD_SELECTORS.join(','));
+  assert.equal(ads.length, 1);
+  assert.ok([...document.querySelectorAll('article')].every((a) => !a.matches(AD_SELECTORS.join(','))));
 });

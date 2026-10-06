@@ -8,6 +8,16 @@ export interface CardRef {
   element: HTMLElement;
 }
 
+/** La page d'une annonce (fiche détaillée), quand le site en affiche une. */
+export interface DetailRef {
+  /** Identifiant de l'annonce sur le site d'annonces (le même que sur les cartes). */
+  siteId: string;
+  /** Conteneur de la fiche. Le plugin y pose les attributs data-tmrl-* (jamais masqué). */
+  element: HTMLElement;
+  /** Élément qui reçoit la barre de suivi, en premier enfant. */
+  anchor: HTMLElement;
+}
+
 /**
  * Tout le code spécifique à un site d'annonces.
  *
@@ -35,4 +45,18 @@ export interface SiteAdapter {
   thumbnailUrl?(photoUrl: string): string;
   /** Élément de la carte qui reçoit la barre d'actions. Default: la carte. */
   toolbarAnchor?(card: CardRef): HTMLElement;
+  /**
+   * Sélecteurs CSS des emplacements publicitaires. Avec un bloqueur de pub,
+   * ces blocs restent vides et laissent des trous dans la liste. Le plugin les masque.
+   */
+  hideSelectors?: string[];
+  /** Fiche d'une annonce affichée dans la page (page d'un bien), s'il y en a une. */
+  findDetail?(root: Document): DetailRef | undefined;
+  /** Données lisibles sur la fiche (DOM). */
+  parseDetail?(detail: DetailRef): ListingData;
+  /**
+   * Page de résultats de recherche ? Le panneau 🏠 propose alors d'enregistrer
+   * la recherche dans les favoris du serveur local.
+   */
+  isSearchPage?(location: Location): boolean;
 }

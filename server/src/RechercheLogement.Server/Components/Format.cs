@@ -13,6 +13,16 @@ public static class Format
     public static string Date(long ms) => TimeZoneInfo.ConvertTime(DateTimeOffset.FromUnixTimeMilliseconds(ms), Paris).ToString("dd/MM/yyyy", Fr);
     public static string DateTime(long ms) => TimeZoneInfo.ConvertTime(DateTimeOffset.FromUnixTimeMilliseconds(ms), Paris).ToString("dd/MM/yyyy HH:mm", Fr);
 
+    /// <summary>Miniature d'une photo d'annonce (le CDN du site redimensionne l'image).</summary>
+    public static string Thumb(string url, int width, int height)
+    {
+        if (url.StartsWith("https://file.bienici.com/", StringComparison.Ordinal))
+            return $"{url}?width={width}&height={height}&fit=cover";
+        if (url.StartsWith("https://cdnihddipa.cloudimg.io/", StringComparison.Ordinal) || url.StartsWith("https://mms.seloger.com/", StringComparison.Ordinal))
+            return $"{url}{(url.Contains('?') ? '&' : '?')}w={width}&h={height}";
+        return url;
+    }
+
     public static string StatusClass(PropertyStatus s) => s switch
     {
         PropertyStatus.Seen => "seen",

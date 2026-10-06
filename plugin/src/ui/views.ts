@@ -7,7 +7,7 @@
  */
 import type { ConnectionSettings, ConnectionStore } from '../core/connection';
 import type { SyncEngine } from '../core/sync';
-import type { ListingKey, ListingRef, PropertyStatus, SuggestionView } from '../core/types';
+import type { ListingKey, ListingRef, PropertyStatus, SavedSearchView, SuggestionView } from '../core/types';
 import { h } from '../shared/dom/h';
 import { siteLabel } from '../sites';
 import { closeModal, showModal } from './modal';
@@ -138,6 +138,15 @@ export interface PanelContext {
   pageCounts(): { total: number; hidden: number; seen: number; toContact: number; suggested: number };
   showHidden: boolean;
   setShowHidden(v: boolean): void;
+  /** Recherches favorites (serveur local). Absent : la section n'est pas affichée. */
+  searches?: {
+    /** La page affichée est une page de résultats : on peut l'enregistrer. */
+    canSaveCurrent: boolean;
+    defaultName: string;
+    site: string;
+    save(name: string): Promise<SavedSearchView>;
+    list(): Promise<SavedSearchView[]>;
+  };
 }
 
 export function showPanel(ctx: PanelContext): void {
@@ -199,6 +208,7 @@ export function showPanel(ctx: PanelContext): void {
           webLink(`${conn.serverUrl}/parametres`, 'Obtenir le token ↗'),
         ),
       ),
+      ctx.searches && searchesSection(ctx.searches, conn.serverUrl),
       section(
         'Cette page',
         h('div', null, `${page.total} annonces · ${page.hidden} masquées · ${page.seen} vues · ${page.toContact} à contacter · ${page.suggested} doublons probables`),
@@ -210,4 +220,60 @@ export function showPanel(ctx: PanelContext): void {
       ),
     ),
   });
+}
+
+// ------------------------------------------------------------------ recherches favorites
+
+function searchesSection(s: NonNullable<PanelContext['searches']>, serverUrl: string): HTMLElement {
+  const nameInput = h('input', {
+    value: s.defaultName,
+    placeholder: 'Nom de la recherche',
+    style: { flex: '1', minWidth: '0', background: THEME.bgSoft, color: THEME.fg, border: `1px solid ${THEME.border}`, borderRadius: '6px', padding: '7px 8px', font: THEME.font },
+  });
+  const feedback = h('div', { style: { minHeight: '16px', marginTop: '6px', fontSize: '12px' } });
+  const list = h('ul', { style: { margin: '8px 0 0', paddingLeft: '18px' } });
+
+  const refresh = () =>
+    s.list().then(
+      (all) => {
+        const mine = all.filter((x) => x.site === s.site);
+        list.replaceChildren(
+          ...(mine.length
+            ? mine.map((x) =>
+                h('li', { style: { marginBottom: '3px' } }, h('a', { href: x.url, title: x.url, style: { color: '#93c5fd' } }, x.name), x.note ? h('span', { style: { color: THEME.muted } }, ` — ${x.note}`) : null),
+              )
+            : [h('li', { style: { color: THEME.muted, listStyle: 'none', marginLeft: '-18px' } }, 'Aucune recherche enregistrée pour ce site.')]),
+        );
+      },
+      () => list.replaceChildren(h('li', { style: { color: THEME.muted, listStyle: 'none', marginLeft: '-18px' } }, 'Liste indisponible (serveur local injoignable).')),
+    );
+  void refresh();
+
+  return section(
+    '⭐ Recherches favorites',
+    s.canSaveCurrent &&
+      h(
+        'div',
+        { style: { display: 'flex', gap: '8px', alignItems: 'center' } },
+        nameInput,
+        button('⭐ Enregistrer cette recherche', () => {
+          feedback.textContent = 'Enregistrement...';
+          feedback.style.color = THEME.muted;
+          s.save(nameInput.value.trim()).then(
+            (x) => {
+              feedback.textContent = `✔ « ${x.name} » enregistrée. Vous pouvez enregistrer plusieurs variantes.`;
+              feedback.style.color = THEME.ok;
+              void refresh();
+            },
+            (e: Error) => {
+              feedback.textContent = `✕ ${e.message}`;
+              feedback.style.color = THEME.rejected;
+            },
+          );
+        }, THEME.ok),
+      ),
+    s.canSaveCurrent && feedback,
+    list,
+    h('div', { style: { marginTop: '6px' } }, webLink(`${serverUrl}/recherches`, 'Gérer les recherches sur le serveur local ↗')),
+  );
 }

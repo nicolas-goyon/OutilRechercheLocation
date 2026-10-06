@@ -151,6 +151,5 @@ else
         if (e.Key == "Enter") AddComment();
     }
 
-    private static string Thumb(string url) =>
-        url.StartsWith("https://file.bienici.com/", StringComparison.Ordinal) ? $"{url}?width=320&height=200&fit=cover" : url;
+    private static string Thumb(string url) => Format.Thumb(url, 320, 200);
 }

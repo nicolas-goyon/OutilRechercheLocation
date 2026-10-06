@@ -64,6 +64,11 @@ window.rl = {
     }, 2000);
   },
 
+  /** Ouvre chaque URL dans un nouvel onglet (recherches favorites). Le bloqueur de pop-up peut demander une autorisation. */
+  openAll(urls) {
+    for (const url of urls) window.open(url, '_blank', 'noopener');
+  },
+
   download(filename, content) {
     const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
     const a = Object.assign(document.createElement('a'), { href: url, download: filename });

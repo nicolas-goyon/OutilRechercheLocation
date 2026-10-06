@@ -32,6 +32,7 @@ public sealed class Catalog
     private readonly List<PropertyEvent> _events = [];
     private readonly HashSet<string> _appliedActions = [];
     private readonly Dictionary<string, string> _settings = [];
+    private readonly Dictionary<string, SavedSearch> _searches = [];
     private readonly Dictionary<string, HashSet<string>> _byProperty = [];
     private readonly Dictionary<string, HashSet<string>> _byBlock = [];
     private readonly Dictionary<string, List<DuplicateLink>> _linksByListing = [];
@@ -52,6 +53,7 @@ public sealed class Catalog
         _nextEventId = _events.Count == 0 ? 1 : _events.Max(e => e.Id) + 1;
         _appliedActions.UnionWith(snap.AppliedActionIds);
         foreach (var (k, v) in snap.Settings) _settings[k] = v;
+        foreach (var x in snap.Searches) _searches[x.Id] = x;
     }
 
     private long Now => _options.Now();
@@ -123,7 +125,8 @@ public sealed class Catalog
 
         var oldBlock = DedupScorer.BlockingKey(l.Data);
         // L'API du site d'annonces est plus précise que la carte HTML. Une carte ne remplace donc pas les données de l'API.
-        var fillOnly = obs.Source == "card" && l.Sources.Contains("api");
+        // La fiche HTML ("detail") est lue dans le DOM, comme une carte : même règle.
+        var fillOnly = (obs.Source is "card" or "detail") && l.Sources.Contains("api");
         var merged = l.Data.Merge(obs.Data, fillOnly);
         if (!merged.SameAs(l.Data))
         {
@@ -241,6 +244,128 @@ public sealed class Catalog
     }, notify: false);
 
     // =====================================================================
+    // Recherches favorites (liens de recherche des sites d'annonces)
+    // =====================================================================
+
+    /// <summary>Recherches favorites, dans l'ordre d'affichage.</summary>
+    public IReadOnlyList<SavedSearch> Searches()
+    {
+        lock (_lock) return OrderedSearches().ToList();
+    }
+
+    /// <summary>
+    /// Ajoute une recherche. Les doublons sont permis (même site ou même URL) : chaque recherche a son propre identifiant.
+    /// </summary>
+    /// <exception cref="ArgumentException">URL absente ou pas en http(s).</exception>
+    public SavedSearch AddSearch(string? name, string? url, string? note = null)
+    {
+        var normalized = SavedSearch.NormalizeUrl(url) ?? throw new ArgumentException("URL de recherche invalide. Exemple : https://www.bienici.com/recherche/location/...", nameof(url));
+        SavedSearch? created = null;
+        Mutate(c =>
+        {
+            var now = Now;
+            created = new SavedSearch
+            {
+                Id = SavedSearch.NewId(),
+                Url = normalized,
+                Site = SavedSearch.SiteOf(normalized),
+                Name = CleanName(name, normalized),
+                Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+                Order = _searches.Count == 0 ? 0 : _searches.Values.Max(x => x.Order) + 1,
+                CreatedAt = now,
+                UpdatedAt = now,
+            };
+            _searches[created.Id] = created;
+            c.Touch(created);
+        });
+        return created!;
+    }
+
+    /// <exception cref="ArgumentException">URL absente ou pas en http(s).</exception>
+    public void UpdateSearch(string id, string? name, string? url, string? note)
+    {
+        var normalized = SavedSearch.NormalizeUrl(url) ?? throw new ArgumentException("URL de recherche invalide.", nameof(url));
+        Mutate(c =>
+        {
+            if (!_searches.TryGetValue(id, out var x)) return;
+            x.Url = normalized;
+            x.Site = SavedSearch.SiteOf(normalized);
+            x.Name = CleanName(name, normalized);
+            x.Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+            x.UpdatedAt = Now;
+            c.Touch(x);
+        });
+    }
+
+    /// <summary>Copie une recherche juste après l'original (pour la décliner avec d'autres critères).</summary>
+    public SavedSearch? DuplicateSearch(string id)
+    {
+        SavedSearch? copy = null;
+        Mutate(c =>
+        {
+            if (!_searches.TryGetValue(id, out var x)) return;
+            var now = Now;
+            // Décale les recherches suivantes d'un cran.
+            foreach (var other in _searches.Values.Where(o => o.Order > x.Order))
+            {
+                other.Order++;
+                c.Touch(other);
+            }
+            copy = new SavedSearch
+            {
+                Id = SavedSearch.NewId(),
+                Url = x.Url,
+                Site = x.Site,
+                Name = $"{x.Name} (copie)",
+                Note = x.Note,
+                Order = x.Order + 1,
+                CreatedAt = now,
+                UpdatedAt = now,
+            };
+            _searches[copy.Id] = copy;
+            c.Touch(copy);
+        });
+        return copy;
+    }
+
+    public void DeleteSearch(string id) => Mutate(c =>
+    {
+        if (_searches.Remove(id, out var x)) c.Delete(x);
+    });
+
+    /// <summary>Monte (delta &lt; 0) ou descend (delta &gt; 0) une recherche d'un cran parmi celles du même site.</summary>
+    public void MoveSearch(string id, int delta) => Mutate(c =>
+    {
+        if (delta == 0 || !_searches.TryGetValue(id, out var x)) return;
+        var sameSite = OrderedSearches().Where(o => o.Site == x.Site).ToList();
+        var i = sameSite.IndexOf(x);
+        var j = Math.Clamp(i + Math.Sign(delta), 0, sameSite.Count - 1);
+        if (i == j) return;
+        var other = sameSite[j];
+        (x.Order, other.Order) = (other.Order, x.Order);
+        if (x.Order == other.Order) x.Order += Math.Sign(delta); // ordres égaux (anciennes données) : on force l'écart
+        c.Touch(x);
+        c.Touch(other);
+    });
+
+    /// <summary>Note la date d'ouverture (affichée sur la page des recherches).</summary>
+    public void MarkSearchOpened(string id) => Mutate(c =>
+    {
+        if (!_searches.TryGetValue(id, out var x)) return;
+        x.LastOpenedAt = Now;
+        c.Touch(x);
+    });
+
+    private IEnumerable<SavedSearch> OrderedSearches() => _searches.Values.OrderBy(x => x.Order).ThenBy(x => x.CreatedAt);
+
+    private static string CleanName(string? name, string url)
+    {
+        var n = name?.Trim();
+        if (!string.IsNullOrEmpty(n)) return n.Length > 200 ? n[..200] : n;
+        return $"Recherche {Labels.Site(SavedSearch.SiteOf(url))}";
+    }
+
+    // =====================================================================
     // Lecture (pages web)
     // =====================================================================
 
@@ -330,6 +455,7 @@ public sealed class Catalog
                 Properties = [.. _properties.Values],
                 Links = [.. _links.Values],
                 Events = [.. _events],
+                Searches = [.. OrderedSearches()],
             };
         }
     }

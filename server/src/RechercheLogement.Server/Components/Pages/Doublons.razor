@@ -51,7 +51,7 @@
         var url = l.Data.Photos?.FirstOrDefault();
         if (url is not null)
         {
-            <img src="@(url.StartsWith("https://file.bienici.com/", StringComparison.Ordinal) ? url + "?width=320&height=200&fit=cover" : url)" alt="" loading="lazy" />
+            <img src="@Format.Thumb(url, 320, 200)" alt="" loading="lazy" />
         }
     };
 

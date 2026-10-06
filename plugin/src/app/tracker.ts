@@ -9,10 +9,12 @@
  *  - Il applique l'état reçu (ou l'état en cache) :
  *     - attributs data-tmrl-*, qui masquent, atténuent ou colorent les cartes.
  *     - une barre d'actions sur chaque carte.
+ *  - Sur la page d'une annonce (fiche), il pose un bandeau de suivi au-dessus
+ *    du titre. La fiche n'est jamais masquée, même si le bien est rejeté.
  */
 import type { SyncEngine } from '../core/sync';
 import { listingKey, type ListingView, type PropertyStatus } from '../core/types';
-import type { CardRef, SiteAdapter } from '../sites/types';
+import type { CardRef, DetailRef, SiteAdapter } from '../sites/types';
 import { siteLabel } from '../sites';
 import { renderToolbar, TOOLBAR_HOST_ATTR } from '../ui/cardToolbar';
 import { installPageStyles, setShowHidden } from '../ui/pageStyles';
@@ -48,7 +50,7 @@ export class Tracker {
   ) {}
 
   start(): void {
-    installPageStyles();
+    installPageStyles(this.adapter.hideSelectors);
 
     const observer = new MutationObserver((records) => {
       if (records.some((r) => !isOwnMutation(r))) this.schedule();
@@ -73,7 +75,10 @@ export class Tracker {
     // Retour sur l'onglet : le plugin demande de nouveau l'état. Un statut a pu changer sur le serveur local.
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        this.sync.refresh(this.adapter.findCards(document).map((c) => listingKey(this.adapter.id, c.siteId)));
+        const ids = this.adapter.findCards(document).map((c) => c.siteId);
+        const detail = this.adapter.findDetail?.(document);
+        if (detail) ids.push(detail.siteId);
+        this.sync.refresh(ids.map((id) => listingKey(this.adapter.id, id)));
       }
     });
     this.schedule();
@@ -115,6 +120,11 @@ export class Tracker {
       if (s.status === 'toContact') counts.toContact++;
       if (s.suggested) counts.suggested++;
     }
+    const detail = this.adapter.findDetail?.(document);
+    if (detail) {
+      this.ingestDetail(detail);
+      this.apply(detail, true);
+    }
     this.counts = counts;
     for (const cb of this.countListeners) cb(counts);
     if (this.options.debug) console.debug('[RechercheLogement] scan', counts);
@@ -134,7 +144,25 @@ export class Tracker {
     }
   }
 
-  private apply(card: CardRef): { hidden: boolean; status: PropertyStatus; suggested: boolean } {
+  /** Fiche d'annonce : envoyée une fois par annonce (source 'detail', moins précise que le JSON du site). */
+  private ingestDetail(detail: DetailRef): void {
+    if (this.processed.get(detail.element) === detail.siteId) return;
+    this.processed.set(detail.element, detail.siteId);
+    detail.element.setAttribute('data-tmrl-card', detail.siteId);
+    detail.element.setAttribute('data-tmrl-detail', '');
+    const now = Date.now();
+    const data = this.adapter.parseDetail?.(detail);
+    if (data) this.sync.observe({ site: this.adapter.id, siteId: detail.siteId, source: 'detail', data, seenAt: now });
+    const api = this.pendingApi.get(detail.siteId);
+    if (api) {
+      this.pendingApi.delete(detail.siteId);
+      this.sync.observe({ site: this.adapter.id, siteId: detail.siteId, source: 'api', data: api, seenAt: now });
+    }
+    // État frais : le statut a pu changer depuis la liste (autre onglet, serveur local).
+    this.sync.refresh([listingKey(this.adapter.id, detail.siteId)]);
+  }
+
+  private apply(card: CardRef | DetailRef, isDetail = false): { hidden: boolean; status: PropertyStatus; suggested: boolean } {
     const key = listingKey(this.adapter.id, card.siteId);
     const el = card.element;
     const view: ListingView | undefined = this.sync.view(key);
@@ -143,13 +171,14 @@ export class Tracker {
 
     let hidden = this.options.hideStatuses.includes(status);
     if (!hidden && status === 'none' && best && this.options.hideSuggestedDuplicatesOf.includes(best.otherStatus)) hidden = true;
+    if (isDetail) hidden = false;
 
     setAttr(el, 'data-tmrl-status', status === 'none' ? null : status);
     setAttr(el, 'data-tmrl-hidden', hidden ? '' : null);
     setAttr(el, 'data-tmrl-dup', best ? (best.otherStatus === 'rejected' ? 'rejected' : 'suggested') : null);
 
     renderToolbar(
-      this.adapter.toolbarAnchor?.(card) ?? el,
+      isDetail ? (card as DetailRef).anchor : (this.adapter.toolbarAnchor?.(card as CardRef) ?? el),
       {
         status,
         contactStage: view?.contactStage,
@@ -168,6 +197,7 @@ export class Tracker {
         onDetails: () => showDetails(this.sync, key),
         onSuggestion: () => best && showSuggestion(this.sync, key, best),
       },
+      isDetail ? 'detail' : 'card',
     );
     return { hidden, status, suggested: !!best };
   }

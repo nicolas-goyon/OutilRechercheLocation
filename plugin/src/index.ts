@@ -94,6 +94,15 @@ export function init(config: InitConfig = {}): PluginHandle | undefined {
       pageCounts: () => tracker.pageCounts(),
       showHidden: tracker.showHidden,
       setShowHidden: (v) => tracker.setShowHidden(v),
+      searches: connection.isConfigured()
+        ? {
+            canSaveCurrent: adapter.isSearchPage?.(location) ?? false,
+            defaultName: searchName(document.title, adapter.label),
+            site: adapter.id,
+            save: (name) => api.addSearch({ name: name || undefined, url: location.href }),
+            list: () => api.searches(),
+          }
+        : undefined,
     });
 
   const button = installFloatingButton({
@@ -124,4 +133,10 @@ export function init(config: InitConfig = {}): PluginHandle | undefined {
 
   instance = { sync, tracker, connection };
   return instance;
+}
+
+/** Nom proposé pour une recherche : titre de la page sans le nom du site ("… - Bien’ici"). */
+export function searchName(title: string, siteLabel: string): string {
+  const cleaned = title.replace(/\s*[-–|]\s*(Bien[’']ici|SeLoger)\s*$/i, '').trim();
+  return (cleaned || `Recherche ${siteLabel}`).slice(0, 120);
 }

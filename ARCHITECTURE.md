@@ -43,7 +43,8 @@ plugin/
   src/core/sync.ts        SyncEngine : file d'observations et d'actions, envoi par lots,
                           cache des ListingView, application optimiste, backoff hors ligne
   src/core/storage.ts     Wrapper GM_getValue / GM_setValue
-  src/sites/              Adaptateurs (bienici/ : lecture des cartes + JSON de l'API)
+  src/sites/              Adaptateurs : bienici/, seloger/ (cartes, page d'une annonce, JSON du site,
+                          emplacements de pub vides à masquer)
   src/app/tracker.ts      Cartes de la page -> observations. État -> attributs data-tmrl-*.
   src/ui/                 Barre par carte, modales, bouton 🏠, CSS injecté
   tests/                  node:test (lecture de fixtures réelles, SyncEngine hors ligne)
@@ -75,6 +76,7 @@ docker-compose.yml
 | **Listing** | Une annonce sur un site. Clé `site:siteId`. | `PropertyId`, `Data` (prix, surface, pièces, CP, GPS, réf. agence, `PhotoKeys`, extrait de description…), `FirstSeenAt`, `LastSeenAt`, `PriceHistory`, `Sources` (`card`/`api`) |
 | **Property** | Le bien réel | `Status` (`None`, `Seen`, `Rejected`, `ToContact`), `ContactStage` (`Pending` → `Contacted` → `VisitScheduled` → `Visited` → `ApplicationSent` → `Accepted`/`Declined`), `Note`, `StatusChangedAt` |
 | **DuplicateLink** | Paire candidate de doublons | `Score`, `Reasons`, `State` (`Suggested`, `Confirmed`, `Dismissed`), `DecidedBy` (`auto`/`user`) |
+| **SavedSearch** | Recherche favorite : lien de recherche d'un site d'annonces (critères dans l'URL). Doublons permis. | `Name`, `Url`, `Site` (déduit de l'URL), `Note`, `Order`, `LastOpenedAt` |
 | **PropertyEvent** | Historique d'un bien | changement de statut ou d'étape, note, fusion, dissociation, commentaire |
 
 Règles :
@@ -160,15 +162,18 @@ Un critère absent d'une des deux annonces ne compte ni pour ni contre.
    fixture HTML réelle et un test.
 2. Créer `plugin/src/sites/<site>/adapter.ts`. Ce fichier contient les sélecteurs. Il peut aussi
    enrichir les données avec le JSON du site.
+   Optionnel : `findDetail` / `parseDetail` (page d'une annonce : bandeau de suivi),
+   `hideSelectors` (emplacements de pub vides à masquer), `isSearchPage` (bouton « Enregistrer
+   cette recherche » du panneau 🏠).
 3. Enregistrer l'adaptateur dans `plugin/src/sites/index.ts`.
 4. Ajouter la ligne `@match` du site dans `plugin/userscripts/recherche-logement.mjs`. La mise à
    jour automatique déploie ce changement.
-5. Ajouter le libellé du site dans `server/.../Model/Labels.cs`.
+5. Ajouter le libellé du site dans `server/.../Model/Labels.cs`, et son domaine dans
+   `SavedSearch.SiteOf` (`Model.cs`) pour regrouper ses recherches favorites.
 
 ## Pistes
 
 - **Collecte automatique** : un service d'arrière-plan sur le serveur (`IHostedService`). Il lit
-  les recherches enregistrées et appelle `Catalog.Sync` avec des observations. C'est le même chemin
+  les recherches favorites (`SavedSearch`) et appelle `Catalog.Sync` avec des observations. C'est le même chemin
   que le plugin. Les doublons et les statuts fonctionnent donc sans code supplémentaire.
-- Page d'une annonce sur le site d'origine (barre de statut + enrichissement).
 - Hash perceptuel des photos, pour les sites qui hébergent une nouvelle copie des images.

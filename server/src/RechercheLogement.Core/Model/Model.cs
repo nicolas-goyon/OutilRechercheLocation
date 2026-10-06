@@ -168,3 +168,51 @@ public enum PropertyEventKind { StatusChanged, ContactStageChanged, Note, Merged
 
 /// <summary>Historique d'un bien. Le serveur local l'affiche sous forme de frise.</summary>
 public sealed record PropertyEvent(long Id, string PropertyId, long At, PropertyEventKind Kind, string Text);
+
+/// <summary>
+/// Recherche favorite : un lien de recherche d'un site d'annonces, avec ses critères dans l'URL.
+/// Plusieurs recherches peuvent viser le même site, ou la même URL (par exemple avec une note différente).
+/// </summary>
+public sealed class SavedSearch
+{
+    public required string Id { get; init; }
+    public string Name { get; set; } = "";
+    public string Url { get; set; } = "";
+    /// <summary>Site d'annonces, déduit de l'URL ("bienici", "seloger"...). Sert au regroupement.</summary>
+    public string Site { get; set; } = "";
+    public string? Note { get; set; }
+    /// <summary>Ordre d'affichage (croissant).</summary>
+    public int Order { get; set; }
+    public long CreatedAt { get; set; }
+    public long UpdatedAt { get; set; }
+    public long? LastOpenedAt { get; set; }
+
+    public static string NewId() => $"s_{Guid.NewGuid():N}"[..14];
+
+    /// <summary>"https://www.seloger.com/classified-search?..." -> "seloger". Hôte inconnu : l'hôte sans "www.".</summary>
+    public static string SiteOf(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var u)) return "";
+        var host = u.Host.ToLowerInvariant();
+        static bool Is(string h, string domain) => h == domain || h.EndsWith("." + domain, StringComparison.Ordinal);
+        if (Is(host, "bienici.com")) return "bienici";
+        if (Is(host, "seloger.com")) return "seloger";
+        if (Is(host, "leboncoin.fr")) return "leboncoin";
+        if (Is(host, "pap.fr")) return "pap";
+        if (Is(host, "logic-immo.com")) return "logicimmo";
+        return host.StartsWith("www.", StringComparison.Ordinal) ? host[4..] : host;
+    }
+
+    /// <summary>URL http(s) absolue, sans espaces autour. Renvoie null si l'URL n'est pas utilisable.</summary>
+    public static string? NormalizeUrl(string? url)
+    {
+        var t = url?.Trim();
+        if (string.IsNullOrEmpty(t)) return null;
+        if (!t.Contains("://", StringComparison.Ordinal)) t = "https://" + t;
+        return Uri.TryCreate(t, UriKind.Absolute, out var u)
+            && (u.Scheme == Uri.UriSchemeHttps || u.Scheme == Uri.UriSchemeHttp)
+            && (u.Host.Contains('.') || u.IsLoopback)
+            ? u.AbsoluteUri
+            : null;
+    }
+}

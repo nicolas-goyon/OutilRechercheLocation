@@ -12,7 +12,7 @@
  * Chaque requête contient `Authorization: Bearer <token>`. Le serveur refuse
  * tout appel /api/* sans le bon token.
  */
-import type { SyncRequest, SyncResponse } from './types';
+import type { SavedSearchRequest, SavedSearchView, SyncRequest, SyncResponse } from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -62,6 +62,16 @@ export class ApiClient {
 
   ping(): Promise<ServerInfo> {
     return this.request<ServerInfo>('GET', '/api/ping');
+  }
+
+  /** Recherches favorites enregistrées sur le serveur local. */
+  searches(): Promise<SavedSearchView[]> {
+    return this.request<SavedSearchView[]>('GET', '/api/searches');
+  }
+
+  /** Enregistre une recherche favorite. Les doublons sont permis (plusieurs variantes d'une même recherche). */
+  addSearch(search: SavedSearchRequest): Promise<SavedSearchView> {
+    return this.request<SavedSearchView>('POST', '/api/searches', search);
   }
 
   private request<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
