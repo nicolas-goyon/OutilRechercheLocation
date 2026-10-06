@@ -1,0 +1,39 @@
+# Serveur local de suivi de recherche logement — image publiée par la CI (GitHub Container Registry).
+#
+# Pas besoin du code source : ce fichier suffit. La CI le publie à chaque nouvelle image :
+#   https://github.com/nicolas-goyon/OutilRechercheLocation/releases/download/server-latest/docker-compose.yml
+#
+# Démarrer :            docker compose up -d                      puis ouvrir http://localhost:5080
+# Afficher le token :   docker compose logs server | grep "Token API"   (ou page Paramètres)
+# Mettre à jour :       docker compose up -d --pull always       (ou ./update.sh / .\update.ps1)
+# Revenir en arrière :  RL_TAG=sha-<commit> docker compose up -d       (tags : latest, <version>, sha-<commit>)
+#
+# Les données (fichier SQLite) sont dans le volume Docker. Une mise à jour ne les efface pas :
+# le serveur migre la base tout seul au démarrage.
+
+name: recherche-logement
+
+services:
+  server:
+    image: ghcr.io/nicolas-goyon/outilrecherchelocation-server:${RL_TAG:-latest}
+    # Pas de pull_policy "always" : le serveur redémarre aussi sans Internet. La mise à jour est explicite
+    # (commande ci-dessus ou scripts update.*).
+    container_name: recherche-logement
+    ports:
+      # Lié à 127.0.0.1 uniquement : le réseau n'a pas accès au serveur local (pages web sans authentification).
+      - "127.0.0.1:${RL_PORT:-5080}:8080"
+    environment:
+      RechercheLogement__PublicUrl: "http://localhost:${RL_PORT:-5080}"
+      # Token fixe. Sans cette variable, le serveur génère un token au premier démarrage (visible dans Paramètres).
+      # RechercheLogement__ApiToken: "change-moi"
+    volumes:
+      - data:/data
+    restart: unless-stopped
+
+volumes:
+  data:
+    # Nom fixe, indépendant du dossier. Pour reprendre les données d'une installation faite avec
+    # le docker-compose.yml du dépôt (build local), mettre le nom de son volume :
+    #   docker volume ls     ->  par exemple "outilrecherchelocation_recherche-logement-data"
+    #   RL_VOLUME=outilrecherchelocation_recherche-logement-data docker compose up -d
+    name: ${RL_VOLUME:-recherche-logement-data}

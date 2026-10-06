@@ -140,3 +140,4 @@ dd { margin: 0; }
 .small { font-size: 12px; }
 .quick-searches { display: flex; gap: 8px; flex-wrap: wrap; }
 .quick-searches a { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 4px 10px; }
+.cmd { background: #111827; color: #f9fafb; border-radius: 6px; padding: 8px 10px; font-size: 12px; overflow-x: auto; }

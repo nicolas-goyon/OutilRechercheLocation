@@ -46,6 +46,17 @@
 </section>
 
 <section class="panel">
+    <h2>Mise à jour du serveur</h2>
+    <p>Version installée : <b>@ApiEndpoints.Version</b>.
+        <a href="@ReleaseUrl" target="_blank" rel="noopener">Dernière version publiée ↗</a></p>
+    <p>Avec le <code>docker-compose.yml</code> publié par la CI (image <code>ghcr.io/…-server:latest</code>),
+        dans son dossier :</p>
+    <pre class="cmd">docker compose up -d --pull always</pre>
+    <p class="muted">Ou les scripts <code>update.sh</code> / <code>update.ps1</code> fournis avec le docker-compose.
+        Les données (volume Docker) sont conservées et la base est migrée au démarrage.</p>
+</section>
+
+<section class="panel">
     <h2>Sauvegarde</h2>
     <p>La base SQLite est dans <code>@Settings.DatabasePath</code> (volume Docker <code>recherche-logement-data</code>). Le bouton ci-dessous exporte toutes les données en JSON.</p>
     <button type="button" @onclick="Export">⬇ Exporter (JSON)</button>
@@ -55,6 +66,11 @@
     [Inject] private Catalog Catalog { get; set; } = default!;
 
     private string _token = "";
+
+    /// <summary>Release "server-latest" du dépôt du plugin (même dépôt GitHub que le lien d'installation).</summary>
+    private string ReleaseUrl => Settings.PluginInstallUrl.Contains("/releases/", StringComparison.Ordinal)
+        ? Settings.PluginInstallUrl[..Settings.PluginInstallUrl.IndexOf("/releases/", StringComparison.Ordinal)] + "/releases/tag/server-latest"
+        : "https://github.com/nicolas-goyon/OutilRechercheLocation/releases/tag/server-latest";
     private bool _show;
     private bool _regenerated;
 

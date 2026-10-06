@@ -1,10 +1,10 @@
-# Serveur local de suivi de recherche logement.
+# Serveur local de suivi de recherche logement — BUILD LOCAL depuis les sources (développement).
+# Pour utiliser l'image publiée par la CI (avec mise à jour) : deploy/docker-compose.yml.
 #   docker compose up -d --build     puis ouvrir http://localhost:5080
 #   docker compose logs server | grep "Token API"   (affiche le token. Le coller dans le plugin : panneau 🏠 > Connexion.)
 services:
   server:
     build: ./server
-    # Autre choix : l'image publiée par la CI. image: ghcr.io/nicolas-goyon/outilrecherchelocation-server:latest
     image: recherche-logement-server:local
     container_name: recherche-logement
     ports:

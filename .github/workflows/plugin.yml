@@ -7,7 +7,8 @@ name: Plugin — test & publication (jsDelivr + GitHub Release, mise à jour aut
 #     attachés à une GitHub Release. Les scripts installés interrogent
 #       https://github.com/<owner>/<repo>/releases/latest/download/<id>.meta.js
 #     et se mettent à jour quand son @version est plus élevé.
-#     ⚠ Seul ce workflow publie des GitHub Releases dans ce dépôt : "latest" = dernier plugin.
+#     ⚠ Seul ce workflow publie des releases "latest" : "latest" = dernier plugin. Le workflow
+#       serveur publie seulement la pre-release "server-latest" (jamais "latest").
 #
 # - Pull request / push touchant plugin/ : typecheck + tests + build.
 # - Push sur main : en plus, publication d'un nouveau tag (patch par défaut,

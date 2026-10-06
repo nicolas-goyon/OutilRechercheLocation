@@ -29,16 +29,43 @@ annonce). Pour ajouter un site d'annonces, lire
 
 ### 1. Le serveur local (Docker)
 
+**Image publiée par la CI (recommandé, sans le code source).** Dans un dossier vide :
+
+```bash
+curl -LO https://github.com/nicolas-goyon/OutilRechercheLocation/releases/download/server-latest/docker-compose.yml
+docker compose up -d
+```
+
+Windows (PowerShell) : `Invoke-WebRequest <même URL> -OutFile docker-compose.yml`, puis
+`docker compose up -d`. Le fichier est aussi dans le dépôt :
+[`deploy/docker-compose.yml`](./deploy/docker-compose.yml).
+
+Ce compose prend l'image `ghcr.io/nicolas-goyon/outilrecherchelocation-server:latest`.
+
+- **Mettre à jour** : `docker compose up -d --pull always`, ou les scripts `update.sh` / `update.ps1`
+  (release `server-latest`, ou dossier `deploy/`). Les données sont conservées, la base est migrée au
+  démarrage. La page **Paramètres** affiche la version installée.
+- **Revenir à une version** : `RL_TAG=0.2.42 docker compose up -d` (tags : `latest`, `<version>`,
+  `sha-<commit>`).
+- **Autre port** : `RL_PORT=5090 docker compose up -d`.
+- **Reprendre les données d'une installation en build local** : `docker volume ls`, puis
+  `RL_VOLUME=<nom du volume> docker compose up -d`.
+
+**Build local depuis les sources** (développement), à la racine du dépôt :
+
 ```bash
 docker compose up -d --build
 ```
+
+Ensuite :
 
 1. Ouvrir <http://localhost:5080>.
 2. Ouvrir la page **Paramètres**. Elle affiche le token du plugin et le lien d'installation.
 
 La commande `docker compose logs server` affiche aussi le token.
 
-Les données sont dans le volume Docker `recherche-logement-data` (fichier SQLite). Le port est lié à
+Les données sont dans un volume Docker (fichier SQLite) : `recherche-logement-data` avec l'image
+publiée. Le port est lié à
 `127.0.0.1`. Le réseau n'a donc pas accès au serveur local.
 
 Sans Docker : `cd server && dotnet run --project src/RechercheLogement.Server`. La base est alors
@@ -150,8 +177,17 @@ dotnet run --project src/RechercheLogement.Server           # http://localhost:5
   Cette Release déclenche la mise à jour automatique des plugins installés. Pour monter la version,
   écrire `[minor]` ou `[major]` dans un message de commit. Seul ce workflow crée des GitHub
   Releases. La Release « latest » est donc toujours la dernière version du plugin.
-- [`server.yml`](./.github/workflows/server.yml) lance le build et les tests .NET. Sur `main`, il
-  publie l'image `ghcr.io/nicolas-goyon/outilrecherchelocation-server:latest`.
+- [`server.yml`](./.github/workflows/server.yml) lance le build et les tests .NET, et valide
+  `deploy/docker-compose.yml`. Sur `main`, il publie :
+  - l'image `ghcr.io/nicolas-goyon/outilrecherchelocation-server` (tags `latest`, `0.2.<n° de run>`,
+    `sha-<commit>`).
+  - `docker-compose.yml`, `update.sh` et `update.ps1` en artefact du run (`server-deploy`) et sur la
+    release `server-latest` (adresse fixe). Cette release est une *pre-release* : elle ne devient
+    jamais « latest », qui reste réservé au plugin.
+
+  Au premier envoi, GitHub crée le paquet GHCR en **privé**. Le rendre public (GitHub > Packages >
+  outilrecherchelocation-server > Package settings > Change visibility), sinon `docker login ghcr.io`
+  est nécessaire avant `docker compose up`.
 
 ## Limites connues
 

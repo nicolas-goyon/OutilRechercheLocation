@@ -64,9 +64,10 @@ server/
                           biens, fiche, doublons, paramètres
   tests/RechercheLogement.Tests/   xUnit : DedupScorer, Catalog, API (WebApplicationFactory)
   Dockerfile
-docker-compose.yml
+docker-compose.yml        Build local depuis les sources (développement)
+deploy/                   docker-compose.yml (image GHCR :latest) + update.sh / update.ps1
 .github/workflows/        plugin.yml (tag plugin-v* + jsDelivr + GitHub Release = mise à jour auto)
-                          server.yml (tests + image GHCR)
+                          server.yml (tests + image GHCR + docker-compose sur la pre-release server-latest)
 ```
 
 ## Modèle de données

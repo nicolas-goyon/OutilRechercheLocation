@@ -10,6 +10,12 @@ ARG VERSION=0.0.0-local
 RUN dotnet publish src/RechercheLogement.Server/RechercheLogement.Server.csproj -c Release -o /app --no-restore -p:Version=${VERSION}
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
+ARG VERSION=0.0.0-local
+# source : relie l'image GHCR au dépôt GitHub. title : sert au nettoyage des anciennes images (deploy/update.*).
+LABEL org.opencontainers.image.title="recherche-logement-server" \
+      org.opencontainers.image.description="Serveur local de suivi de recherche logement (API du plugin + pages web)" \
+      org.opencontainers.image.source="https://github.com/nicolas-goyon/OutilRechercheLocation" \
+      org.opencontainers.image.version="${VERSION}"
 WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=8080 \
     RechercheLogement__DatabasePath=/data/recherche-logement.db \
