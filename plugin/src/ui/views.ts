@@ -6,6 +6,7 @@
  * plugin contient un lien vers le serveur local.
  */
 import type { ConnectionSettings, ConnectionStore } from '../core/connection';
+import type { DisplayPrefsStore } from '../core/displayPrefs';
 import type { SyncEngine } from '../core/sync';
 import type { ListingKey, ListingRef, PropertyStatus, SavedSearchView, SuggestionView } from '../core/types';
 import { h } from '../shared/dom/h';
@@ -138,6 +139,8 @@ export interface PanelContext {
   pageCounts(): { total: number; hidden: number; seen: number; toContact: number; suggested: number };
   showHidden: boolean;
   setShowHidden(v: boolean): void;
+  /** Réglages d'affichage (masquer les annonces vues / à contacter). */
+  display?: DisplayPrefsStore;
   /** Recherches favorites (serveur local). Absent : la section n'est pas affichée. */
   searches?: {
     /** La page affichée est une page de résultats : on peut l'enregistrer. */
@@ -214,6 +217,7 @@ export function showPanel(ctx: PanelContext): void {
         h('div', null, `${page.total} annonces · ${page.hidden} masquées · ${page.seen} vues · ${page.toContact} à contacter · ${page.suggested} doublons probables`),
         h('label', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px', cursor: 'pointer' } }, toggle, 'Afficher les annonces masquées (en pointillés)'),
       ),
+      ctx.display && displaySection(ctx.display),
       h('div', { style: { display: 'flex', justifyContent: 'space-between', color: THEME.muted, fontSize: '11px' } },
         `Plugin v${ctx.version}`,
         webLink(conn.serverUrl, 'Ouvrir le serveur local ↗') ?? '',
@@ -275,5 +279,31 @@ function searchesSection(s: NonNullable<PanelContext['searches']>, serverUrl: st
     s.canSaveCurrent && feedback,
     list,
     h('div', { style: { marginTop: '6px' } }, webLink(`${serverUrl}/recherches`, 'Gérer les recherches sur le serveur local ↗')),
+  );
+}
+
+// ------------------------------------------------------------------ réglages d'affichage
+
+function displaySection(display: DisplayPrefsStore): HTMLElement {
+  const prefs = display.get();
+  const row = (label: string, checked: boolean, onChange: (v: boolean) => void) => {
+    const box = h('input', { type: 'checkbox', checked, on: { change: () => onChange(box.checked) } });
+    return h('label', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px', cursor: 'pointer' } }, box, label);
+  };
+  const seen = row('Masquer les annonces vues 👁', prefs.hideSeen, (v) => display.set({ hideSeen: v }));
+  const contact = row('Masquer les annonces à contacter 📞', prefs.hideToContact, (v) => display.set({ hideToContact: v }));
+  return section(
+    'Affichage',
+    h('div', { style: { color: THEME.muted } }, 'Les annonces « pas intéressé » sont toujours masquées. Cocher les deux cases pour ne voir que les nouvelles annonces.'),
+    seen,
+    contact,
+    h('div', { style: { marginTop: '8px' } },
+      button(display.onlyNew ? 'Tout réafficher (vues et à contacter)' : 'Nouvelles annonces seulement', () => {
+        const on = !display.onlyNew;
+        display.set({ hideSeen: on, hideToContact: on });
+        (seen.querySelector('input') as HTMLInputElement).checked = on;
+        (contact.querySelector('input') as HTMLInputElement).checked = on;
+      }),
+    ),
   );
 }

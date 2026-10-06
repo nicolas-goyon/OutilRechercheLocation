@@ -137,6 +137,11 @@ mêmes boutons (en clair) et le statut actuel. La page d'une annonce n'est jamai
 Le plugin masque aussi les emplacements de pub des listes. Avec un bloqueur de pub, ces blocs
 restent vides et laissent des trous (liste à côté de la carte sur Bien'ici, liste SeLoger).
 
+Panneau 🏠, section **Affichage** : « Masquer les annonces vues 👁 » et « Masquer les annonces à
+contacter 📞 ». Les deux cases cochées (ou le bouton « Nouvelles annonces seulement », aussi dans le
+menu Tampermonkey) : seules les annonces jamais classées restent visibles. Le réglage vaut pour tous
+les sites et tous les onglets. Les annonces « pas intéressé » restent toujours masquées.
+
 Panneau 🏠, section **⭐ Recherches favorites** : sur une page de résultats, le bouton
 « Enregistrer cette recherche » envoie l'URL (avec tous les critères) au serveur local. La section
 liste aussi les recherches déjà enregistrées pour ce site.
@@ -155,7 +160,28 @@ Pages du serveur local :
   Plusieurs recherches par site, même URL possible (doublons permis). Ajouter, modifier, dupliquer
   (pour une variante avec d'autres critères), réordonner, ouvrir une ou toutes les recherches d'un
   site. Le tableau de bord affiche des raccourcis.
+- **🔎 Mes projets** : recherches complètes que le serveur lance lui-même (voir ci-dessous).
 - **Paramètres** : token (copier / régénérer), lien d'installation du plugin, export JSON.
+
+### Mes projets
+
+Un projet regroupe des critères et des sites. Le serveur interroge les sites, garde les annonces
+conformes et signale les nouvelles depuis la dernière visite. Ces données sont **séparées** du suivi
+fait avec le plugin : autre base (`projets.db`, à côté de la base principale), autres pages.
+
+- Critères : location / achat, appartement / maison, lieux (une ville ou un code postal par ligne),
+  prix, surface, pièces, chambres, meublé, mots-clés souhaités (au moins un) et exclus.
+- Sites, par catégorie, activables un par un :
+  - *Sites d'annonces immobilières* : **Bien'ici**, **SeLoger** (PAP, Logic-Immo : à venir).
+  - *Sites d'annonces généralistes* : Leboncoin (à venir).
+  - *Sites d'agences* : à venir.
+- Lancement : à la demande (« ▶ Lancer ») ou automatique (toutes les 1, 3, 6, 12 ou 24 h). Une
+  recherche à la fois, avec une pause entre les pages. Au plus 300 annonces par site et par passage
+  (les plus récentes).
+- Page d'un projet : état de chaque site (nombre d'annonces, erreur lisible), lieux reconnus,
+  annonces avec badge « Nouvelle », filtres (nouvelles seulement, par site, tri), bouton « Masquer ».
+- `RechercheLogement__ProjectsAutoRun=false` coupe les lancements automatiques.
+  `RechercheLogement__ProjectsDatabasePath` change l'emplacement de `projets.db`.
 
 ## Développement
 
@@ -193,6 +219,9 @@ dotnet run --project src/RechercheLogement.Server           # http://localhost:5
 
 - Bien'ici : le plugin relit le JSON de la liste. Cela fait une requête de plus par page. Les deux
   annonces « mises en avant » n'ont souvent que les données de la carte.
+- Mes projets, SeLoger : SeLoger protège son site contre les robots. Un appel venant du serveur
+  (et pas d'un navigateur) peut être refusé : la page du projet affiche alors « SeLoger refuse la
+  requête… ». Bien'ici n'a pas cette protection.
 - SeLoger : le JSON de la liste ne contient ni position GPS ni photos d'origine (les photos sont
   renommées). La position GPS et les charges viennent de la page de l'annonce, une fois ouverte.
 - Le serveur local n'a pas de connexion utilisateur. Il doit tourner sur votre machine, lié à

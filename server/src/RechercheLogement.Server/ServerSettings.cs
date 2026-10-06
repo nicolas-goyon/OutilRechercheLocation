@@ -21,6 +21,15 @@ public sealed class ServerSettings
     public string PluginInstallUrl { get; set; } =
         "https://github.com/nicolas-goyon/OutilRechercheLocation/releases/latest/download/recherche-logement.user.js";
 
+    /// <summary>
+    /// Base des projets ("Mes projets"), séparée de celle du catalogue. Vide : projets.db dans le dossier
+    /// de <see cref="DatabasePath"/> (Docker : /data/projets.db).
+    /// </summary>
+    public string? ProjectsDatabasePath { get; set; }
+
+    /// <summary>Lancement automatique des projets (intervalle choisi dans chaque projet). false : seulement à la demande.</summary>
+    public bool ProjectsAutoRun { get; set; } = true;
+
     /// <summary>"memory" : base en mémoire, perdue à l'arrêt (démo, tests).</summary>
     public string Storage { get; set; } = "sqlite";
 }

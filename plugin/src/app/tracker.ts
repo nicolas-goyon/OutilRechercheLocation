@@ -95,6 +95,12 @@ export class Tracker {
     return this.counts;
   }
 
+  /** Change les statuts masqués (réglages du panneau) et réapplique l'affichage. */
+  setHideStatuses(statuses: PropertyStatus[]): void {
+    this.options.hideStatuses = statuses;
+    this.schedule();
+  }
+
   setShowHidden(show: boolean): void {
     this.showHidden = show;
     setShowHidden(show);

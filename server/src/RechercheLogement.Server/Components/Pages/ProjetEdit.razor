@@ -1,0 +1,238 @@
+@page "/projets/nouveau"
+@page "/projets/{Id}/modifier"
+@inject ProjectStore Store
+@inject ProjectRunner Runner
+@inject NavigationManager Nav
+
+<PageTitle>@(_isNew ? "Nouveau projet" : $"Modifier « {_name} »") — Recherche logement</PageTitle>
+<h1>@(_isNew ? "Nouveau projet" : $"Modifier « {_name} »")</h1>
+
+@if (_notFound)
+{
+    <p>Projet introuvable. <a href="/projets">Retour aux projets</a></p>
+    return;
+}
+
+<section class="panel">
+    <h2>Le projet</h2>
+    <div class="form-grid">
+        <label>Nom</label>
+        <input @bind="_name" @bind:event="oninput" placeholder="Ex. « T2 Rodez, 700 € max »" />
+
+        <label>Transaction</label>
+        <select @bind="_transaction">
+            <option value="@TransactionType.Rent">Location</option>
+            <option value="@TransactionType.Buy">Achat</option>
+        </select>
+
+        <label>Type de bien</label>
+        <div class="checks">
+            <label><input type="checkbox" @bind="_flat" /> Appartement</label>
+            <label><input type="checkbox" @bind="_house" /> Maison</label>
+        </div>
+
+        <label>Lieux</label>
+        <div>
+            <textarea rows="3" @bind="_locations" @bind:event="oninput" placeholder="Une ville ou un code postal par ligne. Ex. :&#10;Rodez&#10;12850"></textarea>
+            <div class="muted small">Chaque site reconnaît le lieu à sa façon. Le libellé trouvé s'affiche après le premier lancement.</div>
+        </div>
+    </div>
+</section>
+
+<section class="panel">
+    <h2>Critères</h2>
+    <div class="form-grid">
+        <label>Prix (€)</label>
+        <div class="range"><input type="number" min="0" @bind="_priceMin" placeholder="min" /> à <input type="number" min="0" @bind="_priceMax" placeholder="max" /></div>
+
+        <label>Surface (m²)</label>
+        <div class="range"><input type="number" min="0" @bind="_surfaceMin" placeholder="min" /> à <input type="number" min="0" @bind="_surfaceMax" placeholder="max" /></div>
+
+        <label>Pièces</label>
+        <div class="range"><input type="number" min="1" @bind="_roomsMin" placeholder="min" /> à <input type="number" min="1" @bind="_roomsMax" placeholder="max" /></div>
+
+        <label>Chambres (min)</label>
+        <div class="range"><input type="number" min="0" @bind="_bedroomsMin" placeholder="min" /></div>
+
+        <label>Meublé</label>
+        <select @bind="_furnished">
+            <option value="any">Indifférent</option>
+            <option value="yes">Meublé</option>
+            <option value="no">Non meublé</option>
+        </select>
+
+        <label>Mots-clés souhaités</label>
+        <div>
+            <input @bind="_include" @bind:event="oninput" placeholder="Ex. balcon, terrasse, parking" />
+            <div class="muted small">Séparés par des virgules. L'annonce doit contenir au moins un de ces mots (titre ou description).</div>
+        </div>
+
+        <label>Mots-clés exclus</label>
+        <div>
+            <input @bind="_exclude" @bind:event="oninput" placeholder="Ex. colocation, viager" />
+            <div class="muted small">L'annonce est écartée si elle contient un de ces mots.</div>
+        </div>
+    </div>
+</section>
+
+<section class="panel">
+    <h2>Sites interrogés</h2>
+    @foreach (var group in SourceSites.All.GroupBy(s => s.Category))
+    {
+        <h3>@SourceSites.Label(group.Key)</h3>
+        <div class="site-choices">
+            @foreach (var site in group)
+            {
+                var usable = site.Available && Runner.HasCollector(site.Id);
+                <label class="site-choice @(usable ? "" : "disabled")" title="@site.Description">
+                    <input type="checkbox" disabled="@(!usable)" checked="@(usable && _sites.Contains(site.Id))"
+                           @onchange="e => ToggleSite(site.Id, e.Value is true)" />
+                    @site.Label
+                    @if (!usable) { <span class="badge">à venir</span> }
+                </label>
+            }
+        </div>
+    }
+</section>
+
+<section class="panel">
+    <h2>Lancement</h2>
+    <div class="form-grid">
+        <label>Fréquence</label>
+        <select @bind="_refresh">
+            <option value="0">À la demande seulement</option>
+            <option value="1">Toutes les heures</option>
+            <option value="3">Toutes les 3 heures</option>
+            <option value="6">Toutes les 6 heures</option>
+            <option value="12">Toutes les 12 heures</option>
+            <option value="24">Tous les jours</option>
+        </select>
+
+        <label>Actif</label>
+        <label><input type="checkbox" @bind="_active" /> Lancer automatiquement (décocher pour mettre en pause)</label>
+    </div>
+</section>
+
+@if (_errors.Count > 0)
+{
+    <ul class="warn">@foreach (var e in _errors) { <li>@e</li> }</ul>
+}
+
+<div class="form-actions">
+    <button type="button" class="primary" @onclick="() => Save(run: true)">Enregistrer et lancer</button>
+    <button type="button" @onclick="() => Save(run: false)">Enregistrer</button>
+    <a class="button" href="@(_isNew ? "/projets" : $"/projets/{Id}")">Annuler</a>
+    @if (!_isNew)
+    {
+        <span class="spacer"></span>
+        @if (_confirmDelete)
+        {
+            <button type="button" class="danger" @onclick="Delete">Confirmer : supprimer le projet et ses résultats</button>
+            <button type="button" @onclick="() => _confirmDelete = false">Annuler</button>
+        }
+        else
+        {
+            <button type="button" class="danger" @onclick="() => _confirmDelete = true">🗑 Supprimer</button>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    private bool _isNew => Id is null;
+    private bool _notFound;
+    private bool _confirmDelete;
+    private SearchProject? _existing;
+    private readonly List<string> _errors = [];
+
+    private string _name = "";
+    private TransactionType _transaction = TransactionType.Rent;
+    private bool _flat = true;
+    private bool _house;
+    private string _locations = "";
+    private decimal? _priceMin, _priceMax;
+    private double? _surfaceMin, _surfaceMax;
+    private int? _roomsMin, _roomsMax, _bedroomsMin;
+    private string _furnished = "any";
+    private string _include = "";
+    private string _exclude = "";
+    private HashSet<string> _sites = ["bienici", "seloger"];
+    private int _refresh = 6;
+    private bool _active = true;
+
+    protected override void OnParametersSet()
+    {
+        if (Id is null) return;
+        _existing = Store.Get(Id);
+        if (_existing is null)
+        {
+            _notFound = true;
+            return;
+        }
+        var p = _existing;
+        _name = p.Name;
+        _transaction = p.Transaction;
+        _flat = p.PropertyTypes.Contains("flat");
+        _house = p.PropertyTypes.Contains("house");
+        _locations = string.Join("\n", p.Locations.Select(l => l.Query));
+        (_priceMin, _priceMax, _surfaceMin, _surfaceMax) = (p.PriceMin, p.PriceMax, p.SurfaceMin, p.SurfaceMax);
+        (_roomsMin, _roomsMax, _bedroomsMin) = (p.RoomsMin, p.RoomsMax, p.BedroomsMin);
+        _furnished = p.Furnished switch { true => "yes", false => "no", _ => "any" };
+        _include = string.Join(", ", p.KeywordsInclude);
+        _exclude = string.Join(", ", p.KeywordsExclude);
+        _sites = [.. p.Sites];
+        _refresh = p.AutoRefreshHours;
+        _active = p.Active;
+    }
+
+    private void ToggleSite(string id, bool on)
+    {
+        if (on) _sites.Add(id);
+        else _sites.Remove(id);
+    }
+
+    private void Save(bool run)
+    {
+        _errors.Clear();
+        var queries = _locations.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var sites = _sites.Where(s => SourceSites.Get(s) is { Available: true } && Runner.HasCollector(s)).ToList();
+        if (string.IsNullOrWhiteSpace(_name)) _errors.Add("Donner un nom au projet.");
+        if (!_flat && !_house) _errors.Add("Choisir au moins un type de bien.");
+        if (queries.Count == 0) _errors.Add("Indiquer au moins un lieu (ville ou code postal).");
+        if (sites.Count == 0) _errors.Add("Choisir au moins un site.");
+        if (_priceMin > _priceMax || _surfaceMin > _surfaceMax || _roomsMin > _roomsMax) _errors.Add("Un minimum est supérieur au maximum.");
+        if (_errors.Count > 0) return;
+
+        var p = _existing ?? new SearchProject { Id = SearchProject.NewId() };
+        p.Name = _name.Trim();
+        p.Transaction = _transaction;
+        p.PropertyTypes = [.. new[] { _flat ? "flat" : null, _house ? "house" : null }.OfType<string>()];
+        // Un lieu inchangé garde les identifiants déjà trouvés sur chaque site.
+        p.Locations = queries.Select(q => p.Locations.FirstOrDefault(l => string.Equals(l.Query, q, StringComparison.OrdinalIgnoreCase))
+            ?? new ProjectLocation { Query = q }).ToList();
+        if (_existing is not null && _existing.Transaction != _transaction)
+            foreach (var l in p.Locations) { l.SiteIds.Clear(); l.Labels.Clear(); }
+        (p.PriceMin, p.PriceMax, p.SurfaceMin, p.SurfaceMax) = (_priceMin, _priceMax, _surfaceMin, _surfaceMax);
+        (p.RoomsMin, p.RoomsMax, p.BedroomsMin) = (_roomsMin, _roomsMax, _bedroomsMin);
+        p.Furnished = _furnished switch { "yes" => true, "no" => false, _ => null };
+        p.KeywordsInclude = SplitWords(_include);
+        p.KeywordsExclude = SplitWords(_exclude);
+        p.Sites = sites;
+        p.AutoRefreshHours = _refresh;
+        p.Active = _active;
+        Store.Save(p);
+        if (run) _ = Task.Run(() => Runner.RunAsync(p.Id, CancellationToken.None));
+        Nav.NavigateTo($"/projets/{p.Id}");
+    }
+
+    private void Delete()
+    {
+        if (Id is not null) Store.Delete(Id);
+        Nav.NavigateTo("/projets");
+    }
+
+    private static List<string> SplitWords(string text) =>
+        text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+}

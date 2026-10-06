@@ -1,0 +1,160 @@
+@page "/projets/{Id}"
+@inherits ProjectsComponent
+
+<PageTitle>@(_project?.Name ?? "Projet") — Recherche logement</PageTitle>
+
+@if (_project is null)
+{
+    <h1>Projet introuvable</h1>
+    <p><a href="/projets">Retour aux projets</a></p>
+}
+else
+{
+    var p = _project;
+    var running = Runner.RunningSite(p.Id);
+    <div class="page-head">
+        <h1>🔎 @p.Name</h1>
+        <span class="spacer"></span>
+        @if (running is not null)
+        {
+            <span class="muted">⏳ Recherche en cours (@running)…</span>
+        }
+        else
+        {
+            <button type="button" class="primary" @onclick="() => StartRun(p.Id)">▶ Lancer maintenant</button>
+        }
+        <a class="button" href="/projets/@p.Id/modifier">✎ Modifier</a>
+    </div>
+    <p class="muted">@ProjectFormat.Summary(p) · lancement @ProjectFormat.Refresh(p.AutoRefreshHours)@(p.Active ? "" : " (en pause)")</p>
+
+    <section class="panel">
+        <h2>Sites</h2>
+        <table class="runs">
+            @foreach (var site in p.Sites)
+            {
+                var run = _runs.FirstOrDefault(r => r.Site == site);
+                var labels = p.Locations.Select(l => l.Labels.GetValueOrDefault(site)).Where(x => x is not null).ToList();
+                <tr class="@(run is null ? "" : run.Ok ? "ok" : "ko")">
+                    <td><b>@ProjectFormat.SiteLabel(site)</b></td>
+                    <td>@(run is null ? "•" : run.Ok ? "✔" : "⚠")</td>
+                    <td>@(run?.Message ?? "Pas encore lancé.")</td>
+                    <td class="muted">@(run is null ? "" : Format.DateTime(run.At))</td>
+                    <td class="muted small">@(labels.Count > 0 ? $"Lieux : {string.Join(", ", labels)}" : "")</td>
+                </tr>
+            }
+        </table>
+    </section>
+
+    <div class="filters">
+        <label class="chip @(_onlyNew ? "on" : "")"><input type="checkbox" @bind="_onlyNew" />Nouvelles seulement (@_newCount)</label>
+        <label class="chip @(_showHidden ? "on" : "")"><input type="checkbox" @bind="_showHidden" />Afficher les masquées (@_hiddenCount)</label>
+        <select @bind="_site">
+            <option value="">Tous les sites</option>
+            @foreach (var site in p.Sites) { <option value="@site">@ProjectFormat.SiteLabel(site)</option> }
+        </select>
+        <select @bind="_sort">
+            <option value="found">Plus récentes d'abord</option>
+            <option value="priceAsc">Prix croissant</option>
+            <option value="priceDesc">Prix décroissant</option>
+            <option value="surfaceDesc">Surface décroissante</option>
+        </select>
+        <span class="muted">@Visible().Count() annonce(s)</span>
+    </div>
+
+    @if (_results.Count == 0)
+    {
+        <p class="muted">Aucune annonce pour l'instant. Cliquer sur « Lancer maintenant ».</p>
+    }
+
+    <div class="grid">
+        @foreach (var r in Visible())
+        {
+            var d = r.Data;
+            var isNew = r.FirstSeenAt > _since;
+            <article class="card @(r.Hidden ? "rejected" : "")">
+                <a class="photo" href="@d.Url" target="_blank" rel="noopener">
+                    @if (d.Photos is { Count: > 0 })
+                    {
+                        <img src="@Format.Thumb(d.Photos[0], 400, 240)" alt="" loading="lazy" />
+                    }
+                    else
+                    {
+                        <span class="nophoto">🏠</span>
+                    }
+                </a>
+                <div class="card-body">
+                    <div class="card-top">
+                        <span class="site">@ProjectFormat.SiteLabel(r.Site)</span>
+                        @if (isNew) { <span class="badge new">Nouvelle</span> }
+                    </div>
+                    <a class="title" href="@d.Url" target="_blank" rel="noopener">@(d.Title ?? "Annonce") ↗</a>
+                    <div class="price">@Format.Price(d.Price) <span class="muted">· @Format.Surface(d.Surface)@(d.Rooms is not null ? $" · {d.Rooms} p." : "")</span></div>
+                    <div class="muted">@d.PostalCode @d.City @(d.District is not null ? $"({d.District})" : "")</div>
+                    <div class="muted small">
+                        Trouvée le @Format.Date(r.FirstSeenAt)@(d.AgencyName is not null ? $" · {d.AgencyName}" : "")
+                    </div>
+                    <div>
+                        @if (r.Hidden)
+                        {
+                            <button type="button" class="link" @onclick="() => Store.SetHidden(p.Id, r.Key, false)">Réafficher</button>
+                        }
+                        else
+                        {
+                            <button type="button" class="link" @onclick="() => Store.SetHidden(p.Id, r.Key, true)">Masquer</button>
+                        }
+                    </div>
+                </div>
+            </article>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = "";
+
+    private SearchProject? _project;
+    private IReadOnlyList<ProjectResult> _results = [];
+    private IReadOnlyList<ProjectRun> _runs = [];
+    private long _since;
+    private string? _sinceFor;
+    private int _newCount, _hiddenCount;
+    private bool _onlyNew, _showHidden;
+    private string _site = "";
+    private string _sort = "found";
+
+    protected override void OnParametersSet()
+    {
+        // Les annonces trouvées depuis la dernière visite restent "nouvelles" pendant toute cette visite.
+        if (_sinceFor != Id && Store.Get(Id) is { } project)
+        {
+            _since = project.LastViewedAt ?? 0;
+            _sinceFor = Id;
+            Store.MarkViewed(Id);
+        }
+        Load();
+    }
+
+    protected override void Load()
+    {
+        _project = Store.Get(Id);
+        _results = _project is null ? [] : Store.Results(Id);
+        _runs = _project is null ? [] : Store.Runs(Id);
+        _newCount = _results.Count(r => !r.Hidden && r.FirstSeenAt > _since);
+        _hiddenCount = _results.Count(r => r.Hidden);
+    }
+
+    private IEnumerable<ProjectResult> Visible()
+    {
+        IEnumerable<ProjectResult> items = _results;
+        if (!_showHidden) items = items.Where(r => !r.Hidden);
+        if (_onlyNew) items = items.Where(r => r.FirstSeenAt > _since);
+        if (_site.Length > 0) items = items.Where(r => r.Site == _site);
+        return _sort switch
+        {
+            "priceAsc" => items.OrderBy(r => r.Data.Price ?? decimal.MaxValue),
+            "priceDesc" => items.OrderByDescending(r => r.Data.Price ?? 0),
+            "surfaceDesc" => items.OrderByDescending(r => r.Data.Surface ?? 0),
+            _ => items,
+        };
+    }
+}

@@ -1,0 +1,65 @@
+@page "/projets"
+@inherits ProjectsComponent
+
+<PageTitle>Mes projets — Recherche logement</PageTitle>
+<div class="page-head">
+    <h1>🔎 Mes projets</h1>
+    <a class="button primary" href="/projets/nouveau">＋ Nouveau projet</a>
+</div>
+<p class="muted">
+    Un projet regroupe vos critères (lieux, prix, surface, pièces, mots-clés…) et les sites à interroger.
+    Le serveur lance lui-même les recherches sur ces sites, à la demande ou à intervalle régulier, et signale
+    les nouvelles annonces. Ces données sont séparées du suivi fait avec le plugin.
+</p>
+
+@if (_items.Count == 0)
+{
+    <section class="panel">
+        <p>Aucun projet pour l'instant. <a href="/projets/nouveau">Créer un premier projet</a>.</p>
+    </section>
+}
+
+<div class="projects">
+    @foreach (var s in _items)
+    {
+        var p = s.Project;
+        var running = Runner.RunningSite(p.Id);
+        <section class="panel project @(p.Active ? "" : "inactive")">
+            <div class="project-head">
+                <a class="project-name" href="/projets/@p.Id">@p.Name</a>
+                @if (s.New > 0) { <span class="badge new">@s.New nouvelle(s)</span> }
+                <span class="muted">@s.Results annonce(s)</span>
+                <span class="spacer"></span>
+                @if (running is not null)
+                {
+                    <span class="muted">⏳ Recherche en cours (@running)…</span>
+                }
+                else
+                {
+                    <button type="button" @onclick="() => StartRun(p.Id)">▶ Lancer</button>
+                }
+                <a class="button" href="/projets/@p.Id/modifier">✎ Modifier</a>
+            </div>
+            <div class="muted">@ProjectFormat.Summary(p)</div>
+            <div class="sites">
+                @foreach (var site in p.Sites)
+                {
+                    var run = s.Runs.FirstOrDefault(r => r.Site == site);
+                    <span class="site @(run is null ? "" : run.Ok ? "ok" : "ko")" title="@(run?.Message ?? "Pas encore lancé")">
+                        @(run is null ? "•" : run.Ok ? "✔" : "⚠") @ProjectFormat.SiteLabel(site)
+                    </span>
+                }
+            </div>
+            <div class="muted small">
+                Lancement @ProjectFormat.Refresh(p.AutoRefreshHours)@(p.Active ? "" : " (en pause)")
+                · @(p.LastRunAt is { } at ? $"dernier passage le {Format.DateTime(at)}" : "jamais lancé")
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<ProjectSummary> _items = [];
+
+    protected override void Load() => _items = Store.Summaries();
+}

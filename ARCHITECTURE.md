@@ -180,9 +180,40 @@ Un critère absent d'une des deux annonces ne compte ni pour ni contre.
 5. Ajouter le libellé du site dans `server/.../Model/Labels.cs`, et son domaine dans
    `SavedSearch.SiteOf` (`Model.cs`) pour regrouper ses recherches favorites.
 
+## Mes projets (recherche faite par le serveur)
+
+Partie séparée du catalogue : autres données (`projets.db`), autres services, autres pages.
+
+```
+Core/Projects/ProjectModel.cs   SearchProject (critères, lieux, sites), ProjectResult, ProjectRun,
+                                SourceSites (catalogue des sites + catégorie + disponible ou "à venir"),
+                                ProjectMatcher (filtre final : critères, mots-clés)
+Core/Projects/ProjectStore.cs   Projets, résultats, passages en mémoire + IProjectPersistence
+Server/Projects/Collectors.cs   ISiteCollector : BieniciCollector, SelogerCollector
+Server/Projects/ProjectRunner.cs  Lancement (un à la fois) + ProjectScheduler (BackgroundService, chaque minute)
+Server/Projects/SqliteProjectPersistence.cs  projets.db (objets en JSON)
+Components/Pages/Projets.razor, ProjetEdit.razor, Projet.razor
+```
+
+Déroulement d'un lancement, pour chaque site activé :
+
+1. Lieux : chaque saisie (« Rodez », « 12850 ») est résolue une fois par site, puis gardée dans le
+   projet (Bien'ici : `res.bienici.com/suggest.json` → `zoneIds` ; SeLoger :
+   `search-mfe-bff/autocomplete/suggestion` → `placeIds`).
+2. Recherche avec les filtres du site, plus récentes d'abord (Bien'ici : `realEstateAds.json?filters=…`,
+   100 par page, 3 pages ; SeLoger : `POST serp-bff/search`, 30 par page, 4 pages, puis
+   `classifiedList/<ids>` pour les données).
+3. Conversion au format commun (`ListingData`, mêmes règles que le plugin), filtre final
+   `ProjectMatcher`, fusion dans les résultats (une annonce déjà connue n'est plus « nouvelle »).
+4. Un `ProjectRun` par site : OK (nombres) ou message d'erreur lisible (anti-robot, lieu inconnu…).
+
+Ajouter un site : une entrée `Available: true` dans `SourceSites`, une classe `ISiteCollector`
+enregistrée dans `CollectorHttp.AddCollectors`, des tests de conversion sans réseau (`ProjectTests`).
+
 ## Pistes
 
-- **Collecte automatique** : un service d'arrière-plan sur le serveur (`IHostedService`). Il lit
-  les recherches favorites (`SavedSearch`) et appelle `Catalog.Sync` avec des observations. C'est le même chemin
-  que le plugin. Les doublons et les statuts fonctionnent donc sans code supplémentaire.
+- **Relier Mes projets au catalogue** : envoyer les résultats d'un projet dans `Catalog.Sync`
+  (observations `api`), pour profiter des doublons et des statuts du plugin. Séparé pour l'instant.
+- **SeLoger bloqué côté serveur** : faire faire la recherche par le plugin (navigateur) pour le
+  compte du serveur.
 - Hash perceptuel des photos, pour les sites qui hébergent une nouvelle copie des images.

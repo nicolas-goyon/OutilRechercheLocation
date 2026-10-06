@@ -15,6 +15,7 @@
 import { Tracker } from './app/tracker';
 import { ApiClient, type ServerInfo } from './core/api';
 import { ConnectionStore, normalizeUrl, type ConnectionSettings } from './core/connection';
+import { DisplayPrefsStore, hiddenStatuses } from './core/displayPrefs';
 import { registerMenuCommand } from './core/menuCommand';
 import { createStore } from './core/storage';
 import { SyncEngine } from './core/sync';
@@ -74,11 +75,15 @@ export function init(config: InitConfig = {}): PluginHandle | undefined {
   });
   window.addEventListener('pagehide', () => void sync.flush());
 
+  const display = new DisplayPrefsStore(store);
+  const baseHidden = config.hideStatuses ?? ['rejected'];
   const tracker = new Tracker(adapter, sync, {
-    hideStatuses: config.hideStatuses ?? ['rejected'],
+    hideStatuses: hiddenStatuses(baseHidden, display.get()),
     hideSuggestedDuplicatesOf: config.hideSuggestedDuplicatesOf ?? [],
     debug: config.debug ?? false,
   });
+
+  display.onChange((p) => tracker.setHideStatuses(hiddenStatuses(baseHidden, p)));
 
   const testConnection = async (s: ConnectionSettings): Promise<string> => {
     const info: ServerInfo = await new ApiClient({ baseUrl: normalizeUrl(s.serverUrl), token: s.token.trim(), timeoutMs: 5000 }).ping();
@@ -94,6 +99,7 @@ export function init(config: InitConfig = {}): PluginHandle | undefined {
       pageCounts: () => tracker.pageCounts(),
       showHidden: tracker.showHidden,
       setShowHidden: (v) => tracker.setShowHidden(v),
+      display,
       searches: connection.isConfigured()
         ? {
             canSaveCurrent: adapter.isSearchPage?.(location) ?? false,
@@ -124,6 +130,10 @@ export function init(config: InitConfig = {}): PluginHandle | undefined {
 
   registerMenuCommand('Ouvrir le panneau (connexion, réglages)', openPanel);
   registerMenuCommand('Afficher / masquer les annonces masquées', () => tracker.setShowHidden(!tracker.showHidden));
+  registerMenuCommand('Nouvelles annonces seulement (oui / non)', () => {
+    const on = !display.onlyNew;
+    display.set({ hideSeen: on, hideToContact: on });
+  });
   registerMenuCommand('Ouvrir le serveur local', () => window.open(connection.get().serverUrl, '_blank'));
 
   tracker.start();

@@ -141,3 +141,32 @@ dd { margin: 0; }
 .quick-searches { display: flex; gap: 8px; flex-wrap: wrap; }
 .quick-searches a { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 4px 10px; }
 .cmd { background: #111827; color: #f9fafb; border-radius: 6px; padding: 8px 10px; font-size: 12px; overflow-x: auto; }
+
+/* Mes projets */
+.page-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.page-head h1 { margin: 0; }
+a.button { display: inline-block; border: 1px solid var(--border); background: var(--panel); border-radius: 6px; padding: 6px 10px; color: var(--fg); }
+a.button:hover { border-color: var(--accent); text-decoration: none; }
+a.button.primary { background: var(--tocontact); border-color: var(--tocontact); color: #fff; }
+.projects { display: flex; flex-direction: column; gap: 4px; }
+.project.inactive { opacity: .7; }
+.project-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.project-name { font-weight: 700; font-size: 16px; }
+.badge.new { background: var(--accent); color: #fff; border-color: transparent; }
+.site.ok { border-color: var(--tocontact); }
+.site.ko { border-color: var(--rejected); color: var(--rejected); }
+.runs { border-collapse: collapse; width: 100%; }
+.runs td { padding: 6px 8px; border-top: 1px solid var(--border); vertical-align: top; }
+.runs tr.ko td { color: var(--rejected); }
+.form-grid { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 10px 14px; align-items: start; }
+.form-grid > label { padding-top: 6px; color: var(--muted); }
+.form-grid input:not([type=checkbox]), .form-grid select, .form-grid textarea { width: 100%; max-width: 520px; box-sizing: border-box; }
+.form-grid .range { display: flex; gap: 8px; align-items: center; }
+.form-grid .range input { width: 120px; }
+.checks { display: flex; gap: 16px; padding-top: 6px; }
+.site-choices { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.site-choice { border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; display: flex; gap: 6px; align-items: center; }
+.site-choice.disabled { opacity: .55; cursor: default; }
+.form-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0 24px; }
+ul.warn { color: var(--rejected); }
+@media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
