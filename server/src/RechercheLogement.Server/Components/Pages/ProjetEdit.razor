@@ -2,6 +2,7 @@
 @page "/projets/{Id}/modifier"
 @inject ProjectStore Store
 @inject ProjectRunner Runner
+@inject SiteRegistry Sites
 @inject NavigationManager Nav
 
 <PageTitle>@(_isNew ? "Nouveau projet" : $"Modifier « {_name} »") — Recherche logement</PageTitle>
@@ -31,11 +32,57 @@
             <label><input type="checkbox" @bind="_house" /> Maison</label>
         </div>
 
-        <label>Lieux</label>
-        <div>
-            <textarea rows="3" @bind="_locations" @bind:event="oninput" placeholder="Une ville ou un code postal par ligne. Ex. :&#10;Rodez&#10;12850"></textarea>
-            <div class="muted small">Chaque site reconnaît le lieu à sa façon. Le libellé trouvé s'affiche après le premier lancement.</div>
-        </div>
+    </div>
+</section>
+
+<section class="panel">
+    <h2>Zone de recherche</h2>
+    <div class="mode-tabs">
+        <label class="chip @(_mode == LocationMode.Places ? "on" : "")"><input type="radio" name="mode" checked="@(_mode == LocationMode.Places)" @onchange="() => _mode = LocationMode.Places" />Villes, codes postaux, départements</label>
+        <label class="chip @(_mode == LocationMode.Radius ? "on" : "")"><input type="radio" name="mode" checked="@(_mode == LocationMode.Radius)" @onchange="() => _mode = LocationMode.Radius" />Rayon autour d'un point</label>
+        <label class="chip @(_mode == LocationMode.TravelTime ? "on" : "")"><input type="radio" name="mode" checked="@(_mode == LocationMode.TravelTime)" @onchange="() => _mode = LocationMode.TravelTime" />Temps de trajet autour d'un point</label>
+    </div>
+    <div class="form-grid">
+        @if (_mode == LocationMode.Places)
+        {
+            <label>Lieux</label>
+            <div>
+                <textarea rows="3" @bind="_locations" @bind:event="oninput" placeholder="Une ville, un code postal ou un département par ligne. Ex. :&#10;Rodez&#10;12850&#10;Aveyron"></textarea>
+                <div class="muted small">Transmis tels quels à chaque site. Le lieu reconnu par chaque site s'affiche après le premier lancement.</div>
+            </div>
+        }
+        else
+        {
+            <label>Point de départ</label>
+            <div>
+                <input @bind="_center" @bind:event="oninput" placeholder="Adresse, ville ou code postal. Ex. « 8 boulevard Gally, Rodez »" />
+                <div class="muted small">Votre travail, une gare, un centre-ville… Localisé avec la base d'adresses nationale (IGN).</div>
+            </div>
+            @if (_mode == LocationMode.Radius)
+            {
+                <label>Rayon (km)</label>
+                <div class="range"><input type="number" min="1" max="200" step="0.5" @bind="_radiusKm" /></div>
+            }
+            else
+            {
+                <label>Temps de trajet</label>
+                <div class="range">
+                    <input type="number" min="5" max="120" step="5" @bind="_travelMinutes" /> min
+                    <select @bind="_travelBy">
+                        <option value="@TravelMode.Car">en voiture</option>
+                        <option value="@TravelMode.Bike">à vélo</option>
+                        <option value="@TravelMode.Walk">à pied</option>
+                    </select>
+                </div>
+            }
+            <label></label>
+            <div class="muted small">
+                Les sites ne cherchent pas dans un cercle ou par temps de trajet. Le serveur calcule la zone exacte
+                (isochrone OpenStreetMap pour le temps de trajet), demande à chaque site les codes postaux qui la
+                couvrent (ou les départements si elle est très grande), puis garde seulement les annonces situées dans
+                la zone exacte (position de l'annonce, sinon centre de sa commune).
+            </div>
+        }
     </div>
 </section>
 
@@ -77,18 +124,18 @@
 
 <section class="panel">
     <h2>Sites interrogés</h2>
-    @foreach (var group in SourceSites.All.GroupBy(s => s.Category))
+    @foreach (var group in Sites.All.GroupBy(s => s.Info.Category))
     {
-        <h3>@SourceSites.Label(group.Key)</h3>
+        <h3>@SiteRegistry.CategoryLabel(group.Key)</h3>
         <div class="site-choices">
             @foreach (var site in group)
             {
-                var usable = site.Available && Runner.HasCollector(site.Id);
-                <label class="site-choice @(usable ? "" : "disabled")" title="@site.Description">
-                    <input type="checkbox" disabled="@(!usable)" checked="@(usable && _sites.Contains(site.Id))"
-                           @onchange="e => ToggleSite(site.Id, e.Value is true)" />
-                    @site.Label
-                    @if (!usable) { <span class="badge">à venir</span> }
+                var id = site.Info.Id;
+                <label class="site-choice @(site.Available ? "" : "disabled")" title="@site.Info.Description">
+                    <input type="checkbox" disabled="@(!site.Available)" checked="@(site.Available && _sites.Contains(id))"
+                           @onchange="e => ToggleSite(id, e.Value is true)" />
+                    @site.Info.Label
+                    @if (!site.Available) { <span class="badge">à venir</span> }
                 </label>
             }
         </div>
@@ -150,7 +197,12 @@
     private TransactionType _transaction = TransactionType.Rent;
     private bool _flat = true;
     private bool _house;
+    private LocationMode _mode = LocationMode.Places;
     private string _locations = "";
+    private string _center = "";
+    private double _radiusKm = 10;
+    private int _travelMinutes = 30;
+    private TravelMode _travelBy = TravelMode.Car;
     private decimal? _priceMin, _priceMax;
     private double? _surfaceMin, _surfaceMax;
     private int? _roomsMin, _roomsMax, _bedroomsMin;
@@ -175,7 +227,12 @@
         _transaction = p.Transaction;
         _flat = p.PropertyTypes.Contains("flat");
         _house = p.PropertyTypes.Contains("house");
+        _mode = p.LocationMode;
         _locations = string.Join("\n", p.Locations.Select(l => l.Query));
+        _center = p.CenterQuery ?? "";
+        _radiusKm = p.RadiusKm;
+        _travelMinutes = p.TravelMinutes;
+        _travelBy = p.TravelBy;
         (_priceMin, _priceMax, _surfaceMin, _surfaceMax) = (p.PriceMin, p.PriceMax, p.SurfaceMin, p.SurfaceMax);
         (_roomsMin, _roomsMax, _bedroomsMin) = (p.RoomsMin, p.RoomsMax, p.BedroomsMin);
         _furnished = p.Furnished switch { true => "yes", false => "no", _ => "any" };
@@ -197,23 +254,31 @@
         _errors.Clear();
         var queries = _locations.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        var sites = _sites.Where(s => SourceSites.Get(s) is { Available: true } && Runner.HasCollector(s)).ToList();
+        var sites = _sites.Where(s => Sites.Get(s) is { Available: true }).ToList();
         if (string.IsNullOrWhiteSpace(_name)) _errors.Add("Donner un nom au projet.");
         if (!_flat && !_house) _errors.Add("Choisir au moins un type de bien.");
-        if (queries.Count == 0) _errors.Add("Indiquer au moins un lieu (ville ou code postal).");
+        if (_mode == LocationMode.Places && queries.Count == 0) _errors.Add("Indiquer au moins un lieu (ville, code postal ou département).");
+        if (_mode != LocationMode.Places && string.IsNullOrWhiteSpace(_center)) _errors.Add("Indiquer le point de départ (adresse ou ville).");
+        if (_mode == LocationMode.Radius && _radiusKm is <= 0 or > 200) _errors.Add("Rayon entre 1 et 200 km.");
+        if (_mode == LocationMode.TravelTime && _travelMinutes is < 5 or > 120) _errors.Add("Temps de trajet entre 5 et 120 minutes.");
         if (sites.Count == 0) _errors.Add("Choisir au moins un site.");
         if (_priceMin > _priceMax || _surfaceMin > _surfaceMax || _roomsMin > _roomsMax) _errors.Add("Un minimum est supérieur au maximum.");
         if (_errors.Count > 0) return;
 
         var p = _existing ?? new SearchProject { Id = SearchProject.NewId() };
         p.Name = _name.Trim();
-        p.Transaction = _transaction;
         p.PropertyTypes = [.. new[] { _flat ? "flat" : null, _house ? "house" : null }.OfType<string>()];
-        // Un lieu inchangé garde les identifiants déjà trouvés sur chaque site.
-        p.Locations = queries.Select(q => p.Locations.FirstOrDefault(l => string.Equals(l.Query, q, StringComparison.OrdinalIgnoreCase))
-            ?? new ProjectLocation { Query = q }).ToList();
-        if (_existing is not null && _existing.Transaction != _transaction)
-            foreach (var l in p.Locations) { l.SiteIds.Clear(); l.Labels.Clear(); }
+        // Transaction changée : les lieux reconnus par les sites (qui en dépendent) sont redemandés.
+        if (_existing is not null && _existing.Transaction != _transaction) p.PlaceCache.Clear();
+        p.Transaction = _transaction;
+        p.LocationMode = _mode;
+        p.Locations = queries.Select(q => new ProjectLocation { Query = q }).ToList();
+        if (!string.Equals(p.CenterQuery?.Trim(), _center.Trim(), StringComparison.OrdinalIgnoreCase)) p.Center = null;
+        p.CenterQuery = string.IsNullOrWhiteSpace(_center) ? null : _center.Trim();
+        p.RadiusKm = _radiusKm;
+        p.TravelMinutes = _travelMinutes;
+        p.TravelBy = _travelBy;
+        // La zone (mode rayon / temps de trajet) est recalculée au prochain lancement si elle a changé (empreinte).
         (p.PriceMin, p.PriceMax, p.SurfaceMin, p.SurfaceMax) = (_priceMin, _priceMax, _surfaceMin, _surfaceMax);
         (p.RoomsMin, p.RoomsMax, p.BedroomsMin) = (_roomsMin, _roomsMax, _bedroomsMin);
         p.Furnished = _furnished switch { "yes" => true, "no" => false, _ => null };

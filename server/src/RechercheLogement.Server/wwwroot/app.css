@@ -170,3 +170,12 @@ a.button.primary { background: var(--tocontact); border-color: var(--tocontact);
 .form-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0 24px; }
 ul.warn { color: var(--rejected); }
 @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
+.mode-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.mode-tabs input { display: none; }
+.history { font-size: 12px; margin-top: 4px; }
+.history summary { cursor: pointer; color: var(--accent); }
+.history .timeline { margin-top: 6px; gap: 3px; }
+.history .ev-removed { color: var(--rejected); }
+.history .ev-reappeared, .history .ev-linked { color: var(--accent); }
+.history .ev-changed { color: var(--suggest); }
+.card-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }

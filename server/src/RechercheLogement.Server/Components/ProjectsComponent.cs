@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using RechercheLogement.Core.Model;
 using RechercheLogement.Core.Projects;
 using RechercheLogement.Server.Projects;
+using RechercheLogement.Server.Sites;
 
 namespace RechercheLogement.Server.Components;
 
@@ -10,6 +11,7 @@ public abstract class ProjectsComponent : ComponentBase, IDisposable
 {
     [Inject] protected ProjectStore Store { get; set; } = default!;
     [Inject] protected ProjectRunner Runner { get; set; } = default!;
+    [Inject] protected SiteRegistry Sites { get; set; } = default!;
 
     protected override void OnInitialized()
     {
@@ -53,7 +55,7 @@ public static class ProjectFormat
         {
             p.Transaction == TransactionType.Buy ? "Achat" : "Location",
             Types(p.PropertyTypes),
-            string.Join(", ", p.Locations.Select(l => l.Query)),
+            Zone(p),
         };
         if (Range(p.PriceMin, p.PriceMax, "€") is { } price) parts.Add(price);
         if (Range(p.SurfaceMin, p.SurfaceMax, "m²") is { } surface) parts.Add(surface);
@@ -77,6 +79,23 @@ public static class ProjectFormat
         };
     }
 
+    /// <summary>"Rodez, 12850" · "10 km autour de Rodez" · "30 min en voiture depuis 8 Boulevard Gally 12000 Rodez".</summary>
+    public static string Zone(SearchProject p) => p.LocationMode switch
+    {
+        LocationMode.Radius => $"{p.RadiusKm.ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"))} km autour de {p.CenterLabel ?? p.CenterQuery}",
+        LocationMode.TravelTime => $"{p.TravelMinutes} min {Travel(p.TravelBy)} depuis {p.CenterLabel ?? p.CenterQuery}",
+        _ => string.Join(", ", p.Locations.Select(l => l.Query)),
+    };
+
+    public static string Travel(TravelMode m) => m switch { TravelMode.Bike => "à vélo", TravelMode.Walk => "à pied", _ => "en voiture" };
+
+    public static string Distance(double? meters) => meters switch
+    {
+        null => "",
+        < 1000 => $"à {Math.Round(meters.Value / 100) * 100:0} m",
+        _ => $"à {(meters.Value / 1000).ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"))} km",
+    };
+
     public static string Refresh(int hours) => hours switch
     {
         <= 0 => "à la demande",
@@ -84,6 +103,4 @@ public static class ProjectFormat
         24 => "tous les jours",
         _ => $"toutes les {hours} h",
     };
-
-    public static string SiteLabel(string id) => SourceSites.Get(id)?.Label ?? id;
 }

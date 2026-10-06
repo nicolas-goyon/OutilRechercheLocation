@@ -165,21 +165,33 @@ Pages du serveur local :
 
 ### Mes projets
 
-Un projet regroupe des critères et des sites. Le serveur interroge les sites, garde les annonces
-conformes et signale les nouvelles depuis la dernière visite. Ces données sont **séparées** du suivi
-fait avec le plugin : autre base (`projets.db`, à côté de la base principale), autres pages.
+Un projet regroupe des critères, une zone et des sites. Le serveur interroge les sites, garde les
+annonces conformes, regroupe celles du même bien et suit leur vie (changements, retraits). Ces données
+sont **séparées** du suivi fait avec le plugin : autre base (`projets.db`, à côté de la base
+principale), autres pages.
 
-- Critères : location / achat, appartement / maison, lieux (une ville ou un code postal par ligne),
-  prix, surface, pièces, chambres, meublé, mots-clés souhaités (au moins un) et exclus.
-- Sites, par catégorie, activables un par un :
-  - *Sites d'annonces immobilières* : **Bien'ici**, **SeLoger** (PAP, Logic-Immo : à venir).
-  - *Sites d'annonces généralistes* : Leboncoin (à venir).
-  - *Sites d'agences* : à venir.
-- Lancement : à la demande (« ▶ Lancer ») ou automatique (toutes les 1, 3, 6, 12 ou 24 h). Une
-  recherche à la fois, avec une pause entre les pages. Au plus 300 annonces par site et par passage
-  (les plus récentes).
-- Page d'un projet : état de chaque site (nombre d'annonces, erreur lisible), lieux reconnus,
-  annonces avec badge « Nouvelle », filtres (nouvelles seulement, par site, tri), bouton « Masquer ».
+- **Zone**, trois modes :
+  - *Villes, codes postaux, départements* : transmis tels quels à chaque site.
+  - *Rayon autour d'un point* (adresse, ville…) : par exemple 15 km autour du travail.
+  - *Temps de trajet autour d'un point* : par exemple 30 min en voiture (aussi à vélo ou à pied).
+
+  Les sites ne cherchent ni dans un cercle ni par temps de trajet. Le serveur calcule la zone exacte
+  (isochrone OpenStreetMap pour le temps de trajet), demande à chaque site les codes postaux qui la
+  couvrent (ou les départements si la zone est très grande), puis garde seulement les annonces situées
+  dans la zone exacte : position GPS de l'annonce, sinon centre de sa commune.
+- **Critères** : location / achat, appartement / maison, prix, surface, pièces, chambres, meublé,
+  mots-clés souhaités (au moins un) et exclus.
+- **Sites**, par catégorie, activables un par un : *sites d'annonces immobilières* (**Bien'ici**,
+  **SeLoger** ; PAP, Logic-Immo à venir), *sites généralistes* (Leboncoin, à venir), *sites d'agences*
+  (à venir).
+- **Suivi de chaque annonce** : nouvelle, prix ou surface modifiés, retirée du site, de nouveau en
+  ligne (avec la durée d'absence). Les annonces du même bien, sur le même site (republiée) ou sur des
+  sites différents, sont regroupées : une carte par bien, avec l'historique de toutes ses annonces.
+  Un bouton « Séparer » annule un regroupement erroné.
+- **Lancement** : à la demande (« ▶ Lancer ») ou automatique (toutes les 1, 3, 6, 12 ou 24 h). Une
+  recherche à la fois, avec une pause entre les pages. Au plus 300 annonces par site (1 000 en mode
+  rayon / temps de trajet), les plus récentes d'abord. Un retrait n'est détecté que si la recherche du
+  site était complète.
 - `RechercheLogement__ProjectsAutoRun=false` coupe les lancements automatiques.
   `RechercheLogement__ProjectsDatabasePath` change l'emplacement de `projets.db`.
 

@@ -28,7 +28,7 @@
             <div class="project-head">
                 <a class="project-name" href="/projets/@p.Id">@p.Name</a>
                 @if (s.New > 0) { <span class="badge new">@s.New nouvelle(s)</span> }
-                <span class="muted">@s.Results annonce(s)</span>
+                <span class="muted">@s.Properties bien(s)</span>
                 <span class="spacer"></span>
                 @if (running is not null)
                 {
@@ -46,7 +46,7 @@
                 {
                     var run = s.Runs.FirstOrDefault(r => r.Site == site);
                     <span class="site @(run is null ? "" : run.Ok ? "ok" : "ko")" title="@(run?.Message ?? "Pas encore lancé")">
-                        @(run is null ? "•" : run.Ok ? "✔" : "⚠") @ProjectFormat.SiteLabel(site)
+                        @(run is null ? "•" : run.Ok ? "✔" : "⚠") @Sites.Label(site)
                     </span>
                 }
             </div>

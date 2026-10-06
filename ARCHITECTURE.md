@@ -185,30 +185,49 @@ Un critère absent d'une des deux annonces ne compte ni pour ni contre.
 Partie séparée du catalogue : autres données (`projets.db`), autres services, autres pages.
 
 ```
-Core/Projects/ProjectModel.cs   SearchProject (critères, lieux, sites), ProjectResult, ProjectRun,
-                                SourceSites (catalogue des sites + catégorie + disponible ou "à venir"),
-                                ProjectMatcher (filtre final : critères, mots-clés)
-Core/Projects/ProjectStore.cs   Projets, résultats, passages en mémoire + IProjectPersistence
-Server/Projects/Collectors.cs   ISiteCollector : BieniciCollector, SelogerCollector
-Server/Projects/ProjectRunner.cs  Lancement (un à la fois) + ProjectScheduler (BackgroundService, chaque minute)
-Server/Projects/SqliteProjectPersistence.cs  projets.db (objets en JSON)
+Core/Projects/ProjectModel.cs     SearchProject (critères, mode de zone, AreaPlan, cache des lieux par site),
+                                  ProjectResult (+ historique, groupe), ProjectMatcher, AreaFilter
+Core/Projects/ProjectStore.cs     Projets, résultats, passages ; suivi (changements, retraits, réapparitions)
+                                  et regroupement des annonces du même bien (DedupScorer)
+Core/Geo/GeoShape.cs              Cercle ou polygones (isochrone) : appartenance, bord, distances
+Core/Text/RefExtractor.cs         Références et SIREN écrits en clair (mêmes règles que le plugin)
+
+Server/Sites/                     UN DOSSIER PAR SITE, chaque dossier regroupe les fonctionnalités du site
+  SiteModule.cs                   Contrats : ISiteModule, IListingParser, ISearchAdapter, PlaceKinds...
+  SiteRegistry.cs                 Modules enregistrés + sites "à venir" (PAP, Logic-Immo, Leboncoin, agences)
+  SitesRegistration.cs            Client HTTP commun + enregistrement des modules
+  Common/                         SiteHttp (erreurs lisibles), JsonRead (lecture tolérante)
+  Bienici/  BieniciSite.cs            module (identité + fonctionnalités)
+            BieniciListingParser.cs   1. parser d'annonces : JSON de l'API -> ListingData
+            BieniciSearchAdapter.cs   2. adaptateur de recherche : lieux (suggest.json) + recherche
+  Seloger/  SelogerSite.cs, SelogerListingParser.cs, SelogerSearchAdapter.cs (même découpage)
+Server/Geo/GeoServices.cs         Géocodage (IGN), communes (geo.api.gouv.fr), isochrones (Valhalla/OSM)
+Server/Projects/AreaPlanner.cs    Zone d'un projet : point, forme exacte, départements, communes
+Server/Projects/ProjectRunner.cs  Lancement + ProjectScheduler (BackgroundService, chaque minute)
 Components/Pages/Projets.razor, ProjetEdit.razor, Projet.razor
 ```
 
-Déroulement d'un lancement, pour chaque site activé :
+Déroulement d'un lancement :
 
-1. Lieux : chaque saisie (« Rodez », « 12850 ») est résolue une fois par site, puis gardée dans le
-   projet (Bien'ici : `res.bienici.com/suggest.json` → `zoneIds` ; SeLoger :
-   `search-mfe-bff/autocomplete/suggestion` → `placeIds`).
-2. Recherche avec les filtres du site, plus récentes d'abord (Bien'ici : `realEstateAds.json?filters=…`,
-   100 par page, 3 pages ; SeLoger : `POST serp-bff/search`, 30 par page, 4 pages, puis
-   `classifiedList/<ids>` pour les données).
-3. Conversion au format commun (`ListingData`, mêmes règles que le plugin), filtre final
-   `ProjectMatcher`, fusion dans les résultats (une annonce déjà connue n'est plus « nouvelle »).
-4. Un `ProjectRun` par site : OK (nombres) ou message d'erreur lisible (anti-robot, lieu inconnu…).
+1. **Zone** (modes rayon / temps de trajet) : géocodage du point, cercle ou isochrone (cercle estimé
+   si l'isochrone échoue), départements touchés (centre + 24 points du bord), communes de ces
+   départements avec leur centre (« dans la zone » si le centre y est, marge 1,5 km). Gardée dans le
+   projet, recalculée si la zone change ou tous les 30 jours.
+2. **Lieux par site** : ce que chaque site sait chercher (`ISearchAdapter.SupportedPlaces`) décide.
+   Mode lieux : saisies telles quelles. Zone : codes postaux de la zone (≤ 80), sinon départements.
+   Les lieux reconnus sont gardés dans `SearchProject.PlaceCache`.
+3. **Recherche** avec les filtres du site, plus récentes d'abord (Bien'ici : 100 par page ; SeLoger :
+   30 par page puis `classifiedList`), jusqu'à 300 (lieux) ou 1 000 (zone) annonces.
+4. **Filtre local** : critères (`ProjectMatcher`) et forme exacte de la zone (`AreaFilter` : GPS de
+   l'annonce, sinon centre de sa commune, marge 500 m + flou GPS).
+5. **Suivi** (`ProjectStore.ApplyResults`) : nouvelle annonce (regroupée avec un bien connu si le score
+   de doublon ≥ 0,8), changements (prix, charges, surface, pièces, meublé, agence, titre, texte),
+   retrait (absente d'une recherche **complète**), réapparition. Un `ProjectRun` par site.
 
-Ajouter un site : une entrée `Available: true` dans `SourceSites`, une classe `ISiteCollector`
-enregistrée dans `CollectorHttp.AddCollectors`, des tests de conversion sans réseau (`ProjectTests`).
+Ajouter un site : un dossier `Server/Sites/<Site>/` avec `<Site>Site.cs` (module) et ses
+fonctionnalités, une ligne dans `SitesRegistration.AddSites`, des tests de conversion sans réseau
+(`ProjectTests`). Ajouter une fonctionnalité à tous les sites : une interface dans `SiteModule.cs`,
+une propriété dans `ISiteModule`, une classe par dossier.
 
 ## Pistes
 

@@ -28,50 +28,68 @@ else
     <p class="muted">@ProjectFormat.Summary(p) · lancement @ProjectFormat.Refresh(p.AutoRefreshHours)@(p.Active ? "" : " (en pause)")</p>
 
     <section class="panel">
-        <h2>Sites</h2>
+        <h2>Zone et sites</h2>
+        @if (p.LocationMode != LocationMode.Places && p.Area is { } area)
+        {
+            <p class="@(area.Approximate ? "warn" : "muted")">
+                @area.Note · @area.Communes.Count(c => c.InArea) commune(s), @area.PostalCodes().Count code(s) postal(aux) ·
+                département(s) @string.Join(", ", area.Departments.Select(d => $"{d.Value} ({d.Key})")) · calculée le @Format.Date(area.ComputedAt)
+            </p>
+        }
+        else if (p.LocationMode != LocationMode.Places)
+        {
+            <p class="muted">La zone sera calculée au premier lancement.</p>
+        }
         <table class="runs">
             @foreach (var site in p.Sites)
             {
                 var run = _runs.FirstOrDefault(r => r.Site == site);
-                var labels = p.Locations.Select(l => l.Labels.GetValueOrDefault(site)).Where(x => x is not null).ToList();
+                var places = p.PlaceCache.GetValueOrDefault(site)?.Values.Where(x => x is not null).Select(x => x!.Label).ToList() ?? [];
                 <tr class="@(run is null ? "" : run.Ok ? "ok" : "ko")">
-                    <td><b>@ProjectFormat.SiteLabel(site)</b></td>
+                    <td><b>@Sites.Label(site)</b></td>
                     <td>@(run is null ? "•" : run.Ok ? "✔" : "⚠")</td>
                     <td>@(run?.Message ?? "Pas encore lancé.")</td>
                     <td class="muted">@(run is null ? "" : Format.DateTime(run.At))</td>
-                    <td class="muted small">@(labels.Count > 0 ? $"Lieux : {string.Join(", ", labels)}" : "")</td>
+                    <td class="muted small" title="@string.Join(", ", places)">
+                        @(places.Count == 0 ? "" : places.Count <= 4 ? $"Lieux : {string.Join(", ", places)}" : $"{places.Count} lieux reconnus")
+                    </td>
                 </tr>
             }
         </table>
     </section>
 
     <div class="filters">
-        <label class="chip @(_onlyNew ? "on" : "")"><input type="checkbox" @bind="_onlyNew" />Nouvelles seulement (@_newCount)</label>
-        <label class="chip @(_showHidden ? "on" : "")"><input type="checkbox" @bind="_showHidden" />Afficher les masquées (@_hiddenCount)</label>
+        <label class="chip @(_onlyNew ? "on" : "")"><input type="checkbox" @bind="_onlyNew" />Nouveaux seulement (@_newCount)</label>
+        <label class="chip @(_showRemoved ? "on" : "")"><input type="checkbox" @bind="_showRemoved" />Retirés (@_removedCount)</label>
+        <label class="chip @(_showHidden ? "on" : "")"><input type="checkbox" @bind="_showHidden" />Masqués (@_hiddenCount)</label>
         <select @bind="_site">
             <option value="">Tous les sites</option>
-            @foreach (var site in p.Sites) { <option value="@site">@ProjectFormat.SiteLabel(site)</option> }
+            @foreach (var site in p.Sites) { <option value="@site">@Sites.Label(site)</option> }
         </select>
         <select @bind="_sort">
-            <option value="found">Plus récentes d'abord</option>
+            <option value="found">Plus récents d'abord</option>
             <option value="priceAsc">Prix croissant</option>
             <option value="priceDesc">Prix décroissant</option>
             <option value="surfaceDesc">Surface décroissante</option>
+            <option value="distance">Plus proches d'abord</option>
+            <option value="changed">Derniers changements</option>
         </select>
-        <span class="muted">@Visible().Count() annonce(s)</span>
+        <span class="muted">@Visible().Count() bien(s)</span>
     </div>
 
-    @if (_results.Count == 0)
+    @if (_groups.Count == 0)
     {
         <p class="muted">Aucune annonce pour l'instant. Cliquer sur « Lancer maintenant ».</p>
     }
 
     <div class="grid">
-        @foreach (var r in Visible())
+        @foreach (var g in Visible())
         {
+            var r = g.Primary;
             var d = r.Data;
-            var isNew = r.FirstSeenAt > _since;
-            <article class="card @(r.Hidden ? "rejected" : "")">
+            var isNew = g.FirstSeenAt > _since;
+            var timeline = g.Timeline().ToList();
+            <article class="card @(g.Removed || g.Hidden ? "rejected" : "")">
                 <a class="photo" href="@d.Url" target="_blank" rel="noopener">
                     @if (d.Photos is { Count: > 0 })
                     {
@@ -84,23 +102,51 @@ else
                 </a>
                 <div class="card-body">
                     <div class="card-top">
-                        <span class="site">@ProjectFormat.SiteLabel(r.Site)</span>
-                        @if (isNew) { <span class="badge new">Nouvelle</span> }
+                        <div class="sites">
+                            @foreach (var l in g.Listings)
+                            {
+                                <a class="site @(l.Removed ? "ko" : "")" href="@l.Data.Url" target="_blank" rel="noopener"
+                                   title="@(l.Removed ? "Retirée" : "En ligne") · vue du @Format.Date(l.FirstSeenAt) au @Format.Date(l.LastSeenAt)">@Sites.Label(l.Site)@(l.Removed ? " (retirée)" : "") ↗</a>
+                            }
+                        </div>
+                        @if (isNew) { <span class="badge new">Nouveau</span> }
+                        else if (g.Removed) { <span class="badge rejected">Retiré</span> }
                     </div>
-                    <a class="title" href="@d.Url" target="_blank" rel="noopener">@(d.Title ?? "Annonce") ↗</a>
+                    <a class="title" href="@d.Url" target="_blank" rel="noopener">@(d.Title ?? "Annonce")</a>
                     <div class="price">@Format.Price(d.Price) <span class="muted">· @Format.Surface(d.Surface)@(d.Rooms is not null ? $" · {d.Rooms} p." : "")</span></div>
-                    <div class="muted">@d.PostalCode @d.City @(d.District is not null ? $"({d.District})" : "")</div>
+                    <div class="muted">@d.PostalCode @d.City @(d.District is not null ? $"({d.District})" : "") @ProjectFormat.Distance(r.DistanceM)</div>
                     <div class="muted small">
-                        Trouvée le @Format.Date(r.FirstSeenAt)@(d.AgencyName is not null ? $" · {d.AgencyName}" : "")
+                        Suivi depuis le @Format.Date(g.FirstSeenAt)@(d.AgencyName is not null ? $" · {d.AgencyName}" : "")
                     </div>
-                    <div>
-                        @if (r.Hidden)
+                    @if (timeline.Count > 1)
+                    {
+                        <details class="history">
+                            <summary>Historique (@timeline.Count)</summary>
+                            <ul class="timeline">
+                                @foreach (var (listing, e) in timeline)
+                                {
+                                    <li class="ev-@e.Kind.ToString().ToLowerInvariant()">
+                                        <span class="muted">@Format.DateTime(e.At)</span> · @Sites.Label(listing.Site) · @e.Text
+                                    </li>
+                                }
+                            </ul>
+                        </details>
+                    }
+                    <div class="card-actions">
+                        @if (g.Hidden)
                         {
-                            <button type="button" class="link" @onclick="() => Store.SetHidden(p.Id, r.Key, false)">Réafficher</button>
+                            <button type="button" class="link" @onclick="() => Store.SetGroupHidden(p.Id, g.GroupId, false)">Réafficher</button>
                         }
                         else
                         {
-                            <button type="button" class="link" @onclick="() => Store.SetHidden(p.Id, r.Key, true)">Masquer</button>
+                            <button type="button" class="link" @onclick="() => Store.SetGroupHidden(p.Id, g.GroupId, true)">Masquer</button>
+                        }
+                        @if (g.Listings.Count > 1)
+                        {
+                            @foreach (var l in g.Listings.Skip(1))
+                            {
+                                <button type="button" class="link" title="Ces annonces ne sont pas le même bien" @onclick="() => Store.Detach(p.Id, l.Key)">Séparer @Sites.Label(l.Site)</button>
+                            }
                         }
                     </div>
                 </div>
@@ -113,18 +159,18 @@ else
     [Parameter] public string Id { get; set; } = "";
 
     private SearchProject? _project;
-    private IReadOnlyList<ProjectResult> _results = [];
+    private IReadOnlyList<ProjectGroup> _groups = [];
     private IReadOnlyList<ProjectRun> _runs = [];
     private long _since;
     private string? _sinceFor;
-    private int _newCount, _hiddenCount;
-    private bool _onlyNew, _showHidden;
+    private int _newCount, _hiddenCount, _removedCount;
+    private bool _onlyNew, _showHidden, _showRemoved;
     private string _site = "";
     private string _sort = "found";
 
     protected override void OnParametersSet()
     {
-        // Les annonces trouvées depuis la dernière visite restent "nouvelles" pendant toute cette visite.
+        // Les biens trouvés depuis la dernière visite restent "nouveaux" pendant toute cette visite.
         if (_sinceFor != Id && Store.Get(Id) is { } project)
         {
             _since = project.LastViewedAt ?? 0;
@@ -137,23 +183,27 @@ else
     protected override void Load()
     {
         _project = Store.Get(Id);
-        _results = _project is null ? [] : Store.Results(Id);
+        _groups = _project is null ? [] : Store.Groups(Id);
         _runs = _project is null ? [] : Store.Runs(Id);
-        _newCount = _results.Count(r => !r.Hidden && r.FirstSeenAt > _since);
-        _hiddenCount = _results.Count(r => r.Hidden);
+        _newCount = _groups.Count(g => !g.Hidden && !g.Removed && g.FirstSeenAt > _since);
+        _hiddenCount = _groups.Count(g => g.Hidden);
+        _removedCount = _groups.Count(g => g.Removed && !g.Hidden);
     }
 
-    private IEnumerable<ProjectResult> Visible()
+    private IEnumerable<ProjectGroup> Visible()
     {
-        IEnumerable<ProjectResult> items = _results;
-        if (!_showHidden) items = items.Where(r => !r.Hidden);
-        if (_onlyNew) items = items.Where(r => r.FirstSeenAt > _since);
-        if (_site.Length > 0) items = items.Where(r => r.Site == _site);
+        IEnumerable<ProjectGroup> items = _groups;
+        if (!_showHidden) items = items.Where(g => !g.Hidden);
+        if (!_showRemoved) items = items.Where(g => !g.Removed);
+        if (_onlyNew) items = items.Where(g => g.FirstSeenAt > _since);
+        if (_site.Length > 0) items = items.Where(g => g.Listings.Any(l => l.Site == _site));
         return _sort switch
         {
-            "priceAsc" => items.OrderBy(r => r.Data.Price ?? decimal.MaxValue),
-            "priceDesc" => items.OrderByDescending(r => r.Data.Price ?? 0),
-            "surfaceDesc" => items.OrderByDescending(r => r.Data.Surface ?? 0),
+            "priceAsc" => items.OrderBy(g => g.Primary.Data.Price ?? decimal.MaxValue),
+            "priceDesc" => items.OrderByDescending(g => g.Primary.Data.Price ?? 0),
+            "surfaceDesc" => items.OrderByDescending(g => g.Primary.Data.Surface ?? 0),
+            "distance" => items.OrderBy(g => g.Primary.DistanceM ?? double.MaxValue),
+            "changed" => items.OrderByDescending(g => g.Listings.SelectMany(l => l.History).Select(e => e.At).DefaultIfEmpty(0).Max()),
             _ => items,
         };
     }
