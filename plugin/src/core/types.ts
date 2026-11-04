@@ -166,3 +166,18 @@ export interface SavedSearchView {
   createdAt: number;
   lastOpenedAt?: number;
 }
+
+/** Requête que le serveur demande d'exécuter dans un onglet du site (GET /api/relay/next). */
+export interface RelayRequest {
+  id: string;
+  method: string;
+  url: string;
+  body?: string;
+}
+
+/** Réponse du site, renvoyée telle quelle au serveur. status 0 : le navigateur n'a pas pu appeler le site. */
+export interface RelayResult {
+  status: number;
+  body?: string;
+  error?: string;
+}

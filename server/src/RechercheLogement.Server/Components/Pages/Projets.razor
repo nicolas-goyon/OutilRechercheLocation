@@ -3,7 +3,7 @@
 
 <PageTitle>Mes projets — Recherche logement</PageTitle>
 <div class="page-head">
-    <h1>🔎 Mes projets</h1>
+    <h1>Mes projets</h1>
     <a class="button primary" href="/projets/nouveau">＋ Nouveau projet</a>
 </div>
 <p class="muted">
@@ -32,13 +32,13 @@
                 <span class="spacer"></span>
                 @if (running is not null)
                 {
-                    <span class="muted">⏳ Recherche en cours (@running)…</span>
+                    <span class="muted"><Icon Name="loader-circle" Class="spin" /> Recherche en cours (@running)…</span>
                 }
                 else
                 {
-                    <button type="button" @onclick="() => StartRun(p.Id)">▶ Lancer</button>
+                    <button type="button" @onclick="() => StartRun(p.Id)"><Icon Name="play" /> Lancer</button>
                 }
-                <a class="button" href="/projets/@p.Id/modifier">✎ Modifier</a>
+                <a class="button" href="/projets/@p.Id/modifier"><Icon Name="pencil" /> Modifier</a>
             </div>
             <div class="muted">@ProjectFormat.Summary(p)</div>
             <div class="sites">
@@ -46,7 +46,7 @@
                 {
                     var run = s.Runs.FirstOrDefault(r => r.Site == site);
                     <span class="site @(run is null ? "" : run.Ok ? "ok" : "ko")" title="@(run?.Message ?? "Pas encore lancé")">
-                        @(run is null ? "•" : run.Ok ? "✔" : "⚠") @Sites.Label(site)
+                        <Icon Name="@(run is null ? "circle" : run.Ok ? "check" : "triangle-alert")" /> @Sites.Label(site)
                     </span>
                 }
             </div>

@@ -2,6 +2,7 @@ using RechercheLogement.Core.Services;
 using RechercheLogement.Server;
 using RechercheLogement.Server.Api;
 using RechercheLogement.Server.Components;
+using RechercheLogement.Server.Geo;
 using RechercheLogement.Server.Projects;
 using RechercheLogement.Server.Storage;
 
@@ -32,6 +33,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapApi();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+app.MapContours();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 
 app.Run();

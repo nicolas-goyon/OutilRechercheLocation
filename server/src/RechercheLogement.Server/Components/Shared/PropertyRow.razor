@@ -1,0 +1,27 @@
+@* Un bien sur une ligne (vue liste). *@
+<article class="row @Format.StatusClass(Item.Property.Status)" data-property="@Item.Property.Id">
+    <a class="row-photo" href="/biens/@Item.Property.Id" aria-hidden="true" tabindex="-1">
+        @if (Item.Photo is not null)
+        {
+            <img src="@Format.Thumb(Item.Photo, 160, 120)" alt="" loading="lazy" />
+        }
+        else
+        {
+            <span class="nophoto"><Icon Name="house" /></span>
+        }
+    </a>
+    <div class="row-main">
+        <a class="title" href="/biens/@Item.Property.Id">@(Item.Title ?? "Annonce")</a>
+        <div class="muted">@Item.PostalCode @Item.City @(Item.District is not null ? $"({Item.District})" : "")</div>
+    </div>
+    <div class="row-price">
+        <div class="price">@Format.Price(Item.Price)</div>
+        <div class="muted">@Format.Surface(Item.Surface)@(Item.Rooms is not null ? $", {Item.Rooms} p." : "")</div>
+    </div>
+    <StatusBadge Status="Item.Property.Status" Stage="Item.Property.ContactStage" />
+    <StatusButtons PropertyId="@Item.Property.Id" Current="Item.Property.Status" />
+</article>
+
+@code {
+    [Parameter, EditorRequired] public PropertySummary Item { get; set; } = default!;
+}

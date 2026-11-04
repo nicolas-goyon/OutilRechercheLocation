@@ -243,10 +243,56 @@ fonctionnalités, une ligne dans `SitesRegistration.AddSites`, des tests de conv
 (`ProjectTests`). Ajouter une fonctionnalité à tous les sites : une interface dans `SiteModule.cs`,
 une propriété dans `ISiteModule`, une classe par dossier.
 
+## Interface
+
+`wwwroot/app.css` porte les couleurs (variables `:root`, thèmes clair et sombre). Le vert sert aux actions, le bleu
+aux biens à contacter. Tout est embarqué dans l'image, sans CDN : police Hanken Grotesk (OFL), icônes Lucide
+(`wwwroot/icons.svg`, composant `Icon`), Leaflet et Leaflet.markercluster (`wwwroot/lib`). Seul le fond de carte vient d'Internet. Les
+émojis restent dans les textes qui citent un bouton du plugin.
+
+## Projets et catalogue
+
+Les résultats d'un lancement partent aussi dans `Catalog.Sync` (observations `api`) : mêmes doublons, mêmes
+statuts que le plugin. Le catalogue ne connaît pas les projets. Une page passe un filtre (`PropertyQuery.Scope`) :
+`ProjectSelection.Scope` garde les résultats du projet et les annonces qui respectent ses critères et sa zone
+(`ProjectScope`). Ce périmètre n'est pas stocké : il suit les modifications du projet, et les anciennes annonces
+y entrent sans migration. Les recherches favorites, elles, ont un `ProjectId` optionnel.
+
+## Relais navigateur (SeLoger)
+
+SeLoger refuse les appels du serveur. `SelogerSearchAdapter` passe donc par `Sites/Common/BrowserRelay.cs` :
+
+1. l'adaptateur dépose une requête et attend sa réponse ;
+2. le plugin (`plugin/src/core/relay.ts`), dans un onglet du site, la récupère par attente longue
+   (`GET /api/relay/next`), vérifie l'adresse (`relayPaths` de l'adaptateur), l'exécute avec `fetch` ;
+3. il renvoie la réponse brute (`POST /api/relay/{id}/result`), et le serveur la lit comme un appel direct.
+
+Choix retenu (issue #4) : pas d'image Docker de collecte, ni de copie de cookies vers le serveur. Le navigateur
+de l'utilisateur fait déjà foi, les sessions restent chez lui, et une image dédiée serait lourde sans garantie de
+passer. En contrepartie, il faut un onglet ouvert. Une requête à la fois, délai réglable, arrêt dès qu'une
+vérification apparaît.
+
+Pour un nouveau site bloqué : `relayPaths` dans son adaptateur de plugin, et `BrowserRelay` dans son
+adaptateur de recherche.
+
+## Contours des lieux
+
+`GET /geo/contours/{type}/{code}` (`Geo/GeoContours.cs`) renvoie un GeoJSON au navigateur, qui l'affiche dans `ZoneMap` :
+
+- départements et régions de métropole : fichiers simplifiés embarqués (`Geo/Data/`, issus de
+  [france-geojson](https://github.com/gregoiredavid/france-geojson), données Admin Express de l'IGN, Licence
+  ouverte). Le serveur reste utilisable pour ces contours sans Internet ;
+- communes : `geo.api.gouv.fr` ;
+- codes postaux : pas de découpage officiel, donc les contours des communes du code postal. Une commune
+  à plusieurs codes postaux apparaît entière ;
+- départements d'outre-mer : contours de leurs communes.
+
+La sélection à vue (`GeoServices.PlaceLevelsAtAsync`) renvoie les lieux sous un point, du code postal à la
+région. Une région est demandée aux sites département par département (`ProjectRunner.ToQueries`).
+
+Les réponses de `geo.api.gouv.fr` sont gardées en mémoire. Si un contour manque, le lieu reste utilisé pour la
+recherche, et la carte l'indique.
+
 ## Pistes
 
-- **Relier Mes projets au catalogue** : envoyer les résultats d'un projet dans `Catalog.Sync`
-  (observations `api`), pour profiter des doublons et des statuts du plugin. Séparé pour l'instant.
-- **SeLoger bloqué côté serveur** : faire faire la recherche par le plugin (navigateur) pour le
-  compte du serveur.
 - Hash perceptuel des photos, pour les sites qui hébergent une nouvelle copie des images.

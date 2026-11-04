@@ -49,9 +49,9 @@ public static class Format
 
     public static string StatusIcon(PropertyStatus s) => s switch
     {
-        PropertyStatus.Seen => "👁",
-        PropertyStatus.Rejected => "✕",
-        PropertyStatus.ToContact => "📞",
+        PropertyStatus.Seen => "eye",
+        PropertyStatus.Rejected => "x",
+        PropertyStatus.ToContact => "phone",
         _ => "•",
     };
 

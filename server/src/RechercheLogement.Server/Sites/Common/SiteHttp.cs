@@ -27,20 +27,25 @@ public static class SiteHttp
         }
         using (res)
         {
-            if (res.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests)
-                throw new SiteException($"{siteLabel} refuse la requête (HTTP {(int)res.StatusCode}) : protection anti-robot du site.");
-            var text = await res.Content.ReadAsStringAsync(ct);
-            if (!res.IsSuccessStatusCode)
-                throw new SiteException($"{siteLabel} : HTTP {(int)res.StatusCode} {JsonRead.Truncate(text, 160)}");
-            try
-            {
-                return JsonNode.Parse(text) ?? throw new SiteException($"{siteLabel} : réponse vide.");
-            }
-            catch (JsonException e)
-            {
-                // Page HTML (captcha) au lieu du JSON attendu.
-                throw new SiteException($"{siteLabel} : réponse inattendue (page de vérification anti-robot ?).", e);
-            }
+            return ReadJson((int)res.StatusCode, await res.Content.ReadAsStringAsync(ct), siteLabel);
+        }
+    }
+
+    /// <summary>Réponse d'un site -> JSON. Refus et page anti-robot deviennent une <see cref="SiteException"/>.</summary>
+    public static JsonNode ReadJson(int status, string text, string siteLabel)
+    {
+        if (status is (int)HttpStatusCode.Forbidden or (int)HttpStatusCode.TooManyRequests)
+            throw new SiteException($"{siteLabel} refuse la requête (HTTP {status}) : protection anti-robot du site.");
+        if (status is < 200 or >= 300)
+            throw new SiteException($"{siteLabel} : HTTP {status} {JsonRead.Truncate(text, 160)}");
+        try
+        {
+            return JsonNode.Parse(text) ?? throw new SiteException($"{siteLabel} : réponse vide.");
+        }
+        catch (JsonException e)
+        {
+            // Page HTML (captcha) au lieu du JSON attendu.
+            throw new SiteException($"{siteLabel} : réponse inattendue (page de vérification anti-robot ?).", e);
         }
     }
 

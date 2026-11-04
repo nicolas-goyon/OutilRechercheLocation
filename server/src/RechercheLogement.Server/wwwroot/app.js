@@ -1,5 +1,24 @@
 // Fonctions de la page. Blazor les appelle (JS interop), ou les boutons les appellent directement (onclick).
 window.rl = {
+  /** Préférences de ce navigateur. Le stockage peut être indisponible : la page fonctionne alors sans. */
+  prefs: {
+    get(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    },
+    set(key, value) {
+      try {
+        if (value === null || value === undefined) localStorage.removeItem(key);
+        else localStorage.setItem(key, value);
+      } catch {
+        // Préférence non mémorisée.
+      }
+    },
+  },
+
   /** Copie le texte. Retourne true si la copie a réussi. */
   async copy(text) {
     try {
@@ -79,7 +98,7 @@ window.rl = {
   },
 
   /**
-   * Carte de la zone de recherche (composant ZoneMap). Leaflet est chargé depuis unpkg (App.razor),
+   * Carte de la zone de recherche (composant ZoneMap). Leaflet est embarqué (wwwroot/lib/leaflet),
    * le fond de carte vient d'OpenStreetMap. Un clic ou le déplacement du marqueur renvoie le point à Blazor.
    */
   zoneMap: {
@@ -93,7 +112,8 @@ window.rl = {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">contributeurs OpenStreetMap</a>',
       }).addTo(map);
       const layer = L.featureGroup().addTo(map);
-      const state = { map, layer, dotnet, fitKey: null };
+      const zones = L.featureGroup().addTo(map);
+      const state = { map, layer, zones, zoneLayers: new Map(), dotnet, fitKey: null, generation: 0, unavailable: '[]' };
       map.on('click', (e) => dotnet.invokeMethodAsync('Point', e.latlng.lat, e.latlng.lng));
       rl.zoneMap.maps.set(el, state);
       // Le bloc peut encore changer de taille juste après l'affichage.
@@ -123,13 +143,59 @@ window.rl = {
           .bindTooltip(m.label)
           .addTo(st.layer);
       }
-      if (s.fitKey !== st.fitKey) {
-        st.fitKey = s.fitKey;
-        const b = st.layer.getBounds();
-        if (!b.isValid()) return;
-        if (b.getNorthEast().equals(b.getSouthWest())) st.map.setView(b.getCenter(), 12);
-        else st.map.fitBounds(b, { padding: [24, 24], maxZoom: 13 });
+      const fit = s.fitKey !== st.fitKey;
+      st.fitKey = s.fitKey;
+      rl.zoneMap.syncZones(st, s.zones ?? [], color).then((current) => {
+        if (current && fit) rl.zoneMap.fit(st);
+      });
+    },
+
+    /** Recadre la carte sur tout ce qui est affiché. */
+    fit(st) {
+      const b = st.layer.getBounds();
+      if (st.zones.getLayers().length > 0) b.extend(st.zones.getBounds());
+      if (!b.isValid()) return;
+      if (b.getNorthEast().equals(b.getSouthWest())) st.map.setView(b.getCenter(), 12);
+      else st.map.fitBounds(b, { padding: [24, 24], maxZoom: 13 });
+    },
+
+    /**
+     * Affiche le contour de chaque lieu. Les contours sont gardés entre deux mises à jour. Contour indisponible :
+     * un point au centre du lieu, s'il est connu, et le nom du lieu est signalé à Blazor.
+     * Retourne false si une mise à jour plus récente a pris le relais.
+     */
+    async syncZones(st, zones, color) {
+      const generation = ++st.generation;
+      const wanted = new Set(zones.map((z) => z.key));
+      for (const [key, layer] of st.zoneLayers) {
+        if (wanted.has(key)) continue;
+        st.zones.removeLayer(layer);
+        st.zoneLayers.delete(key);
       }
+      const missing = [];
+      await Promise.all(zones.map(async (z) => {
+        if (st.zoneLayers.has(z.key)) return;
+        let layer = null;
+        try {
+          const res = await fetch(z.url);
+          if (!res.ok) throw new Error(String(res.status));
+          layer = L.geoJSON(await res.json(), { style: { color, weight: 2, fillOpacity: 0.14 } }).bindTooltip(z.label, { sticky: true });
+        } catch {
+          missing.push(z.label);
+          if (z.center) layer = L.circleMarker(z.center, { radius: 7, color: '#16a34a', weight: 2, fillOpacity: 0.6 }).bindTooltip(z.label);
+        }
+        if (layer && generation === st.generation) {
+          st.zoneLayers.set(z.key, layer);
+          st.zones.addLayer(layer);
+        }
+      }));
+      if (generation !== st.generation) return false;
+      const unavailable = JSON.stringify(missing.sort());
+      if (unavailable !== st.unavailable) {
+        st.unavailable = unavailable;
+        st.dotnet.invokeMethodAsync('ZonesUnavailable', missing);
+      }
+      return true;
     },
 
     dispose(el) {
@@ -137,6 +203,90 @@ window.rl = {
       if (!st) return;
       st.map.remove();
       rl.zoneMap.maps.delete(el);
+    },
+  },
+
+  /**
+   * Carte des biens (composant PropertyMap). Marqueurs regroupés quand ils sont proches. Le survol d'un bien de la
+   * liste met son marqueur en évidence, et inversement : tout se passe dans le navigateur, sans appel au serveur.
+   */
+  propertyMap: {
+    maps: new Map(),
+
+    colors() {
+      const css = getComputedStyle(document.documentElement);
+      const get = (name) => css.getPropertyValue(name).trim();
+      return { none: get('--accent'), seen: get('--seen'), rejected: get('--rejected'), tocontact: get('--tocontact') };
+    },
+
+    init(el) {
+      if (!window.L || !L.markerClusterGroup || !el) return false;
+      const map = L.map(el).setView([46.6, 2.4], 5);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">contributeurs OpenStreetMap</a>',
+      }).addTo(map);
+      const cluster = L.markerClusterGroup({
+        showCoverageOnHover: false,
+        maxClusterRadius: 40,
+        iconCreateFunction: (c) => L.divIcon({ html: `<span>${c.getChildCount()}</span>`, className: 'map-cluster', iconSize: [32, 32] }),
+      }).addTo(map);
+      const st = { map, cluster, markers: new Map(), hover: null };
+      const list = el.closest('.with-map')?.querySelector('.property-list');
+      const over = (e) => {
+        const id = e.target.closest?.('[data-property]')?.dataset.property ?? null;
+        if (id !== st.hover) rl.propertyMap.highlight(st, id);
+      };
+      list?.addEventListener('mouseover', over);
+      st.detach = () => list?.removeEventListener('mouseover', over);
+      rl.propertyMap.maps.set(el, st);
+      setTimeout(() => map.invalidateSize(), 50);
+      return true;
+    },
+
+    highlight(st, id) {
+      st.markers.get(st.hover)?.setStyle({ weight: 2, radius: 7 });
+      document.querySelector('.property-list .hovered')?.classList.remove('hovered');
+      st.hover = id;
+      if (id === null) return;
+      st.markers.get(id)?.setStyle({ weight: 4, radius: 10 }).bringToFront?.();
+      document.querySelector(`.property-list [data-property="${CSS.escape(id)}"]`)?.classList.add('hovered');
+    },
+
+    popup(p) {
+      const box = document.createElement('div');
+      const link = Object.assign(document.createElement('a'), { href: `/biens/${p.id}`, textContent: p.title });
+      const lines = [p.detail, p.approx ? `${p.place} (position approchée)` : p.place];
+      box.append(link, ...lines.map((text) => Object.assign(document.createElement('div'), { textContent: text })));
+      return box;
+    },
+
+    update(el, json) {
+      const st = rl.propertyMap.maps.get(el);
+      if (!st) return;
+      const colors = rl.propertyMap.colors();
+      const first = st.markers.size === 0;
+      st.cluster.clearLayers();
+      st.markers.clear();
+      for (const p of JSON.parse(json)) {
+        const color = colors[p.status] ?? colors.none;
+        const marker = L.circleMarker([p.lat, p.lon], { radius: 7, color, weight: 2, fillColor: color, fillOpacity: p.approx ? 0.15 : 0.75, dashArray: p.approx ? '3 3' : null })
+          .bindPopup(() => rl.propertyMap.popup(p));
+        marker.on('mouseover', () => rl.propertyMap.highlight(st, p.id));
+        marker.on('mouseout', () => rl.propertyMap.highlight(st, null));
+        st.markers.set(p.id, marker);
+        st.cluster.addLayer(marker);
+      }
+      const b = st.cluster.getBounds();
+      if (first && b.isValid()) st.map.fitBounds(b, { padding: [28, 28], maxZoom: 13 });
+    },
+
+    dispose(el) {
+      const st = rl.propertyMap.maps.get(el);
+      if (!st) return;
+      st.detach();
+      st.map.remove();
+      rl.propertyMap.maps.delete(el);
     },
   },
 };

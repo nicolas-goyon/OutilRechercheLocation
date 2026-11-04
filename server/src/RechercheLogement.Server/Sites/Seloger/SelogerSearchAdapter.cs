@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using RechercheLogement.Core.Dedup;
 using RechercheLogement.Core.Model;
@@ -13,9 +12,10 @@ namespace RechercheLogement.Server.Sites.Seloger;
 ///    (ville AD08…, code postal POCO…, département AD06…) ;
 ///  - annonces : POST https://www.seloger.com/serp-bff/search (identifiants, 30 par page, plus récentes
 ///    d'abord), puis GET https://www.seloger.com/classifiedList/&lt;ids&gt; (données des annonces).
-/// SeLoger a une protection anti-robot : un appel hors navigateur peut être refusé (message affiché).
+/// SeLoger refuse les appels hors navigateur : ils passent par le plugin (<see cref="BrowserRelay"/>), dans un
+/// onglet seloger.com ouvert par l'utilisateur. Sans onglet ouvert, la recherche attend (message affiché).
 /// </summary>
-public sealed class SelogerSearchAdapter(IHttpClientFactory factory) : ISearchAdapter
+public sealed class SelogerSearchAdapter(BrowserRelay relay) : ISearchAdapter
 {
     private const string Label = "SeLoger";
     private const int PageSize = 30;
@@ -25,9 +25,8 @@ public sealed class SelogerSearchAdapter(IHttpClientFactory factory) : ISearchAd
 
     public async Task<CachedPlace?> ResolvePlaceAsync(PlaceQuery query, TransactionType transaction, CancellationToken ct)
     {
-        var http = factory.CreateClient(SiteHttp.ClientName);
         var url = $"https://www.seloger.com/search-mfe-bff/autocomplete/suggestion?query={Uri.EscapeDataString(query.Text.Trim())}&limit=5&distributionType={Distribution(transaction)}";
-        var json = await SiteHttp.SendJsonAsync(http, Get(url), Label, ct);
+        var json = await GetAsync(url, ct);
         return PickPlace(json, query);
     }
 
@@ -55,7 +54,6 @@ public sealed class SelogerSearchAdapter(IHttpClientFactory factory) : ISearchAd
 
     public async Task<SearchOutcome> SearchAsync(SearchRequest request, CancellationToken ct)
     {
-        var http = factory.CreateClient(SiteHttp.ClientName);
         var ids = new List<string>();
         var complete = true;
         var total = 0;
@@ -64,12 +62,7 @@ public sealed class SelogerSearchAdapter(IHttpClientFactory factory) : ISearchAd
         {
             for (var page = 1; ; page++)
             {
-                var req = new HttpRequestMessage(HttpMethod.Post, "https://www.seloger.com/serp-bff/search")
-                {
-                    Content = JsonContent.Create(BuildSearch(request.Project, chunk, page)),
-                };
-                AddBrowserHeaders(req);
-                var json = await SiteHttp.SendJsonAsync(http, req, Label, ct);
+                var json = await relay.SendJsonAsync(SelogerSite.Id, Label, HttpMethod.Post, "https://www.seloger.com/serp-bff/search", BuildSearch(request.Project, chunk, page).ToJsonString(), ct);
                 var pageIds = (json["classifieds"] as JsonArray ?? new JsonArray())
                     .Select(c => JsonRead.Str(c?["id"])).Where(x => x is not null).Cast<string>().ToList();
                 ids.AddRange(pageIds);
@@ -92,7 +85,7 @@ public sealed class SelogerSearchAdapter(IHttpClientFactory factory) : ISearchAd
         var items = new List<CollectedItem>();
         foreach (var chunk in ids.Distinct().Chunk(PageSize))
         {
-            var json = await SiteHttp.SendJsonAsync(http, Get($"https://www.seloger.com/classifiedList/{string.Join(',', chunk)}"), Label, ct);
+            var json = await GetAsync($"https://www.seloger.com/classifiedList/{string.Join(',', chunk)}", ct);
             foreach (var c in json as JsonArray ?? new JsonArray())
                 if (c is not null && SelogerListingParser.ParseClassified(c) is { } item) items.Add(item);
             await Task.Delay(500, ct);
@@ -125,16 +118,6 @@ public sealed class SelogerSearchAdapter(IHttpClientFactory factory) : ISearchAd
 
     private static string Distribution(TransactionType t) => t == TransactionType.Buy ? "Buy" : "Rent";
 
-    private static HttpRequestMessage Get(string url)
-    {
-        var req = new HttpRequestMessage(HttpMethod.Get, url);
-        AddBrowserHeaders(req);
-        return req;
-    }
-
-    private static void AddBrowserHeaders(HttpRequestMessage req)
-    {
-        req.Headers.Referrer = new Uri("https://www.seloger.com/classified-search");
-        req.Headers.TryAddWithoutValidation("Origin", "https://www.seloger.com");
-    }
+    private Task<JsonNode> GetAsync(string url, CancellationToken ct) =>
+        relay.SendJsonAsync(SelogerSite.Id, Label, HttpMethod.Get, url, null, ct);
 }

@@ -6,7 +6,7 @@
         }
         else
         {
-            <span class="nophoto">🏠</span>
+            <span class="nophoto"><Icon Name="house" /></span>
         }
     </a>
     <div class="card-body">
@@ -20,12 +20,12 @@
         <div class="sites">
             @foreach (var l in Item.Listings)
             {
-                <a class="site" href="@l.Data.Url" target="_blank" rel="noopener" title="@l.Data.Title">@Labels.Site(l.Site) ↗</a>
+                <a class="site" href="@l.Data.Url" target="_blank" rel="noopener" title="@l.Data.Title">@Labels.Site(l.Site) <Icon Name="arrow-up-right" /></a>
             }
         </div>
         @if (!string.IsNullOrEmpty(Item.Property.Note))
         {
-            <div class="note">📝 @Item.Property.Note</div>
+            <div class="note">@Item.Property.Note</div>
         }
     </div>
 </article>

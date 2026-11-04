@@ -30,6 +30,7 @@ public sealed class GeoServices(IHttpClientFactory factory)
 {
     private readonly ConcurrentDictionary<string, List<PlanCommune>> _communes = new();
     private readonly ConcurrentDictionary<string, string> _departmentNames = new();
+    private readonly ConcurrentDictionary<string, List<PlanCommune>> _postalCommunes = new();
 
     private HttpClient Http => factory.CreateClient(SiteHttp.ClientName);
 
@@ -85,9 +86,138 @@ public sealed class GeoServices(IHttpClientFactory factory)
         // Département en tête seulement si son nom correspond mieux que la première commune ("Aveyron" et non "Paris").
         var depFirst = deps.Count > 0 && DedupScorer.NormalizeText(deps[0].Label).StartsWith(DedupScorer.NormalizeText(text), StringComparison.Ordinal);
         if (depFirst) list.AddRange(deps.Take(1));
+        list.AddRange(await RegionsNamedAsync(q, ct));
         list.AddRange(towns.Select(CommuneSuggestion));
         list.AddRange(deps.Skip(depFirst ? 1 : 0));
         return list;
+    }
+
+    private async Task<List<PlaceSuggestion>> RegionsNamedAsync(string escapedName, CancellationToken ct)
+    {
+        var list = new List<PlaceSuggestion>();
+        var regions = await GetGeoAsync($"regions?nom={escapedName}&fields=nom,code", ct) as JsonArray ?? [];
+        foreach (var r in regions.Take(2))
+            if (JsonRead.Str(r?["nom"]) is { } name && JsonRead.Str(r?["code"]) is { } code)
+                list.Add(RegionSuggestion(name, code, await RegionDepartmentsAsync(code, ct)));
+        return list;
+    }
+
+    private async Task<List<(string Name, string Code)>> RegionDepartmentsAsync(string code, CancellationToken ct)
+    {
+        var json = await GetGeoAsync($"regions/{code}/departements?fields=nom,code", ct);
+        return (json as JsonArray ?? [])
+            .Select(d => (Name: JsonRead.Str(d?["nom"]), Code: JsonRead.Str(d?["code"])))
+            .Where(d => d.Name is not null && d.Code is not null)
+            .Select(d => (d.Name!, d.Code!)).ToList();
+    }
+
+    public static PlaceSuggestion RegionSuggestion(string name, string code, List<(string Name, string Code)> departments) =>
+        new(name, $"Région · {departments.Count} départements", "compass",
+            new ProjectLocation
+            {
+                Type = PlaceType.Region,
+                Query = name,
+                Code = code,
+                Label = name,
+                Departments = departments.Select(d => d.Name).ToList(),
+                DepartmentCodes = departments.Select(d => d.Code).ToList(),
+            }, null);
+
+    /// <summary>
+    /// Lieux qui contiennent le point, du plus petit au plus grand : code postal, commune, département, région
+    /// (sélection à vue sur la carte). Vide : pas de commune française à cet endroit. Un niveau indisponible est omis.
+    /// </summary>
+    public async Task<List<ProjectLocation>> PlaceLevelsAtAsync(GeoPoint p, CancellationToken ct)
+    {
+        var json = await GetGeoAsync(string.Create(CultureInfo.InvariantCulture, $"communes?lat={p.Lat}&lon={p.Lon}&{CommuneFields},codeRegion"), ct);
+        var raw = (json as JsonArray)?.FirstOrDefault();
+        if (ParseCommunes(json).FirstOrDefault() is not { } commune) return [];
+
+        var levels = new List<ProjectLocation>();
+        if (await PostalCodeAtAsync(p, commune, ct) is { } cp)
+        {
+            var communes = ParseCommunes(await GetGeoAsync($"communes?codePostal={cp}&{CommuneFields}", ct));
+            levels.Add(PostalCodeSuggestion(cp, communes.Count > 0 ? communes : [commune]).Location!);
+        }
+        levels.Add(CommuneSuggestion(commune).Location!);
+        await AddLevelAsync(levels, async () => (await DepartmentByCodeAsync(commune.Department, ct))?.Location);
+        if (JsonRead.Str(raw?["codeRegion"]) is { } region)
+        {
+            await AddLevelAsync(levels, async () =>
+            {
+                var name = JsonRead.Str((await GetGeoAsync($"regions/{region}?fields=nom,code", ct))["nom"]);
+                return name is null ? null : RegionSuggestion(name, region, await RegionDepartmentsAsync(region, ct)).Location;
+            });
+        }
+        return levels;
+    }
+
+    private static async Task AddLevelAsync(List<ProjectLocation> levels, Func<Task<ProjectLocation?>> load)
+    {
+        try
+        {
+            if (await load() is { } level) levels.Add(level);
+        }
+        catch (SiteException)
+        {
+            // Niveau omis : les autres restent utilisables.
+        }
+    }
+
+    /// <summary>Code postal du point : celui de l'adresse la plus proche s'il appartient à la commune, sinon le premier de la commune.</summary>
+    private async Task<string?> PostalCodeAtAsync(GeoPoint p, PlanCommune commune, CancellationToken ct)
+    {
+        if (commune.PostalCodes.Count <= 1) return commune.PostalCodes.FirstOrDefault();
+        try
+        {
+            var args = string.Create(CultureInfo.InvariantCulture, $"lon={p.Lon}&lat={p.Lat}&limit=1");
+            var json = await SiteHttp.GetJsonAsync(Http, $"https://data.geopf.fr/geocodage/reverse?{args}", "Géocodage IGN", ct);
+            var cp = JsonRead.Str((json["features"] as JsonArray)?.FirstOrDefault()?["properties"]?["postcode"]);
+            if (cp is not null && commune.PostalCodes.Contains(cp)) return cp;
+        }
+        catch (SiteException)
+        {
+            // Repli sur le premier code postal.
+        }
+        return commune.PostalCodes[0];
+    }
+
+    public static string CenterKey(string postalCode, string? city) => $"{postalCode}|{DedupScorer.NormalizeText(city ?? "")}";
+
+    /// <summary>
+    /// Centre de la commune de chaque lieu (<see cref="CenterKey"/>), pour placer sur la carte les biens sans GPS :
+    /// commune du même nom si le code postal en compte plusieurs, sinon la première. Un lieu introuvable est omis.
+    /// </summary>
+    public async Task<Dictionary<string, GeoPoint>> CentersAsync(IEnumerable<(string PostalCode, string? City)> places, CancellationToken ct)
+    {
+        var wanted = places.Distinct().ToList();
+        using var limit = new SemaphoreSlim(4);
+        await Task.WhenAll(wanted.Select(p => p.PostalCode).Distinct().Select(async cp =>
+        {
+            await limit.WaitAsync(ct);
+            try
+            {
+                if (!_postalCommunes.ContainsKey(cp))
+                    _postalCommunes[cp] = ParseCommunes(await GetGeoAsync($"communes?codePostal={Uri.EscapeDataString(cp)}&{CommuneFields}", ct));
+            }
+            catch (SiteException)
+            {
+                // Bien non placé. Sera redemandé à la prochaine mise à jour.
+            }
+            finally
+            {
+                limit.Release();
+            }
+        }));
+
+        var centers = new Dictionary<string, GeoPoint>();
+        foreach (var (cp, city) in wanted)
+        {
+            if (!_postalCommunes.TryGetValue(cp, out var communes) || communes.Count == 0) continue;
+            var name = DedupScorer.NormalizeText(city ?? "");
+            centers[CenterKey(cp, city)] = (communes.FirstOrDefault(c => DedupScorer.NormalizeText(c.Name) == name) ?? communes[0]).Center;
+        }
+        return centers;
     }
 
     /// <summary>Commune qui contient le point (clic sur la carte en mode lieux).</summary>
@@ -173,7 +303,7 @@ public sealed class GeoServices(IHttpClientFactory factory)
         (json as JsonArray ?? new JsonArray())
             .Select(d => (Name: JsonRead.Str(d?["nom"]), Code: JsonRead.Str(d?["code"])))
             .Where(d => d.Name is not null && d.Code is not null)
-            .Select(d => new PlaceSuggestion($"{d.Name} ({d.Code})", "Département", "🗺",
+            .Select(d => new PlaceSuggestion($"{d.Name} ({d.Code})", "Département", "map",
                 new ProjectLocation { Type = PlaceType.Department, Query = d.Name!, Code = d.Code, Label = $"{d.Name} ({d.Code})" }, null))
             .ToList();
 
@@ -182,7 +312,7 @@ public sealed class GeoServices(IHttpClientFactory factory)
         var cps = c.PostalCodes.Count switch { 0 => "", 1 => c.PostalCodes[0], _ => $"{c.PostalCodes[0]}…" };
         var label = cps.Length == 0 ? c.Name : $"{c.Name} ({cps})";
         var detail = c.PostalCodes.Count > 1 ? $"Commune · codes postaux {string.Join(", ", c.PostalCodes)}" : $"Commune · département {c.Department}";
-        return new PlaceSuggestion(label, detail, "🏘",
+        return new PlaceSuggestion(label, detail, "building-2",
             new ProjectLocation { Type = PlaceType.Commune, Query = c.Name, Code = c.Code, Label = label, PostalCodes = [.. c.PostalCodes], Center = c.Center },
             c.Center);
     }
@@ -190,7 +320,7 @@ public sealed class GeoServices(IHttpClientFactory factory)
     public static PlaceSuggestion PostalCodeSuggestion(string cp, List<PlanCommune> communes)
     {
         var names = string.Join(", ", communes.Take(4).Select(c => c.Name)) + (communes.Count > 4 ? $" et {communes.Count - 4} autre(s)" : "");
-        return new PlaceSuggestion(cp, $"Code postal · {names}", "📮",
+        return new PlaceSuggestion(cp, $"Code postal · {names}", "mail-open",
             new ProjectLocation { Type = PlaceType.PostalCode, Query = cp, Code = cp, Label = $"{cp} ({communes[0].Name}{(communes.Count > 1 ? "…" : "")})", Center = communes[0].Center },
             communes[0].Center);
     }
@@ -207,11 +337,11 @@ public sealed class GeoServices(IHttpClientFactory factory)
             var type = JsonRead.Str(f!["properties"]?["type"]);
             (string Icon, string? Kind) meta = type switch
             {
-                "housenumber" => ("📍", "Adresse"),
-                "street" => ("🛣", "Voie"),
-                "municipality" => ("🏘", "Commune"),
-                "locality" => ("📌", "Lieu-dit"),
-                _ => ("📍", null),
+                "housenumber" => ("map-pin", "Adresse"),
+                "street" => ("signpost", "Voie"),
+                "municipality" => ("building-2", "Commune"),
+                "locality" => ("pin", "Lieu-dit"),
+                _ => ("map-pin", null),
             };
             var context = JsonRead.Str(f["properties"]?["context"]);
             var detail = meta.Kind is null ? context : context is null ? meta.Kind : $"{meta.Kind} · {context}";

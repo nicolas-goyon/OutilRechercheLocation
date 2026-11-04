@@ -1,6 +1,9 @@
 using System.Collections.Concurrent;
+using RechercheLogement.Core.Contracts;
 using RechercheLogement.Core.Projects;
+using RechercheLogement.Core.Services;
 using RechercheLogement.Server.Sites;
+using RechercheLogement.Server.Sites.Common;
 
 namespace RechercheLogement.Server.Projects;
 
@@ -11,10 +14,11 @@ namespace RechercheLogement.Server.Projects;
 ///     ne connaît pas les codes postaux (zone plus large, filtrée ensuite chez nous).
 ///  2. Lieux reconnus par le site (gardés en cache dans le projet).
 ///  3. Recherche avec les filtres du site, puis filtre local : critères du projet et forme exacte de la zone.
-///  4. Intégration : nouvelles annonces, changements, retraits, réapparitions, regroupement des doublons.
+///  4. Intégration : nouvelles annonces, changements, retraits, réapparitions, regroupement des doublons,
+///     puis envoi au catalogue.
 /// Un seul lancement à la fois (on reste discret avec les sites).
 /// </summary>
-public sealed class ProjectRunner(ProjectStore store, SiteRegistry sites, AreaPlanner planner, ILogger<ProjectRunner> log)
+public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegistry sites, AreaPlanner planner, ILogger<ProjectRunner> log)
 {
     /// <summary>Au-delà, la recherche par codes postaux passe aux départements.</summary>
     private const int MaxPostalCodes = 80;
@@ -28,7 +32,8 @@ public sealed class ProjectRunner(ProjectStore store, SiteRegistry sites, AreaPl
     /// <summary>Étape en cours pour ce projet (pour la page), sinon null.</summary>
     public string? RunningSite(string projectId) => _running.GetValueOrDefault(projectId);
 
-    public async Task RunAsync(string projectId, CancellationToken ct)
+    /// <summary>Lance un projet. <paramref name="onlySite"/> : un seul de ses sites (reprise d'une recherche en attente).</summary>
+    public async Task RunAsync(string projectId, CancellationToken ct, string? onlySite = null)
     {
         if (!_running.TryAdd(projectId, "en attente")) return;
         store.NotifyRunning();
@@ -54,7 +59,7 @@ public sealed class ProjectRunner(ProjectStore store, SiteRegistry sites, AreaPl
                 }
             }
 
-            foreach (var siteId in project.Sites.Distinct())
+            foreach (var siteId in project.Sites.Distinct().Where(s => onlySite is null || s == onlySite))
             {
                 if (sites.Get(siteId) is not { Available: true } entry) continue;
                 SetStep(projectId, entry.Info.Label);
@@ -69,6 +74,15 @@ public sealed class ProjectRunner(ProjectStore store, SiteRegistry sites, AreaPl
         }
     }
 
+    /// <summary>Un onglet vient de s'ouvrir : relance les recherches de ce site restées en attente d'un onglet.</summary>
+    public async Task ResumeWaitingAsync(string site, CancellationToken ct)
+    {
+        var waiting = store.Projects()
+            .Where(p => p.Active && store.Runs(p.Id).Any(r => r.Site == site && r.Message.StartsWith(BrowserRelay.NoTabPrefix, StringComparison.Ordinal)))
+            .Select(p => p.Id).ToList();
+        foreach (var id in waiting) await RunAsync(id, ct, onlySite: site);
+    }
+
     private void SetStep(string projectId, string step)
     {
         _running[projectId] = step;
@@ -79,7 +93,7 @@ public sealed class ProjectRunner(ProjectStore store, SiteRegistry sites, AreaPl
     public static (List<PlaceQuery> Queries, string How) PlaceQueries(SearchProject p, PlaceKinds supported)
     {
         if (p.LocationMode == LocationMode.Places || p.Area is null)
-            return (p.Locations.Select(ToQuery).ToList(), "lieux saisis");
+            return (p.Locations.SelectMany(ToQueries).ToList(), "lieux saisis");
         var postalCodes = p.Area.PostalCodes();
         if (supported.HasFlag(PlaceKinds.PostalCode) && postalCodes.Count is > 0 and <= MaxPostalCodes)
             return (postalCodes.Select(cp => new PlaceQuery(PlaceKind.PostalCode, cp)).ToList(), $"{postalCodes.Count} code(s) postal(aux) de la zone");
@@ -87,6 +101,12 @@ public sealed class ProjectRunner(ProjectStore store, SiteRegistry sites, AreaPl
             return (p.Area.Departments.Values.Select(d => new PlaceQuery(PlaceKind.Department, d)).ToList(), $"département(s) {string.Join(", ", p.Area.Departments.Values)}");
         return (postalCodes.Select(cp => new PlaceQuery(PlaceKind.PostalCode, cp)).ToList(), $"{postalCodes.Count} code(s) postal(aux)");
     }
+
+    /// <summary>Lieu du projet -> lieux à demander au site. Une région est demandée département par département.</summary>
+    public static IEnumerable<PlaceQuery> ToQueries(ProjectLocation l) =>
+        l is { Type: PlaceType.Region, Departments.Count: > 0 }
+            ? l.Departments.Select(d => new PlaceQuery(PlaceKind.Department, d))
+            : [ToQuery(l)];
 
     /// <summary>Lieu du projet -> lieu à demander au site.</summary>
     public static PlaceQuery ToQuery(ProjectLocation l) => l.Type switch
@@ -149,6 +169,8 @@ public sealed class ProjectRunner(ProjectStore store, SiteRegistry sites, AreaPl
 
             // 4. Intégration et suivi.
             var applied = store.ApplyResults(project.Id, site.Id, incoming, outcome.Complete, started);
+            // Mêmes statuts et mêmes doublons que les annonces vues avec le plugin.
+            catalog.Sync(new SyncRequest("projet", incoming.Select(i => new Observation(site.Id, i.SiteId, "api", i.Data, started)).ToList(), null, null));
             var parts = new List<string> { $"{applied.Kept} annonce(s) retenue(s) sur {outcome.Items.Count} reçue(s)" };
             if (applied.New > 0) parts.Add($"{applied.New} nouvelle(s)");
             if (applied.Changed > 0) parts.Add($"{applied.Changed} modifiée(s)");
@@ -174,10 +196,24 @@ public sealed class ProjectRunner(ProjectStore store, SiteRegistry sites, AreaPl
 }
 
 /// <summary>Lance automatiquement les projets dont l'intervalle (AutoRefreshHours) est écoulé. Vérification chaque minute.</summary>
-public sealed class ProjectScheduler(ProjectRunner runner, ProjectStore store, ILogger<ProjectScheduler> log) : BackgroundService
+public sealed class ProjectScheduler(ProjectRunner runner, ProjectStore store, BrowserRelay relay, ILogger<ProjectScheduler> log) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        void Resume(string site) => _ = Task.Run(async () =>
+        {
+            try
+            {
+                await runner.ResumeWaitingAsync(site, stoppingToken);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                log.LogError(e, "Reprise des recherches en attente de {Site}", site);
+            }
+        }, stoppingToken);
+        relay.SiteConnected += Resume;
+        using var unsubscribe = new Unsubscribe(() => relay.SiteConnected -= Resume);
+
         // Laisse le serveur démarrer avant le premier passage.
         await Task.Delay(TimeSpan.FromSeconds(20), stoppingToken);
         using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
@@ -197,4 +233,9 @@ public sealed class ProjectScheduler(ProjectRunner runner, ProjectStore store, I
         }
         while (await timer.WaitForNextTickAsync(stoppingToken));
     }
+}
+
+file sealed class Unsubscribe(Action action) : IDisposable
+{
+    public void Dispose() => action();
 }

@@ -180,6 +180,15 @@ Pages du serveur local :
   (pour une variante avec d'autres critères), réordonner, ouvrir une ou toutes les recherches d'un
   site. Le tableau de bord affiche des raccourcis.
 - **🔎 Mes projets** : recherches complètes que le serveur lance lui-même (voir ci-dessous).
+
+Dans **Tous les biens**, on choisit la vue en grille ou en liste, et on peut afficher la carte à côté. Elle suit les
+filtres. Un bien sans GPS (SeLoger, tant que l'annonce n'a pas été ouverte) est placé au centre de sa commune,
+avec un marqueur en pointillés.
+
+Le sélecteur **Projet**, en haut de la barre latérale, limite le tableau de bord, À contacter, Tous les biens,
+Doublons et Recherches à un projet. Un bien en fait partie s'il a été trouvé par le projet, ou si une de ses
+annonces, vue avec le plugin, respecte les critères et la zone du projet. Les statuts sont communs à tous les
+projets : un bien rejeté l'est partout.
 - **Paramètres** : token (copier / régénérer), lien d'installation du plugin, export JSON.
 
 ### Mes projets
@@ -257,9 +266,12 @@ dotnet run --project src/RechercheLogement.Server           # http://localhost:5
 
 - Bien'ici : le plugin relit le JSON de la liste. Cela fait une requête de plus par page. Les deux
   annonces « mises en avant » n'ont souvent que les données de la carte.
-- Mes projets, SeLoger : SeLoger protège son site contre les robots. Un appel venant du serveur
-  (et pas d'un navigateur) peut être refusé : la page du projet affiche alors « SeLoger refuse la
-  requête… ». Bien'ici n'a pas cette protection.
+- Mes projets, SeLoger : SeLoger refuse les appels hors navigateur. La recherche est donc faite par le
+  plugin, dans un onglet seloger.com ouvert, à raison d'une requête toutes les 2 secondes au moins
+  (`RechercheLogement__SiteRelayDelayMs`). Sans onglet, le projet affiche « En attente d'un onglet… » et la
+  recherche repart à l'ouverture d'un onglet. Si SeLoger demande une vérification, la recherche s'arrête :
+  la passer dans l'onglet, puis relancer le projet. Rien n'est contourné automatiquement. Vérifiez que cet
+  usage personnel respecte les conditions d'utilisation du site.
 - SeLoger : le JSON de la liste ne contient ni position GPS ni photos d'origine (les photos sont
   renommées). La position GPS et les charges viennent de la page de l'annonce, une fois ouverte.
 - Le serveur local n'a pas de connexion utilisateur. Il doit tourner sur votre machine, lié à

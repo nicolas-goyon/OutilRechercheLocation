@@ -1,6 +1,8 @@
 @page "/biens"
 @inherits LiveComponent
 
+@inject IJSRuntime JS
+
 <PageTitle>Biens — Recherche logement</PageTitle>
 <h1>Tous les biens</h1>
 
@@ -10,7 +12,7 @@
         {
             <label class="chip @Format.StatusClass(s) @(_statuses.Contains(s) ? "on" : "")">
                 <input type="checkbox" checked="@_statuses.Contains(s)" @onchange="() => Toggle(s)" />
-                @Format.StatusIcon(s) @Labels.Of(s)
+                <Icon Name="@Format.StatusIcon(s)" /> @Labels.Of(s)
             </label>
         }
     </div>
@@ -27,9 +29,34 @@
     </select>
 </div>
 
-<p class="muted">@_items.Count bien(s)@(_items.Count >= Take ? $" (les {Take} premiers)" : "")</p>
-<div class="grid">
-    @foreach (var p in _items) { <PropertyCard Item="p" /> }
+<div class="view-bar">
+    <p class="muted">@_items.Count bien(s)@(_items.Count >= Take ? $" (les {Take} premiers)" : "")</p>
+    <div class="segmented" role="group" aria-label="Affichage">
+        <button type="button" class="@(_view == "grid" ? "on" : "")" aria-pressed="@(_view == "grid" ? "true" : "false")" @onclick="@(() => SetView("grid"))"><Icon Name="layout-dashboard" /> Grille</button>
+        <button type="button" class="@(_view == "list" ? "on" : "")" aria-pressed="@(_view == "list" ? "true" : "false")" @onclick="@(() => SetView("list"))"><Icon Name="list-checks" /> Liste</button>
+    </div>
+    <button type="button" class="@(_map ? "toggle on" : "toggle")" aria-pressed="@(_map ? "true" : "false")" @onclick="ToggleMap"><Icon Name="map" /> Carte</button>
+</div>
+
+<div class="@(_map ? "with-map" : "")">
+    <div class="property-list">
+        @if (_view == "list")
+        {
+            <div class="rows">
+                @foreach (var p in _items) { <PropertyRow @key="p.Property.Id" Item="p" /> }
+            </div>
+        }
+        else
+        {
+            <div class="grid">
+                @foreach (var p in _items)
+                {
+                    <div @key="p.Property.Id" class="grid-item" data-property="@p.Property.Id"><PropertyCard Item="p" /></div>
+                }
+            </div>
+        }
+    </div>
+    @if (_map) { <PropertyMap Items="_items" /> }
 </div>
 
 @code {
@@ -44,6 +71,8 @@
     private double? _minSurface;
     private PropertySort _sort = PropertySort.LastSeen;
     private IReadOnlyList<PropertySummary> _items = [];
+    private string _view = "grid";
+    private bool _map;
 
     protected override void OnInitialized()
     {
@@ -60,7 +89,29 @@
         MinSurface = _minSurface,
         Sort = _sort,
         Take = Take,
+        Scope = Selection.Scope,
     });
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        // Choix gardés dans le navigateur : connus une fois la page interactive.
+        _view = await JS.InvokeAsync<string?>("rl.prefs.get", "rl-biens-view") == "list" ? "list" : "grid";
+        _map = await JS.InvokeAsync<string?>("rl.prefs.get", "rl-biens-map") == "on";
+        StateHasChanged();
+    }
+
+    private async Task SetView(string view)
+    {
+        _view = view;
+        await JS.InvokeVoidAsync("rl.prefs.set", "rl-biens-view", view);
+    }
+
+    private async Task ToggleMap()
+    {
+        _map = !_map;
+        await JS.InvokeVoidAsync("rl.prefs.set", "rl-biens-map", _map ? "on" : null);
+    }
 
     private void Toggle(PropertyStatus s)
     {

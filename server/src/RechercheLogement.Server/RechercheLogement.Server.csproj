@@ -18,6 +18,9 @@
     <ProjectReference Include="..\RechercheLogement.Core\RechercheLogement.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Geo\Data\*.geojson" LogicalName="%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="RechercheLogement.Tests" />
   </ItemGroup>
 </Project>

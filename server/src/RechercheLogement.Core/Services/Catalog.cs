@@ -257,7 +257,7 @@ public sealed class Catalog
     /// Ajoute une recherche. Les doublons sont permis (même site ou même URL) : chaque recherche a son propre identifiant.
     /// </summary>
     /// <exception cref="ArgumentException">URL absente ou pas en http(s).</exception>
-    public SavedSearch AddSearch(string? name, string? url, string? note = null)
+    public SavedSearch AddSearch(string? name, string? url, string? note = null, string? projectId = null)
     {
         var normalized = SavedSearch.NormalizeUrl(url) ?? throw new ArgumentException("URL de recherche invalide. Exemple : https://www.bienici.com/recherche/location/...", nameof(url));
         SavedSearch? created = null;
@@ -271,6 +271,7 @@ public sealed class Catalog
                 Site = SavedSearch.SiteOf(normalized),
                 Name = CleanName(name, normalized),
                 Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+                ProjectId = projectId,
                 Order = _searches.Count == 0 ? 0 : _searches.Values.Max(x => x.Order) + 1,
                 CreatedAt = now,
                 UpdatedAt = now,
@@ -297,6 +298,15 @@ public sealed class Catalog
         });
     }
 
+    /// <summary>Rattache une recherche à un projet (null : visible dans tous les projets).</summary>
+    public void SetSearchProject(string id, string? projectId) => Mutate(c =>
+    {
+        if (!_searches.TryGetValue(id, out var x)) return;
+        x.ProjectId = projectId;
+        x.UpdatedAt = Now;
+        c.Touch(x);
+    });
+
     /// <summary>Copie une recherche juste après l'original (pour la décliner avec d'autres critères).</summary>
     public SavedSearch? DuplicateSearch(string id)
     {
@@ -318,6 +328,7 @@ public sealed class Catalog
                 Site = x.Site,
                 Name = $"{x.Name} (copie)",
                 Note = x.Note,
+                ProjectId = x.ProjectId,
                 Order = x.Order + 1,
                 CreatedAt = now,
                 UpdatedAt = now,
@@ -373,7 +384,7 @@ public sealed class Catalog
     {
         lock (_lock)
         {
-            IEnumerable<PropertySummary> items = _properties.Values.Select(Summarize);
+            IEnumerable<PropertySummary> items = _properties.Values.Where(p => InScope(p, q.Scope)).Select(Summarize);
             if (q.Statuses is { Count: > 0 }) items = items.Where(s => q.Statuses.Contains(s.Property.Status));
             if (q.Site is not null) items = items.Where(s => s.Listings.Any(l => l.Site == q.Site));
             if (!string.IsNullOrWhiteSpace(q.PostalCode)) items = items.Where(s => s.PostalCode?.StartsWith(q.PostalCode.Trim(), StringComparison.Ordinal) == true);
@@ -415,7 +426,10 @@ public sealed class Catalog
         lock (_lock) return _listings.GetValueOrDefault(listingKey)?.PropertyId;
     }
 
-    public IReadOnlyList<PendingDuplicate> PendingDuplicates()
+    private bool InScope(Property p, Func<Listing, bool>? scope) => scope is null || ListingsOf(p.Id).Any(scope);
+
+    /// <param name="scope">Limite au périmètre : au moins une des deux annonces en fait partie.</param>
+    public IReadOnlyList<PendingDuplicate> PendingDuplicates(Func<Listing, bool>? scope = null)
     {
         lock (_lock)
         {
@@ -423,24 +437,28 @@ public sealed class Catalog
                 .Where(l => l.State == LinkState.Suggested)
                 .Select(l => (Link: l, A: _listings.GetValueOrDefault(l.A), B: _listings.GetValueOrDefault(l.B)))
                 .Where(x => x.A is not null && x.B is not null && x.A.PropertyId != x.B.PropertyId)
+                .Where(x => scope is null || scope(x.A!) || scope(x.B!))
                 .OrderByDescending(x => x.Link.Score)
                 .Select(x => new PendingDuplicate(x.Link, x.A!, x.B!, _properties[x.A!.PropertyId].Status, _properties[x.B!.PropertyId].Status))
                 .ToList();
         }
     }
 
-    public CatalogStats Stats()
+    /// <param name="scope">Limite au périmètre (un projet). null : tout le catalogue.</param>
+    public CatalogStats Stats(Func<Listing, bool>? scope = null)
     {
         lock (_lock)
         {
+            var properties = _properties.Values.Where(p => InScope(p, scope)).ToList();
+            var listings = properties.SelectMany(p => ListingsOf(p.Id)).ToList();
             return new CatalogStats(
-                _listings.Count,
-                _properties.Count,
-                _properties.Values.GroupBy(p => p.Status).ToDictionary(g => g.Key, g => g.Count()),
-                _properties.Values.Where(p => p.Status == PropertyStatus.ToContact)
+                listings.Count,
+                properties.Count,
+                properties.GroupBy(p => p.Status).ToDictionary(g => g.Key, g => g.Count()),
+                properties.Where(p => p.Status == PropertyStatus.ToContact)
                     .GroupBy(p => p.ContactStage ?? ContactStage.Pending).ToDictionary(g => g.Key, g => g.Count()),
-                _listings.Values.GroupBy(l => l.Site).ToDictionary(g => g.Key, g => g.Count()),
-                PendingDuplicates().Count);
+                listings.GroupBy(l => l.Site).ToDictionary(g => g.Key, g => g.Count()),
+                PendingDuplicates(scope).Count);
         }
     }
 
@@ -695,7 +713,8 @@ public sealed class Catalog
             listings.Select(l => l.Data.City).FirstOrDefault(x => x is not null),
             listings.Select(l => l.Data.District).FirstOrDefault(x => x is not null),
             listings.SelectMany(l => l.Data.Photos ?? []).FirstOrDefault(),
-            listings.Count == 0 ? 0 : listings.Max(l => l.LastSeenAt));
+            listings.Count == 0 ? 0 : listings.Max(l => l.LastSeenAt),
+            listings.Select(l => l.Data.Geo).FirstOrDefault(x => x is not null));
     }
 
     private void AddListingToIndexes(Listing l)
@@ -739,6 +758,8 @@ public sealed record PropertyQuery
     public double? MinSurface { get; init; }
     public string? Text { get; init; }
     public PropertySort Sort { get; init; } = PropertySort.LastSeen;
+    /// <summary>Limite au périmètre (un projet) : au moins une annonce du bien en fait partie.</summary>
+    public Func<Listing, bool>? Scope { get; init; }
     public int Skip { get; init; }
     public int Take { get; init; } = 200;
 }
@@ -754,7 +775,8 @@ public sealed record PropertySummary(
     string? City,
     string? District,
     string? Photo,
-    long LastSeenAt);
+    long LastSeenAt,
+    GeoPoint? Geo = null);
 
 public sealed record PendingDuplicate(DuplicateLink Link, Listing A, Listing B, PropertyStatus StatusA, PropertyStatus StatusB);
 

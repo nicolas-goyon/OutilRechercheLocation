@@ -1,0 +1,105 @@
+@using System.Text.Json
+@using RechercheLogement.Server.Geo
+@inject IJSRuntime JS
+@inject GeoServices Geo
+@implements IAsyncDisposable
+
+@* Carte des biens affichés. Sans GPS : centre de la commune, marqué comme position approchée. *@
+<div class="property-map-wrap">
+    <div class="property-map" @ref="_element"></div>
+    @if (_failed)
+    {
+        <div class="zone-map-off muted">Carte indisponible : la bibliothèque Leaflet n'a pas pu être chargée. Recharger la page.</div>
+    }
+    <p class="muted small">
+        @_exact placé(s) par leur adresse@(_approx > 0 ? $", {_approx} au centre de leur commune" : "")@(_missing > 0 ? $", {_missing} non placé(s), faute de lieu connu" : "").
+    </p>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<PropertySummary> Items { get; set; } = [];
+
+    private ElementReference _element;
+    private bool _ready, _failed;
+    private string? _sent;
+    private int _exact, _approx, _missing, _version;
+
+    protected override void OnParametersSet() => _ = RefreshAsync();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            _ready = await JS.InvokeAsync<bool>("rl.propertyMap.init", _element);
+        }
+        catch (JSException)
+        {
+            _ready = false;
+        }
+        _failed = !_ready;
+        if (_failed) StateHasChanged();
+        else await RefreshAsync();
+    }
+
+    /// <summary>Place les biens tout de suite, puis ajoute ceux dont il faut chercher la commune.</summary>
+    private async Task RefreshAsync()
+    {
+        var version = ++_version;
+        var items = Items;
+        await ShowAsync(items, version, new Dictionary<string, GeoPoint>());
+        var centers = await Geo.CentersAsync(items.Where(i => i.Geo is null && i.PostalCode is not null).Select(i => (i.PostalCode!, i.City)), CancellationToken.None);
+        await InvokeAsync(() => ShowAsync(items, version, centers));
+    }
+
+    private async Task ShowAsync(IReadOnlyList<PropertySummary> items, int version, IReadOnlyDictionary<string, GeoPoint> centers)
+    {
+        if (version != _version) return;
+        var points = items.Select(i =>
+        {
+            var center = i.Geo is null && i.PostalCode is not null ? centers.GetValueOrDefault(GeoServices.CenterKey(i.PostalCode, i.City)) : null;
+            var at = i.Geo ?? center;
+            return at is null ? null : new
+            {
+                id = i.Property.Id,
+                lat = at.Lat,
+                lon = at.Lon,
+                approx = i.Geo is null,
+                title = i.Title ?? "Annonce",
+                detail = $"{Format.Price(i.Price)}, {Format.Surface(i.Surface)}",
+                place = $"{i.PostalCode} {i.City}".Trim(),
+                status = Format.StatusClass(i.Property.Status),
+            };
+        }).OfType<object>().ToList();
+        _exact = items.Count(i => i.Geo is not null);
+        _approx = points.Count - _exact;
+        _missing = items.Count - points.Count;
+        StateHasChanged();
+        if (!_ready) return;
+        var state = JsonSerializer.Serialize(points);
+        if (state == _sent) return;
+        _sent = state;
+        try
+        {
+            await JS.InvokeVoidAsync("rl.propertyMap.update", _element, state);
+        }
+        catch (JSDisconnectedException)
+        {
+            // Page fermée.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _version = -1;
+        if (!_ready) return;
+        try
+        {
+            await JS.InvokeVoidAsync("rl.propertyMap.dispose", _element);
+        }
+        catch (JSDisconnectedException)
+        {
+            // Page fermée : rien à nettoyer côté navigateur.
+        }
+    }
+}

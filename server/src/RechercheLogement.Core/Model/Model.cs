@@ -188,6 +188,8 @@ public sealed class SavedSearch
     /// <summary>Site d'annonces, déduit de l'URL ("bienici", "seloger"...). Sert au regroupement.</summary>
     public string Site { get; set; } = "";
     public string? Note { get; set; }
+    /// <summary>Projet de la recherche. null : visible dans tous les projets.</summary>
+    public string? ProjectId { get; set; }
     /// <summary>Ordre d'affichage (croissant).</summary>
     public int Order { get; set; }
     public long CreatedAt { get; set; }

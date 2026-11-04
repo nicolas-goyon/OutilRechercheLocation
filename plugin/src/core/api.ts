@@ -12,7 +12,7 @@
  * Chaque requête contient `Authorization: Bearer <token>`. Le serveur refuse
  * tout appel /api/* sans le bon token.
  */
-import type { SavedSearchRequest, SavedSearchView, SyncRequest, SyncResponse } from './types';
+import type { RelayRequest, RelayResult, SavedSearchRequest, SavedSearchView, SyncRequest, SyncResponse } from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -74,7 +74,17 @@ export class ApiClient {
     return this.request<SavedSearchView>('POST', '/api/searches', search);
   }
 
-  private request<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
+  /** Prochaine requête à exécuter pour le serveur. Le serveur attend jusqu'à 25 s avant de répondre. */
+  relayNext(site: string): Promise<RelayRequest | undefined> {
+    return this.request<RelayRequest | undefined>('GET', `/api/relay/next?site=${encodeURIComponent(site)}`, undefined, 35_000);
+  }
+
+  /** Réponse du site à une requête du relais. */
+  relayResult(id: string, result: RelayResult): Promise<void> {
+    return this.request<void>('POST', `/api/relay/${encodeURIComponent(id)}/result`, result, 30_000);
+  }
+
+  private request<T>(method: 'GET' | 'POST', path: string, body?: unknown, timeoutMs?: number): Promise<T> {
     const url = this.baseUrl + path;
     const headers: Record<string, string> = {
       Accept: 'application/json',
@@ -82,7 +92,7 @@ export class ApiClient {
     };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     const data = body === undefined ? undefined : JSON.stringify(body);
-    const timeout = this.options.timeoutMs ?? 10_000;
+    const timeout = timeoutMs ?? this.options.timeoutMs ?? 10_000;
 
     const parse = (status: number, text: string): T => {
       if (status === 401) throw new ApiError('Le serveur refuse le token.', 401);

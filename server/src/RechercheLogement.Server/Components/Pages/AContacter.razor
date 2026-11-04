@@ -2,7 +2,7 @@
 @inherits LiveComponent
 
 <PageTitle>À contacter — Recherche logement</PageTitle>
-<h1>📞 À contacter</h1>
+<h1>À contacter</h1>
 <p class="muted">Les flèches font passer un bien à l'étape précédente ou suivante. Pour ajouter un commentaire, ouvrir la fiche du bien.</p>
 
 <div class="kanban">
@@ -17,16 +17,16 @@
                     <a href="/biens/@i.Property.Id" class="title">@(i.Title ?? "Annonce")</a>
                     <div>@Format.Price(i.Price) · @Format.Surface(i.Surface)</div>
                     <div class="muted">@i.PostalCode @i.City</div>
-                    @if (!string.IsNullOrEmpty(i.Property.Note)) { <div class="note">📝 @i.Property.Note</div> }
+                    @if (!string.IsNullOrEmpty(i.Property.Note)) { <div class="note">@i.Property.Note</div> }
                     <div class="kactions">
                         @if (stage > ContactStage.Pending)
                         {
-                            <button type="button" title="Étape précédente" @onclick="() => Catalog.SetContactStage(i.Property.Id, stage - 1)">←</button>
+                            <button type="button" title="Étape précédente" @onclick="() => Catalog.SetContactStage(i.Property.Id, stage - 1)"><Icon Name="arrow-left" /></button>
                         }
-                        @foreach (var l in i.Listings) { <a href="@l.Data.Url" target="_blank" rel="noopener">@Labels.Site(l.Site) ↗</a> }
+                        @foreach (var l in i.Listings) { <a href="@l.Data.Url" target="_blank" rel="noopener">@Labels.Site(l.Site) <Icon Name="arrow-up-right" /></a> }
                         @if (stage < ContactStage.Declined)
                         {
-                            <button type="button" title="Étape suivante" @onclick="() => Catalog.SetContactStage(i.Property.Id, stage + 1)">→</button>
+                            <button type="button" title="Étape suivante" @onclick="() => Catalog.SetContactStage(i.Property.Id, stage + 1)"><Icon Name="arrow-right" /></button>
                         }
                     </div>
                 </div>
@@ -39,5 +39,5 @@
     private IReadOnlyList<PropertySummary> _items = [];
 
     protected override void Load() =>
-        _items = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.ToContact }, Sort = PropertySort.LastUpdate, Take = 1000 });
+        _items = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.ToContact }, Sort = PropertySort.LastUpdate, Take = 1000, Scope = Selection.Scope });
 }

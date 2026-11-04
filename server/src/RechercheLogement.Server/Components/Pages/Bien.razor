@@ -27,7 +27,7 @@ else
     @if (p.Status == PropertyStatus.ToContact)
     {
         <section class="panel">
-            <h2>📞 Suivi du contact</h2>
+            <h2>Suivi du contact</h2>
             <div class="stages">
                 @foreach (var st in Enum.GetValues<ContactStage>())
                 {
@@ -49,7 +49,7 @@ else
                             @foreach (var ph in l.Data.Photos) { <img src="@Thumb(ph)" alt="" loading="lazy" /> }
                         </div>
                     }
-                    <div><b>@Labels.Site(l.Site)</b> — <a href="@l.Data.Url" target="_blank" rel="noopener">@(l.Data.Title ?? l.SiteId) ↗</a></div>
+                    <div><b>@Labels.Site(l.Site)</b> — <a href="@l.Data.Url" target="_blank" rel="noopener">@(l.Data.Title ?? l.SiteId) <Icon Name="arrow-up-right" /></a></div>
                     <dl>
                         <dt>Prix</dt><dd>@Format.Price(l.Data.Price)@(l.Data.Charges is not null ? $" (dont {Format.Price(l.Data.Charges)} de charges)" : "")</dd>
                         <dt>Surface</dt><dd>@Format.Surface(l.Data.Surface)</dd>
@@ -83,7 +83,7 @@ else
             @if (_detail.Suggestions.Count > 0)
             {
                 <section class="panel">
-                    <h2>≈ Doublons probables</h2>
+                    <h2>Doublons probables</h2>
                     @foreach (var d in _detail.Suggestions)
                     {
                         <div class="dup-mini">

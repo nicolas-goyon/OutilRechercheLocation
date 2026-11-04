@@ -3,20 +3,24 @@
 
 <PageTitle>Tableau de bord — Recherche logement</PageTitle>
 <h1>Tableau de bord</h1>
+@if (Selection.Project is { } project)
+{
+    <p class="muted">Projet « @project.Name » · <a href="/projets/@project.Id">voir le projet</a></p>
+}
 
 <div class="stats">
-    <a class="stat tocontact" href="/a-contacter"><b>@Count(PropertyStatus.ToContact)</b><span>📞 à contacter</span></a>
-    <a class="stat seen" href="/biens?statut=seen"><b>@Count(PropertyStatus.Seen)</b><span>👁 vus</span></a>
-    <a class="stat rejected" href="/biens?statut=rejected"><b>@Count(PropertyStatus.Rejected)</b><span>✕ pas intéressé</span></a>
-    <a class="stat" href="/biens?statut=none"><b>@Count(PropertyStatus.None)</b><span>sans statut</span></a>
-    <a class="stat suggest" href="/doublons"><b>@_stats.PendingDuplicates</b><span>≈ doublons à vérifier</span></a>
+    <a class="stat tocontact" href="/a-contacter"><b>@Count(PropertyStatus.ToContact)</b><span><Icon Name="phone" /> À contacter</span></a>
+    <a class="stat seen" href="/biens?statut=seen"><b>@Count(PropertyStatus.Seen)</b><span><Icon Name="eye" /> Vus</span></a>
+    <a class="stat rejected" href="/biens?statut=rejected"><b>@Count(PropertyStatus.Rejected)</b><span><Icon Name="x" /> Pas intéressé</span></a>
+    <a class="stat" href="/biens?statut=none"><b>@Count(PropertyStatus.None)</b><span>Sans statut</span></a>
+    <a class="stat suggest" href="/doublons"><b>@_stats.PendingDuplicates</b><span><Icon Name="copy" /> Doublons à vérifier</span></a>
 </div>
 <p class="muted">
     @_stats.Listings annonces pour @_stats.Properties biens.
     Par site : @string.Join(" · ", _stats.BySite.Select(kv => $"{Labels.Site(kv.Key)} : {kv.Value}"))
 </p>
 
-<h2>⭐ Recherches favorites</h2>
+<h2>Recherches favorites</h2>
 @if (_searches.Count == 0)
 {
     <p class="muted">Aucune recherche enregistrée. <a href="/recherches">Ajouter une recherche</a></p>
@@ -26,13 +30,13 @@ else
     <div class="quick-searches">
         @foreach (var s in _searches)
         {
-            <a href="@s.Url" target="_blank" rel="noopener" title="@s.Url" @onclick="() => Catalog.MarkSearchOpened(s.Id)">@Labels.Site(s.Site) · @s.Name ↗</a>
+            <a href="@s.Url" target="_blank" rel="noopener" title="@s.Url" @onclick="() => Catalog.MarkSearchOpened(s.Id)">@Labels.Site(s.Site) · @s.Name <Icon Name="arrow-up-right" /></a>
         }
         <a href="/recherches">Gérer…</a>
     </div>
 }
 
-<h2>📞 Suivi des contacts</h2>
+<h2>Suivi des contacts</h2>
 @if (_toContact.Count == 0)
 {
     <p class="muted">Aucun bien à contacter. Pour ajouter un bien, cliquer sur le bouton 📞 dans le plugin.</p>
@@ -57,10 +61,11 @@ else
 
     protected override void Load()
     {
-        _stats = Catalog.Stats();
-        _searches = Catalog.Searches();
-        _toContact = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.ToContact }, Sort = PropertySort.LastUpdate, Take = 12 });
-        _recent = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.None, PropertyStatus.Seen }, Take = 12 });
+        var scope = Selection.Scope;
+        _stats = Catalog.Stats(scope);
+        _searches = Selection.Visible(Catalog.Searches()).ToList();
+        _toContact = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.ToContact }, Sort = PropertySort.LastUpdate, Take = 12, Scope = scope });
+        _recent = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.None, PropertyStatus.Seen }, Take = 12, Scope = scope });
     }
 
     private int Count(PropertyStatus s) => _stats.ByStatus.GetValueOrDefault(s);

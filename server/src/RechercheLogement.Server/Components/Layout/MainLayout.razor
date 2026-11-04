@@ -1,15 +1,29 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@inject ProjectStore Store
+@inject ProjectSelection Selection
+@inject IJSRuntime JS
 
 <div class="app">
     <nav class="sidebar">
-        <a class="brand" href="/">🏠 Recherche logement</a>
-        <NavLink href="/" Match="NavLinkMatch.All">Tableau de bord</NavLink>
-        <NavLink href="/a-contacter">📞 À contacter</NavLink>
-        <NavLink href="/biens">Tous les biens</NavLink>
-        <NavLink href="/doublons">≈ Doublons à vérifier</NavLink>
-        <NavLink href="/recherches">⭐ Recherches</NavLink>
-        <NavLink href="/projets">🔎 Mes projets</NavLink>
-        <NavLink href="/parametres">⚙ Paramètres</NavLink>
+        <a class="brand" href="/"><Icon Name="house" /> Recherche logement</a>
+        <label class="project-picker">
+            <span>Projet</span>
+            <select value="@(Selection.ProjectId ?? "")" @onchange="OnProjectChanged">
+                <option value="">Tous les projets</option>
+                @foreach (var p in Store.Projects())
+                {
+                    <option value="@p.Id">@p.Name</option>
+                }
+            </select>
+        </label>
+        <NavLink href="/" Match="NavLinkMatch.All"><Icon Name="layout-dashboard" /> Tableau de bord</NavLink>
+        <NavLink href="/a-contacter"><Icon Name="phone" /> À contacter</NavLink>
+        <NavLink href="/biens"><Icon Name="list-checks" /> Tous les biens</NavLink>
+        <NavLink href="/doublons"><Icon Name="copy" /> Doublons à vérifier</NavLink>
+        <NavLink href="/recherches"><Icon Name="bookmark" /> Recherches</NavLink>
+        <NavLink href="/projets"><Icon Name="map-pinned" /> Mes projets</NavLink>
+        <NavLink href="/parametres"><Icon Name="settings" /> Paramètres</NavLink>
     </nav>
     <main class="content">
         @Body
@@ -19,3 +33,33 @@
 <div id="blazor-error-ui" data-nosnippet>
     Une erreur est survenue. <a href="." class="reload">Recharger</a>
 </div>
+
+@code {
+    private const string StorageKey = "rl-project";
+
+    protected override void OnInitialized()
+    {
+        Store.Changed += OnStoreChanged;
+        Selection.Changed += OnStoreChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Le choix est dans le navigateur : il n'est connu qu'une fois la page interactive.
+        if (firstRender) Selection.Select(await JS.InvokeAsync<string?>("rl.prefs.get", StorageKey));
+    }
+
+    private async Task OnProjectChanged(ChangeEventArgs e)
+    {
+        Selection.Select(e.Value as string);
+        await JS.InvokeVoidAsync("rl.prefs.set", StorageKey, Selection.ProjectId);
+    }
+
+    private void OnStoreChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Store.Changed -= OnStoreChanged;
+        Selection.Changed -= OnStoreChanged;
+    }
+}
