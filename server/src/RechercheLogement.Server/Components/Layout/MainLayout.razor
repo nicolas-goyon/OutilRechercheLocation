@@ -6,7 +6,7 @@
 
 <div class="app">
     <nav class="sidebar">
-        <a class="brand" href="/">🏠 Recherche logement</a>
+        <a class="brand" href="/"><Icon Name="house" /> Recherche logement</a>
         <label class="project-picker">
             <span>Projet</span>
             <select value="@(Selection.ProjectId ?? "")" @onchange="OnProjectChanged">
@@ -17,13 +17,13 @@
                 }
             </select>
         </label>
-        <NavLink href="/" Match="NavLinkMatch.All">Tableau de bord</NavLink>
-        <NavLink href="/a-contacter">📞 À contacter</NavLink>
-        <NavLink href="/biens">Tous les biens</NavLink>
-        <NavLink href="/doublons">≈ Doublons à vérifier</NavLink>
-        <NavLink href="/recherches">⭐ Recherches</NavLink>
-        <NavLink href="/projets">🔎 Mes projets</NavLink>
-        <NavLink href="/parametres">⚙ Paramètres</NavLink>
+        <NavLink href="/" Match="NavLinkMatch.All"><Icon Name="layout-dashboard" /> Tableau de bord</NavLink>
+        <NavLink href="/a-contacter"><Icon Name="phone" /> À contacter</NavLink>
+        <NavLink href="/biens"><Icon Name="list-checks" /> Tous les biens</NavLink>
+        <NavLink href="/doublons"><Icon Name="copy" /> Doublons à vérifier</NavLink>
+        <NavLink href="/recherches"><Icon Name="bookmark" /> Recherches</NavLink>
+        <NavLink href="/projets"><Icon Name="map-pinned" /> Mes projets</NavLink>
+        <NavLink href="/parametres"><Icon Name="settings" /> Paramètres</NavLink>
     </nav>
     <main class="content">
         @Body

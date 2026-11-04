@@ -10,7 +10,7 @@
         {
             <label class="chip @Format.StatusClass(s) @(_statuses.Contains(s) ? "on" : "")">
                 <input type="checkbox" checked="@_statuses.Contains(s)" @onchange="() => Toggle(s)" />
-                @Format.StatusIcon(s) @Labels.Of(s)
+                <Icon Name="@Format.StatusIcon(s)" /> @Labels.Of(s)
             </label>
         }
     </div>

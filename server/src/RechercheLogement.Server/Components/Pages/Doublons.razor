@@ -2,12 +2,12 @@
 @inherits LiveComponent
 
 <PageTitle>Doublons — Recherche logement</PageTitle>
-<h1>≈ Doublons à vérifier</h1>
+<h1>Doublons à vérifier</h1>
 <p class="muted">Annonces probablement identiques (score entre 50 et 80 %). Au-dessus de 80 %, le serveur fusionne les annonces automatiquement. La fiche du bien permet d'annuler cette fusion.</p>
 
 @if (_items.Count == 0)
 {
-    <p>Rien à vérifier. 🎉</p>
+    <p>Aucun doublon à vérifier pour le moment.</p>
 }
 @foreach (var d in _items)
 {
@@ -17,7 +17,7 @@
             <span class="muted">@string.Join(" · ", d.Link.Reasons)</span>
             <span class="spacer"></span>
             <button type="button" @onclick="() => Catalog.DismissDuplicate(d.A.Key, d.B.Key)">Pas le même bien</button>
-            <button type="button" class="primary" @onclick="() => Catalog.ConfirmDuplicate(d.A.Key, d.B.Key)">✔ Même bien</button>
+            <button type="button" class="primary" @onclick="() => Catalog.ConfirmDuplicate(d.A.Key, d.B.Key)"><Icon Name="check" /> Même bien</button>
         </div>
         <table class="compare">
             <tr><th></th><th>@Side(d.A, d.StatusA)</th><th>@Side(d.B, d.StatusB)</th></tr>
@@ -42,7 +42,7 @@
 
     private static RenderFragment Side(Listing l, PropertyStatus status) => __builder =>
     {
-        <a href="@l.Data.Url" target="_blank" rel="noopener">@Labels.Site(l.Site) ↗</a>
+        <a href="@l.Data.Url" target="_blank" rel="noopener">@Labels.Site(l.Site) <Icon Name="arrow-up-right" /></a>
         <text> </text>
         <StatusBadge Status="status" />
     };

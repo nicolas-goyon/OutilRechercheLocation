@@ -5,7 +5,7 @@
 @inject IJSRuntime JS
 
 <PageTitle>Paramètres — Recherche logement</PageTitle>
-<h1>⚙ Paramètres</h1>
+<h1>Paramètres</h1>
 
 <section class="panel">
     <h2>Token du plugin</h2>
@@ -33,7 +33,7 @@
     <h2>Installer le plugin</h2>
     <ol class="steps">
         <li>Installer Tampermonkey dans le navigateur.</li>
-        <li>Ouvrir <a href="@Settings.PluginInstallUrl" target="_blank" rel="noopener">le script du plugin ↗</a>
+        <li>Ouvrir <a href="@Settings.PluginInstallUrl" target="_blank" rel="noopener">le script du plugin <Icon Name="arrow-up-right" /></a>
             et cliquer sur <b>Installer</b>. Le plugin se met ensuite à jour automatiquement à chaque nouvelle version.</li>
         <li>Ouvrir une recherche sur un site d'annonces (bienici.com, seloger.com…). Au premier lancement, le panneau 🏠 s'ouvre.</li>
         <li>Dans <b>Connexion au serveur local</b>, garder l'URL <code>@Settings.PublicUrl</code>.</li>
@@ -48,7 +48,7 @@
 <section class="panel">
     <h2>Mise à jour du serveur</h2>
     <p>Version installée : <b>@ApiEndpoints.Version</b>.
-        <a href="@ReleaseUrl" target="_blank" rel="noopener">Dernière version publiée ↗</a></p>
+        <a href="@ReleaseUrl" target="_blank" rel="noopener">Dernière version publiée <Icon Name="arrow-up-right" /></a></p>
     <p>Avec le <code>docker-compose.yml</code> publié par la CI (image <code>ghcr.io/…-server:latest</code>),
         dans son dossier :</p>
     <pre class="cmd">docker compose up -d --pull always</pre>

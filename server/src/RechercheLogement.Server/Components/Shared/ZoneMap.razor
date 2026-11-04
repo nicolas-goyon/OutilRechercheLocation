@@ -8,7 +8,7 @@
     <div class="zone-map @(Picking ? "picking" : "")" @ref="_element"></div>
     @if (_failed)
     {
-        <div class="zone-map-off muted">Carte indisponible : la bibliothèque Leaflet n'a pas pu être chargée (connexion internet ?).</div>
+        <div class="zone-map-off muted">Carte indisponible : la bibliothèque Leaflet n'a pas pu être chargée. Recharger la page.</div>
     }
     @if (_unavailable.Length > 0)
     {

@@ -111,7 +111,7 @@ public sealed class GeoServices(IHttpClientFactory factory)
     }
 
     public static PlaceSuggestion RegionSuggestion(string name, string code, List<(string Name, string Code)> departments) =>
-        new(name, $"Région · {departments.Count} départements", "🧭",
+        new(name, $"Région · {departments.Count} départements", "compass",
             new ProjectLocation
             {
                 Type = PlaceType.Region,
@@ -264,7 +264,7 @@ public sealed class GeoServices(IHttpClientFactory factory)
         (json as JsonArray ?? new JsonArray())
             .Select(d => (Name: JsonRead.Str(d?["nom"]), Code: JsonRead.Str(d?["code"])))
             .Where(d => d.Name is not null && d.Code is not null)
-            .Select(d => new PlaceSuggestion($"{d.Name} ({d.Code})", "Département", "🗺",
+            .Select(d => new PlaceSuggestion($"{d.Name} ({d.Code})", "Département", "map",
                 new ProjectLocation { Type = PlaceType.Department, Query = d.Name!, Code = d.Code, Label = $"{d.Name} ({d.Code})" }, null))
             .ToList();
 
@@ -273,7 +273,7 @@ public sealed class GeoServices(IHttpClientFactory factory)
         var cps = c.PostalCodes.Count switch { 0 => "", 1 => c.PostalCodes[0], _ => $"{c.PostalCodes[0]}…" };
         var label = cps.Length == 0 ? c.Name : $"{c.Name} ({cps})";
         var detail = c.PostalCodes.Count > 1 ? $"Commune · codes postaux {string.Join(", ", c.PostalCodes)}" : $"Commune · département {c.Department}";
-        return new PlaceSuggestion(label, detail, "🏘",
+        return new PlaceSuggestion(label, detail, "building-2",
             new ProjectLocation { Type = PlaceType.Commune, Query = c.Name, Code = c.Code, Label = label, PostalCodes = [.. c.PostalCodes], Center = c.Center },
             c.Center);
     }
@@ -281,7 +281,7 @@ public sealed class GeoServices(IHttpClientFactory factory)
     public static PlaceSuggestion PostalCodeSuggestion(string cp, List<PlanCommune> communes)
     {
         var names = string.Join(", ", communes.Take(4).Select(c => c.Name)) + (communes.Count > 4 ? $" et {communes.Count - 4} autre(s)" : "");
-        return new PlaceSuggestion(cp, $"Code postal · {names}", "📮",
+        return new PlaceSuggestion(cp, $"Code postal · {names}", "mail-open",
             new ProjectLocation { Type = PlaceType.PostalCode, Query = cp, Code = cp, Label = $"{cp} ({communes[0].Name}{(communes.Count > 1 ? "…" : "")})", Center = communes[0].Center },
             communes[0].Center);
     }
@@ -298,11 +298,11 @@ public sealed class GeoServices(IHttpClientFactory factory)
             var type = JsonRead.Str(f!["properties"]?["type"]);
             (string Icon, string? Kind) meta = type switch
             {
-                "housenumber" => ("📍", "Adresse"),
-                "street" => ("🛣", "Voie"),
-                "municipality" => ("🏘", "Commune"),
-                "locality" => ("📌", "Lieu-dit"),
-                _ => ("📍", null),
+                "housenumber" => ("map-pin", "Adresse"),
+                "street" => ("signpost", "Voie"),
+                "municipality" => ("building-2", "Commune"),
+                "locality" => ("pin", "Lieu-dit"),
+                _ => ("map-pin", null),
             };
             var context = JsonRead.Str(f["properties"]?["context"]);
             var detail = meta.Kind is null ? context : context is null ? meta.Kind : $"{meta.Kind} · {context}";

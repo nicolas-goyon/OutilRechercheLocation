@@ -33,7 +33,7 @@
             @if (group.Count() > 1)
             {
                 <button type="button" title="Ouvre chaque recherche dans un onglet. Le navigateur peut demander d'autoriser les fenêtres pop-up pour localhost."
-                        @onclick="() => OpenAll(group)">Ouvrir toutes ↗</button>
+                        @onclick="() => OpenAll(group)">Ouvrir toutes <Icon Name="arrow-up-right" /></button>
             }
         </div>
         <ul class="searches">
@@ -53,7 +53,7 @@
                     else
                     {
                         <div class="search-main">
-                            <a class="search-name" href="@s.Url" target="_blank" rel="noopener" @onclick="() => Catalog.MarkSearchOpened(s.Id)">@s.Name ↗</a>
+                            <a class="search-name" href="@s.Url" target="_blank" rel="noopener" @onclick="() => Catalog.MarkSearchOpened(s.Id)">@s.Name <Icon Name="arrow-up-right" /></a>
                             <div class="chips small">
                                 @foreach (var c in Criteria(s.Url)) { <span class="site">@c</span> }
                             </div>
@@ -66,12 +66,12 @@
                             @if (Selection.ProjectId is { } projectId)
                             {
                                 <button type="button" title="@(s.ProjectId is null ? "Rattacher à ce projet" : "Afficher dans tous les projets")"
-                                        @onclick="() => Catalog.SetSearchProject(s.Id, s.ProjectId is null ? projectId : null)">@(s.ProjectId is null ? "📌" : "🌐")</button>
+                                        @onclick="() => Catalog.SetSearchProject(s.Id, s.ProjectId is null ? projectId : null)"><Icon Name="@(s.ProjectId is null ? "pin" : "globe")" /></button>
                             }
-                            <button type="button" title="Monter" @onclick="() => Catalog.MoveSearch(s.Id, -1)">↑</button>
-                            <button type="button" title="Descendre" @onclick="() => Catalog.MoveSearch(s.Id, 1)">↓</button>
-                            <button type="button" title="Copier le lien" @onclick="() => Copy(s.Url)">📋</button>
-                            <button type="button" title="Modifier" @onclick="() => StartEdit(s)">✎</button>
+                            <button type="button" title="Monter" @onclick="() => Catalog.MoveSearch(s.Id, -1)"><Icon Name="arrow-up" /></button>
+                            <button type="button" title="Descendre" @onclick="() => Catalog.MoveSearch(s.Id, 1)"><Icon Name="arrow-down" /></button>
+                            <button type="button" title="Copier le lien" @onclick="() => Copy(s.Url)"><Icon Name="clipboard" /></button>
+                            <button type="button" title="Modifier" @onclick="() => StartEdit(s)"><Icon Name="pencil" /></button>
                             <button type="button" title="Dupliquer (pour une variante avec d'autres critères)" @onclick="() => Catalog.DuplicateSearch(s.Id)">⧉</button>
                             @if (_confirmDelete == s.Id)
                             {
@@ -80,7 +80,7 @@
                             }
                             else
                             {
-                                <button type="button" class="danger" title="Supprimer" @onclick="() => _confirmDelete = s.Id">🗑</button>
+                                <button type="button" class="danger" title="Supprimer" @onclick="() => _confirmDelete = s.Id"><Icon Name="trash-2" /></button>
                             }
                         </div>
                     }

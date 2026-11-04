@@ -243,6 +243,13 @@ fonctionnalités, une ligne dans `SitesRegistration.AddSites`, des tests de conv
 (`ProjectTests`). Ajouter une fonctionnalité à tous les sites : une interface dans `SiteModule.cs`,
 une propriété dans `ISiteModule`, une classe par dossier.
 
+## Interface
+
+`wwwroot/app.css` porte les couleurs (variables `:root`, thèmes clair et sombre). Le vert sert aux actions, le bleu
+aux biens à contacter. Tout est embarqué dans l'image, sans CDN : police Hanken Grotesk (OFL), icônes Lucide
+(`wwwroot/icons.svg`, composant `Icon`), Leaflet (`wwwroot/lib`). Seul le fond de carte vient d'Internet. Les
+émojis restent dans les textes qui citent un bouton du plugin.
+
 ## Projets et catalogue
 
 Les résultats d'un lancement partent aussi dans `Catalog.Sync` (observations `api`) : mêmes doublons, mêmes

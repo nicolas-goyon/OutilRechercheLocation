@@ -6,7 +6,7 @@
 <div class="suggest @Class">
     <input value="@Value" placeholder="@Placeholder" autocomplete="off" spellcheck="false"
            @oninput="OnInput" @onkeydown="OnKeyDown" @onblur="() => _open = false" @onfocus="OnFocus" />
-    @if (_loading) { <span class="suggest-spinner" title="Recherche…">⏳</span> }
+    @if (_loading) { <span class="suggest-spinner" title="Recherche…"><Icon Name="loader-circle" Class="spin" /></span> }
     @if (_open && (_items.Count > 0 || _message is not null))
     {
         <ul class="suggest-list" role="listbox">
@@ -16,7 +16,7 @@
                 var item = _items[i];
                 <li class="@(i == _active ? "active" : "")" role="option"
                     @onmousedown="() => Pick(item)" @onmousedown:preventDefault @onmouseover="() => _active = index">
-                    <span class="icon">@item.Icon</span>
+                    <span class="icon"><Icon Name="@item.Icon" /></span>
                     <span class="label">@item.Label</span>
                     @if (item.Detail is not null) { <span class="detail">@item.Detail</span> }
                 </li>

@@ -1,0 +1,10 @@
+@* Icône du fichier wwwroot/icons.svg (Lucide). Ajouter une icône : copier son symbole dans ce fichier, avec le préfixe i-. *@
+@if (!string.IsNullOrEmpty(Name))
+{
+    <svg class="icon @Class" aria-hidden="true"><use href="icons.svg#i-@Name"></use></svg>
+}
+
+@code {
+    [Parameter, EditorRequired] public string? Name { get; set; }
+    [Parameter] public string? Class { get; set; }
+}

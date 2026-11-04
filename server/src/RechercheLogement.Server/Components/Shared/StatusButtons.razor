@@ -4,8 +4,8 @@
     {
         var active = Current == s;
         <button type="button" class="sb @Format.StatusClass(s) @(active ? "active" : "")"
-                title="@(active ? $"Annuler : {Labels.Of(s)}" : Labels.Of(s))"
-                @onclick="() => Catalog.SetStatus(PropertyId, active ? PropertyStatus.None : s)">@Format.StatusIcon(s)</button>
+                title="@(active ? $"Annuler : {Labels.Of(s)}" : Labels.Of(s))" aria-label="@(active ? $"Annuler : {Labels.Of(s)}" : Labels.Of(s))"
+                @onclick="() => Catalog.SetStatus(PropertyId, active ? PropertyStatus.None : s)"><Icon Name="@Format.StatusIcon(s)" /></button>
     }
 </div>
 

@@ -13,17 +13,17 @@ else
     var p = _project;
     var running = Runner.RunningSite(p.Id);
     <div class="page-head">
-        <h1>🔎 @p.Name</h1>
+        <h1>@p.Name</h1>
         <span class="spacer"></span>
         @if (running is not null)
         {
-            <span class="muted">⏳ Recherche en cours (@running)…</span>
+            <span class="muted"><Icon Name="loader-circle" Class="spin" /> Recherche en cours (@running)…</span>
         }
         else
         {
-            <button type="button" class="primary" @onclick="() => StartRun(p.Id)">▶ Lancer maintenant</button>
+            <button type="button" class="primary" @onclick="() => StartRun(p.Id)"><Icon Name="play" /> Lancer maintenant</button>
         }
-        <a class="button" href="/projets/@p.Id/modifier">✎ Modifier</a>
+        <a class="button" href="/projets/@p.Id/modifier"><Icon Name="pencil" /> Modifier</a>
     </div>
     <p class="muted">@ProjectFormat.Summary(p) · lancement @ProjectFormat.Refresh(p.AutoRefreshHours)@(p.Active ? "" : " (en pause)")</p>
 
@@ -47,7 +47,7 @@ else
                 var places = p.PlaceCache.GetValueOrDefault(site)?.Values.Where(x => x is not null).Select(x => x!.Label).ToList() ?? [];
                 <tr class="@(run is null ? "" : run.Ok ? "ok" : "ko")">
                     <td><b>@Sites.Label(site)</b></td>
-                    <td>@(run is null ? "•" : run.Ok ? "✔" : "⚠")</td>
+                    <td><Icon Name="@(run is null ? "circle" : run.Ok ? "check" : "triangle-alert")" /></td>
                     <td>@(run?.Message ?? "Pas encore lancé.")</td>
                     <td class="muted">@(run is null ? "" : Format.DateTime(run.At))</td>
                     <td class="muted small" title="@string.Join(", ", places)">
@@ -97,7 +97,7 @@ else
                     }
                     else
                     {
-                        <span class="nophoto">🏠</span>
+                        <span class="nophoto"><Icon Name="house" /></span>
                     }
                 </a>
                 <div class="card-body">

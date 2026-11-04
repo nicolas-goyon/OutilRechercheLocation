@@ -98,7 +98,7 @@ window.rl = {
   },
 
   /**
-   * Carte de la zone de recherche (composant ZoneMap). Leaflet est chargé depuis unpkg (App.razor),
+   * Carte de la zone de recherche (composant ZoneMap). Leaflet est embarqué (wwwroot/lib/leaflet),
    * le fond de carte vient d'OpenStreetMap. Un clic ou le déplacement du marqueur renvoie le point à Blazor.
    */
   zoneMap: {
