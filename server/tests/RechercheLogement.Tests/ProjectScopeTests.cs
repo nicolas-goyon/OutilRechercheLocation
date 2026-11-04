@@ -124,4 +124,13 @@ public class PropertySummaryGeoTests
 
         Assert.Equal(42.8, Assert.Single(catalog.QueryProperties(new PropertyQuery())).Geo?.Lat);
     }
+
+    [Fact]
+    public void Summary_GroupsPhotosOfAllListings_WithoutDuplicates()
+    {
+        var catalog = new Catalog(new InMemoryPersistence());
+        catalog.Sync(new SyncRequest("t", [new Observation("bienici", "a", "api", new ListingData { Title = "Chalet", Photos = ["1.jpg", "2.jpg", "1.jpg"] }, 1)], null, null));
+
+        Assert.Equal(new[] { "1.jpg", "2.jpg" }, Assert.Single(catalog.QueryProperties(new PropertyQuery())).Photos);
+    }
 }

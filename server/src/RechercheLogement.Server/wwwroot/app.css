@@ -71,7 +71,17 @@ code { font-size: 13px; }
 .card.rejected { opacity: .6; }
 .card.seen .photo img { filter: saturate(.4); }
 .card .photo { display: block; height: 160px; background: var(--photo); }
-.card .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-link { display: block; height: 100%; }
+.carousel { position: relative; height: 100%; }
+.carousel img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.carousel-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%; background: rgba(10, 20, 17, .68); color: #fff; opacity: 0; }
+.carousel-nav.prev { left: 6px; }
+.carousel-nav.next { right: 6px; }
+.carousel-nav:hover { background: rgba(10, 20, 17, .9); }
+.carousel:hover .carousel-nav, .carousel-nav:focus-visible { opacity: 1; }
+@media (hover: none) { .carousel-nav { opacity: 1; } }
+.carousel-count { position: absolute; right: 6px; bottom: 6px; padding: 0 6px; border-radius: 4px; background: rgba(10, 20, 17, .68); color: #fff; font-size: 12px; pointer-events: none; }
 .nophoto { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 36px; color: var(--muted); }
 .card-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
 .card-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
@@ -266,7 +276,10 @@ button.toggle { display: inline-flex; gap: 6px; align-items: center; }
 .row:first-child { border-top: none; }
 .row.rejected { opacity: .6; }
 .row-photo { display: block; width: 80px; height: 60px; border-radius: 4px; overflow: hidden; background: var(--photo); }
-.row-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.row-photo .carousel-nav { width: 24px; height: 24px; }
+.row-photo .carousel-nav.prev { left: 3px; }
+.row-photo .carousel-nav.next { right: 3px; }
+.row-photo .carousel-count { display: none; }
 .row-photo .nophoto { font-size: 20px; }
 .row-main .title { font-weight: 600; color: var(--fg); }
 .row-price { text-align: right; white-space: nowrap; }
@@ -286,5 +299,14 @@ button.toggle { display: inline-flex; gap: 6px; align-items: center; }
 .grid-item .card { width: 100%; }
 .map-cluster { display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: 13px; }
 .leaflet-container { font-family: inherit; font-size: 13px; }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--fg); }
+.leaflet-popup-content-wrapper { border-radius: 8px; overflow: hidden; padding: 0; }
+.leaflet-popup-content { margin: 0; width: 260px !important; }
 .leaflet-popup-content a { font-weight: 600; }
+.leaflet-container a.leaflet-popup-close-button { z-index: 1; width: 24px; height: 24px; top: 6px; right: 6px; border-radius: 50%; background: rgba(10, 20, 17, .68); color: #fff; font: 18px/22px sans-serif; }
+.map-popup { padding-bottom: 10px; }
+.map-popup .carousel { height: 160px; margin-bottom: 8px; background: var(--photo); }
+.map-popup > a, .map-popup > div:not(.carousel) { display: block; padding: 0 12px; }
+.map-popup:not(:has(.carousel)) { padding-top: 12px; }
+.map-popup .title { color: var(--fg); padding-right: 12px; }
 

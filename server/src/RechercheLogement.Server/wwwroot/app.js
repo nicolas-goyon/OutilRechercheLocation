@@ -253,12 +253,39 @@ window.rl = {
       document.querySelector(`.property-list [data-property="${CSS.escape(id)}"]`)?.classList.add('hovered');
     },
 
+    /** Aperçu d'un bien : carrousel de ses photos, sans appel au serveur. Tout le texte passe par textContent. */
     popup(p) {
-      const box = document.createElement('div');
-      const link = Object.assign(document.createElement('a'), { href: `/biens/${p.id}`, textContent: p.title });
+      const href = `/biens/${encodeURIComponent(p.id)}`;
+      const box = Object.assign(document.createElement('div'), { className: 'map-popup' });
+      if (p.photos.length > 0) box.append(rl.propertyMap.carousel(p.photos, href));
+      const link = Object.assign(document.createElement('a'), { className: 'title', href, textContent: p.title });
       const lines = [p.detail, p.approx ? `${p.place} (position approchée)` : p.place];
       box.append(link, ...lines.map((text) => Object.assign(document.createElement('div'), { textContent: text })));
       return box;
+    },
+
+    carousel(photos, href) {
+      const root = Object.assign(document.createElement('div'), { className: 'carousel' });
+      const link = Object.assign(document.createElement('a'), { className: 'photo-link', href, tabIndex: -1 });
+      const img = Object.assign(document.createElement('img'), { alt: '', src: photos[0] });
+      link.append(img);
+      root.append(link);
+      if (photos.length < 2) return root;
+      let index = 0;
+      const count = Object.assign(document.createElement('span'), { className: 'carousel-count', textContent: `1/${photos.length}` });
+      const nav = (side, label, delta) => {
+        const button = Object.assign(document.createElement('button'), { type: 'button', className: `carousel-nav ${side}` });
+        button.setAttribute('aria-label', label);
+        button.innerHTML = `<svg class="icon" aria-hidden="true"><use href="icons.svg#i-arrow-${side === 'prev' ? 'left' : 'right'}"></use></svg>`;
+        button.addEventListener('click', () => {
+          index = (index + delta + photos.length) % photos.length;
+          img.src = photos[index];
+          count.textContent = `${index + 1}/${photos.length}`;
+        });
+        return button;
+      };
+      root.append(nav('prev', 'Photo précédente', -1), nav('next', 'Photo suivante', 1), count);
+      return root;
     },
 
     update(el, json) {
@@ -271,7 +298,7 @@ window.rl = {
       for (const p of JSON.parse(json)) {
         const color = colors[p.status] ?? colors.none;
         const marker = L.circleMarker([p.lat, p.lon], { radius: 7, color, weight: 2, fillColor: color, fillOpacity: p.approx ? 0.15 : 0.75, dashArray: p.approx ? '3 3' : null })
-          .bindPopup(() => rl.propertyMap.popup(p));
+          .bindPopup(() => rl.propertyMap.popup(p), { minWidth: 260, maxWidth: 260 });
         marker.on('mouseover', () => rl.propertyMap.highlight(st, p.id));
         marker.on('mouseout', () => rl.propertyMap.highlight(st, null));
         st.markers.set(p.id, marker);

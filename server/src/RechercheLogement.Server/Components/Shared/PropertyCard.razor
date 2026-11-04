@@ -1,14 +1,7 @@
 <article class="card @Format.StatusClass(Item.Property.Status)">
-    <a class="photo" href="/biens/@Item.Property.Id">
-        @if (Item.Photo is not null)
-        {
-            <img src="@Thumb(Item.Photo)" alt="" loading="lazy" />
-        }
-        else
-        {
-            <span class="nophoto"><Icon Name="house" /></span>
-        }
-    </a>
+    <div class="photo">
+        <PhotoCarousel Photos="Item.Photos ?? []" Href="@($"/biens/{Item.Property.Id}")" />
+    </div>
     <div class="card-body">
         <div class="card-top">
             <StatusBadge Status="Item.Property.Status" Stage="Item.Property.ContactStage" />
@@ -32,7 +25,4 @@
 
 @code {
     [Parameter, EditorRequired] public PropertySummary Item { get; set; } = default!;
-
-    /// <summary>Miniature. Bien'ici fournit l'image à la taille demandée.</summary>
-    private static string Thumb(string url) => Format.Thumb(url, 400, 240);
 }
