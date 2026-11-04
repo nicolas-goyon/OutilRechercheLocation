@@ -44,10 +44,29 @@ Ce compose prend l'image `ghcr.io/nicolas-goyon/outilrecherchelocation-server:la
 
 - **Mettre à jour** : `docker compose up -d --pull always`, ou les scripts `update.sh` / `update.ps1`
   (release `server-latest`, ou dossier `deploy/`). Les données sont conservées, la base est migrée au
-  démarrage. La page **Paramètres** affiche la version installée.
+  démarrage après sauvegarde. Les scripts vérifient que le serveur répond, et affichent le journal et la
+  commande de retour arrière sinon. La page **Paramètres** affiche la version installée.
+  Depuis les sources : `./update-local.sh`.
 - **Revenir à une version** : `RL_TAG=0.2.42 docker compose up -d` (tags : `latest`, `<version>`,
   `sha-<commit>`).
+  Une image plus ancienne refuse de démarrer sur une base plus récente, pour ne pas l'abîmer :
+  restaurer d'abord une sauvegarde.
 - **Autre port** : `RL_PORT=5090 docker compose up -d`.
+
+#### Sauvegardes et restauration
+
+Avant de migrer une base existante, le serveur en écrit une copie dans le dossier `backups/` du volume
+(`recherche-logement.v<version>.<date>.db`, `projets.v<version>.<date>.db`). Les 5 dernières copies de
+chaque base sont gardées. Pour restaurer :
+
+```sh
+docker compose stop server
+docker compose run --rm --no-deps --entrypoint bash server -c 'ls /data/backups'
+docker compose run --rm --no-deps --entrypoint bash server -c '
+  rm -f /data/recherche-logement.db-wal /data/recherche-logement.db-shm
+  cp /data/backups/recherche-logement.v2.<date>.db /data/recherche-logement.db'
+RL_TAG=<version compatible> docker compose up -d
+```
 - **Reprendre les données d'une installation en build local** : `docker volume ls`, puis
   `RL_VOLUME=<nom du volume> docker compose up -d`.
 

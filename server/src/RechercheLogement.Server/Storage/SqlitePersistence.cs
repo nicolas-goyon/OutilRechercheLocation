@@ -10,11 +10,11 @@ namespace RechercheLogement.Server.Storage;
 /// ListingData change avec les sites d'annonces. Les colonnes servent au tri,
 /// au filtrage et à l'inspection manuelle de la base.
 ///
-/// Migrations : liste ordonnée de scripts SQL. Le numéro actuel est dans PRAGMA user_version.
+/// Migrations : liste ordonnée, appliquée par <see cref="SqliteMigrator"/>. Le numéro actuel est dans PRAGMA user_version.
 /// </summary>
 public sealed class SqlitePersistence : IPersistence
 {
-    private static readonly string[] Migrations =
+    public static readonly Migration[] Migrations =
     [
         // v1
         """
@@ -91,9 +91,11 @@ public sealed class SqlitePersistence : IPersistence
     ];
 
     private readonly string _connectionString;
+    private readonly string _path;
 
     public SqlitePersistence(string path)
     {
+        _path = path;
         var dir = Path.GetDirectoryName(Path.GetFullPath(path));
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
         _connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = true }.ToString();
@@ -113,14 +115,7 @@ public sealed class SqlitePersistence : IPersistence
     private void Migrate()
     {
         using var c = Open();
-        var version = Convert.ToInt32(Scalar(c, "PRAGMA user_version"));
-        for (var v = version; v < Migrations.Length; v++)
-        {
-            using var tx = c.BeginTransaction();
-            Exec(c, tx, Migrations[v]);
-            Exec(c, tx, $"PRAGMA user_version = {v + 1}");
-            tx.Commit();
-        }
+        SqliteMigrator.Apply(c, _path, Migrations);
     }
 
     public StoreSnapshot Load()
