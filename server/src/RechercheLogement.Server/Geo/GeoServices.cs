@@ -30,6 +30,7 @@ public sealed class GeoServices(IHttpClientFactory factory)
 {
     private readonly ConcurrentDictionary<string, List<PlanCommune>> _communes = new();
     private readonly ConcurrentDictionary<string, string> _departmentNames = new();
+    private readonly ConcurrentDictionary<string, List<PlanCommune>> _postalCommunes = new();
 
     private HttpClient Http => factory.CreateClient(SiteHttp.ClientName);
 
@@ -179,6 +180,44 @@ public sealed class GeoServices(IHttpClientFactory factory)
             // Repli sur le premier code postal.
         }
         return commune.PostalCodes[0];
+    }
+
+    public static string CenterKey(string postalCode, string? city) => $"{postalCode}|{DedupScorer.NormalizeText(city ?? "")}";
+
+    /// <summary>
+    /// Centre de la commune de chaque lieu (<see cref="CenterKey"/>), pour placer sur la carte les biens sans GPS :
+    /// commune du même nom si le code postal en compte plusieurs, sinon la première. Un lieu introuvable est omis.
+    /// </summary>
+    public async Task<Dictionary<string, GeoPoint>> CentersAsync(IEnumerable<(string PostalCode, string? City)> places, CancellationToken ct)
+    {
+        var wanted = places.Distinct().ToList();
+        using var limit = new SemaphoreSlim(4);
+        await Task.WhenAll(wanted.Select(p => p.PostalCode).Distinct().Select(async cp =>
+        {
+            await limit.WaitAsync(ct);
+            try
+            {
+                if (!_postalCommunes.ContainsKey(cp))
+                    _postalCommunes[cp] = ParseCommunes(await GetGeoAsync($"communes?codePostal={Uri.EscapeDataString(cp)}&{CommuneFields}", ct));
+            }
+            catch (SiteException)
+            {
+                // Bien non placé. Sera redemandé à la prochaine mise à jour.
+            }
+            finally
+            {
+                limit.Release();
+            }
+        }));
+
+        var centers = new Dictionary<string, GeoPoint>();
+        foreach (var (cp, city) in wanted)
+        {
+            if (!_postalCommunes.TryGetValue(cp, out var communes) || communes.Count == 0) continue;
+            var name = DedupScorer.NormalizeText(city ?? "");
+            centers[CenterKey(cp, city)] = (communes.FirstOrDefault(c => DedupScorer.NormalizeText(c.Name) == name) ?? communes[0]).Center;
+        }
+        return centers;
     }
 
     /// <summary>Commune qui contient le point (clic sur la carte en mode lieux).</summary>

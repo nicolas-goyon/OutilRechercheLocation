@@ -247,7 +247,7 @@ une propriété dans `ISiteModule`, une classe par dossier.
 
 `wwwroot/app.css` porte les couleurs (variables `:root`, thèmes clair et sombre). Le vert sert aux actions, le bleu
 aux biens à contacter. Tout est embarqué dans l'image, sans CDN : police Hanken Grotesk (OFL), icônes Lucide
-(`wwwroot/icons.svg`, composant `Icon`), Leaflet (`wwwroot/lib`). Seul le fond de carte vient d'Internet. Les
+(`wwwroot/icons.svg`, composant `Icon`), Leaflet et Leaflet.markercluster (`wwwroot/lib`). Seul le fond de carte vient d'Internet. Les
 émojis restent dans les textes qui citent un bouton du plugin.
 
 ## Projets et catalogue

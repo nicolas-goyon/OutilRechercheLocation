@@ -82,6 +82,30 @@ public class GeoLevelsTests
     }
 
     [Fact]
+    public async Task Centers_PreferTheCommuneOfTheSameName_AndAreCached()
+    {
+        var calls = 0;
+        var fake = new Fake(p =>
+        {
+            calls++;
+            return p.StartsWith("/communes?codePostal=65170") ? """
+                [{ "nom": "Aragnouet", "code": "1", "centre": { "coordinates": [0.2, 42.8] } },
+                 { "nom": "Vielle-Aure", "code": "2", "centre": { "coordinates": [0.3, 42.8] } }]
+                """ : null;
+        });
+        var geo = new GeoServices(fake);
+        (string, string?)[] places = [("65170", "VIELLE AURE"), ("65170", null), ("00000", "Nulle part")];
+
+        var centers = await geo.CentersAsync(places, default);
+        await geo.CentersAsync(places.Take(2), default);
+
+        Assert.Equal(0.3, centers[GeoServices.CenterKey("65170", "VIELLE AURE")].Lon);
+        Assert.Equal(0.2, centers[GeoServices.CenterKey("65170", null)].Lon);
+        Assert.False(centers.ContainsKey(GeoServices.CenterKey("00000", "Nulle part")));
+        Assert.Equal(2, calls);
+    }
+
+    [Fact]
     public void Region_IsSearchedDepartmentByDepartment()
     {
         var project = new SearchProject

@@ -181,6 +181,10 @@ Pages du serveur local :
   site. Le tableau de bord affiche des raccourcis.
 - **🔎 Mes projets** : recherches complètes que le serveur lance lui-même (voir ci-dessous).
 
+Dans **Tous les biens**, on choisit la vue en grille ou en liste, et on peut afficher la carte à côté. Elle suit les
+filtres. Un bien sans GPS (SeLoger, tant que l'annonce n'a pas été ouverte) est placé au centre de sa commune,
+avec un marqueur en pointillés.
+
 Le sélecteur **Projet**, en haut de la barre latérale, limite le tableau de bord, À contacter, Tous les biens,
 Doublons et Recherches à un projet. Un bien en fait partie s'il a été trouvé par le projet, ou si une de ses
 annonces, vue avec le plugin, respecte les critères et la zone du projet. Les statuts sont communs à tous les

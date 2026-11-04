@@ -113,3 +113,15 @@ public class ProjectScopeTests
         Assert.Equal(new[] { "mine", "all" }, visible.Select(s => s.Id));
     }
 }
+
+public class PropertySummaryGeoTests
+{
+    [Fact]
+    public void Summary_ExposesThePositionOfAListing()
+    {
+        var catalog = new Catalog(new InMemoryPersistence());
+        catalog.Sync(new SyncRequest("t", [new Observation("bienici", "a", "api", new ListingData { Title = "Chalet", Geo = new GeoPoint(42.8, 0.3) }, 1)], null, null));
+
+        Assert.Equal(42.8, Assert.Single(catalog.QueryProperties(new PropertyQuery())).Geo?.Lat);
+    }
+}
