@@ -38,7 +38,7 @@
 @code {
     private IReadOnlyList<PendingDuplicate> _items = [];
 
-    protected override void Load() => _items = Catalog.PendingDuplicates().Take(100).ToList();
+    protected override void Load() => _items = Catalog.PendingDuplicates(Selection.Scope).Take(100).ToList();
 
     private static RenderFragment Side(Listing l, PropertyStatus status) => __builder =>
     {

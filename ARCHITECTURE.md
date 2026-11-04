@@ -243,6 +243,14 @@ fonctionnalités, une ligne dans `SitesRegistration.AddSites`, des tests de conv
 (`ProjectTests`). Ajouter une fonctionnalité à tous les sites : une interface dans `SiteModule.cs`,
 une propriété dans `ISiteModule`, une classe par dossier.
 
+## Projets et catalogue
+
+Les résultats d'un lancement partent aussi dans `Catalog.Sync` (observations `api`) : mêmes doublons, mêmes
+statuts que le plugin. Le catalogue ne connaît pas les projets. Une page passe un filtre (`PropertyQuery.Scope`) :
+`ProjectSelection.Scope` garde les résultats du projet et les annonces qui respectent ses critères et sa zone
+(`ProjectScope`). Ce périmètre n'est pas stocké : il suit les modifications du projet, et les anciennes annonces
+y entrent sans migration. Les recherches favorites, elles, ont un `ProjectId` optionnel.
+
 ## Relais navigateur (SeLoger)
 
 SeLoger refuse les appels du serveur. `SelogerSearchAdapter` passe donc par `Sites/Common/BrowserRelay.cs` :
@@ -280,6 +288,4 @@ recherche, et la carte l'indique.
 
 ## Pistes
 
-- **Relier Mes projets au catalogue** : envoyer les résultats d'un projet dans `Catalog.Sync`
-  (observations `api`), pour profiter des doublons et des statuts du plugin. Séparé pour l'instant.
 - Hash perceptuel des photos, pour les sites qui hébergent une nouvelle copie des images.

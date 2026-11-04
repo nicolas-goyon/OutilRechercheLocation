@@ -88,6 +88,8 @@ public sealed class SqlitePersistence : IPersistence
             last_opened_at INTEGER NULL
         );
         """,
+        // v3 : recherche rattachée à un projet (projets.db). NULL : visible dans tous les projets.
+        "ALTER TABLE saved_searches ADD COLUMN project_id TEXT NULL;",
     ];
 
     private readonly string _connectionString;
@@ -182,7 +184,7 @@ public sealed class SqlitePersistence : IPersistence
         foreach (var r in Query(c, "SELECT key, value FROM settings"))
             snap.Settings[r.GetString(0)] = r.GetString(1);
 
-        foreach (var r in Query(c, "SELECT id, name, url, site, note, sort_order, created_at, updated_at, last_opened_at FROM saved_searches"))
+        foreach (var r in Query(c, "SELECT id, name, url, site, note, sort_order, created_at, updated_at, last_opened_at, project_id FROM saved_searches"))
         {
             snap.Searches.Add(new SavedSearch
             {
@@ -267,13 +269,13 @@ public sealed class SqlitePersistence : IPersistence
         foreach (var x in changes.Searches.Values)
         {
             Exec(c, tx, """
-                INSERT INTO saved_searches (id, name, url, site, note, sort_order, created_at, updated_at, last_opened_at)
-                VALUES ($id, $name, $url, $site, $note, $order, $created, $updated, $opened)
+                INSERT INTO saved_searches (id, name, url, site, note, sort_order, created_at, updated_at, last_opened_at, project_id)
+                VALUES ($id, $name, $url, $site, $note, $order, $created, $updated, $opened, $project)
                 ON CONFLICT(id) DO UPDATE SET name = excluded.name, url = excluded.url, site = excluded.site, note = excluded.note,
-                    sort_order = excluded.sort_order, updated_at = excluded.updated_at, last_opened_at = excluded.last_opened_at
+                    sort_order = excluded.sort_order, updated_at = excluded.updated_at, last_opened_at = excluded.last_opened_at, project_id = excluded.project_id
                 """,
                 ("$id", x.Id), ("$name", x.Name), ("$url", x.Url), ("$site", x.Site), ("$note", x.Note), ("$order", x.Order),
-                ("$created", x.CreatedAt), ("$updated", x.UpdatedAt), ("$opened", x.LastOpenedAt));
+                ("$created", x.CreatedAt), ("$updated", x.UpdatedAt), ("$opened", x.LastOpenedAt), ("$project", x.ProjectId));
         }
 
         foreach (var id in changes.DeletedSearches)

@@ -64,6 +64,8 @@ public sealed class ProjectLocation
     public GeoPoint? Center { get; set; }
     /// <summary>Région : noms de ses départements. Les sites reçoivent ces départements.</summary>
     public List<string> Departments { get; set; } = [];
+    /// <summary>Région : codes de ses départements (rattachement des annonces au projet).</summary>
+    public List<string> DepartmentCodes { get; set; } = [];
 
     public string Display() => string.IsNullOrWhiteSpace(Label) ? Query : Label;
 
@@ -242,6 +244,47 @@ public static class ProjectMatcher
     {
         why = reason;
         return false;
+    }
+}
+
+/// <summary>
+/// Périmètre d'un projet dans le catalogue : une annonce en fait partie si elle respecte ses critères et sa zone,
+/// qu'elle vienne d'un lancement du projet ou de la navigation avec le plugin. Rien n'est stocké : le périmètre
+/// suit les modifications du projet. Un critère inconnu n'exclut pas l'annonce, mais il faut pouvoir la situer.
+/// </summary>
+public static class ProjectScope
+{
+    public static bool Contains(SearchProject p, ListingData d) =>
+        ProjectMatcher.Matches(p, d, out _) && InZone(p, d);
+
+    private static bool InZone(SearchProject p, ListingData d)
+    {
+        if (p.LocationMode != LocationMode.Places)
+            return p.Area is { } area && AreaFilter.Check(area, d, out _) == AreaFilter.Verdict.Inside;
+        return p.Locations.Any(l => InPlace(l, d));
+    }
+
+    private static bool InPlace(ProjectLocation l, ListingData d)
+    {
+        var cp = d.PostalCode?.Trim();
+        var city = d.City is null ? "" : DedupScorer.NormalizeText(d.City);
+        return l.Type switch
+        {
+            PlaceType.PostalCode => cp == (l.Code ?? l.Query),
+            PlaceType.Commune => cp is not null && l.PostalCodes.Contains(cp) && (city.Length == 0 || city == DedupScorer.NormalizeText(l.Query)),
+            PlaceType.Department => cp is not null && l.Code is not null && DepartmentOf(cp).Contains(l.Code.ToUpperInvariant()),
+            PlaceType.Region => cp is not null && DepartmentOf(cp).Intersect(l.DepartmentCodes).Any(),
+            _ => cp == l.Query.Trim() || (city.Length > 0 && city == DedupScorer.NormalizeText(l.Query)),
+        };
+    }
+
+    /// <summary>Code(s) de département d'un code postal : Corse "20" -> 2A ou 2B, outre-mer sur trois chiffres.</summary>
+    public static IReadOnlyList<string> DepartmentOf(string postalCode)
+    {
+        if (postalCode.Length < 2) return [];
+        var two = postalCode[..2];
+        if (two == "20") return ["2A", "2B"];
+        return two is "97" or "98" && postalCode.Length >= 3 ? [postalCode[..3]] : [two];
     }
 }
 

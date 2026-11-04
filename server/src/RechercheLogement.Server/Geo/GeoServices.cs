@@ -101,15 +101,26 @@ public sealed class GeoServices(IHttpClientFactory factory)
         return list;
     }
 
-    private async Task<List<string>> RegionDepartmentsAsync(string code, CancellationToken ct)
+    private async Task<List<(string Name, string Code)>> RegionDepartmentsAsync(string code, CancellationToken ct)
     {
         var json = await GetGeoAsync($"regions/{code}/departements?fields=nom,code", ct);
-        return (json as JsonArray ?? []).Select(d => JsonRead.Str(d?["nom"])).OfType<string>().ToList();
+        return (json as JsonArray ?? [])
+            .Select(d => (Name: JsonRead.Str(d?["nom"]), Code: JsonRead.Str(d?["code"])))
+            .Where(d => d.Name is not null && d.Code is not null)
+            .Select(d => (d.Name!, d.Code!)).ToList();
     }
 
-    public static PlaceSuggestion RegionSuggestion(string name, string code, List<string> departments) =>
+    public static PlaceSuggestion RegionSuggestion(string name, string code, List<(string Name, string Code)> departments) =>
         new(name, $"Région · {departments.Count} départements", "🧭",
-            new ProjectLocation { Type = PlaceType.Region, Query = name, Code = code, Label = name, Departments = departments }, null);
+            new ProjectLocation
+            {
+                Type = PlaceType.Region,
+                Query = name,
+                Code = code,
+                Label = name,
+                Departments = departments.Select(d => d.Name).ToList(),
+                DepartmentCodes = departments.Select(d => d.Code).ToList(),
+            }, null);
 
     /// <summary>
     /// Lieux qui contiennent le point, du plus petit au plus grand : code postal, commune, département, région

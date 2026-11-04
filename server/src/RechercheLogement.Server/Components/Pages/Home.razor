@@ -3,6 +3,10 @@
 
 <PageTitle>Tableau de bord — Recherche logement</PageTitle>
 <h1>Tableau de bord</h1>
+@if (Selection.Project is { } project)
+{
+    <p class="muted">Projet « @project.Name » · <a href="/projets/@project.Id">voir le projet</a></p>
+}
 
 <div class="stats">
     <a class="stat tocontact" href="/a-contacter"><b>@Count(PropertyStatus.ToContact)</b><span>📞 à contacter</span></a>
@@ -57,10 +61,11 @@ else
 
     protected override void Load()
     {
-        _stats = Catalog.Stats();
-        _searches = Catalog.Searches();
-        _toContact = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.ToContact }, Sort = PropertySort.LastUpdate, Take = 12 });
-        _recent = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.None, PropertyStatus.Seen }, Take = 12 });
+        var scope = Selection.Scope;
+        _stats = Catalog.Stats(scope);
+        _searches = Selection.Visible(Catalog.Searches()).ToList();
+        _toContact = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.ToContact }, Sort = PropertySort.LastUpdate, Take = 12, Scope = scope });
+        _recent = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.None, PropertyStatus.Seen }, Take = 12, Scope = scope });
     }
 
     private int Count(PropertyStatus s) => _stats.ByStatus.GetValueOrDefault(s);

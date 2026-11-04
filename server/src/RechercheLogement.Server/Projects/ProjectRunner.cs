@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
+using RechercheLogement.Core.Contracts;
 using RechercheLogement.Core.Projects;
+using RechercheLogement.Core.Services;
 using RechercheLogement.Server.Sites;
 using RechercheLogement.Server.Sites.Common;
 
@@ -12,10 +14,11 @@ namespace RechercheLogement.Server.Projects;
 ///     ne connaît pas les codes postaux (zone plus large, filtrée ensuite chez nous).
 ///  2. Lieux reconnus par le site (gardés en cache dans le projet).
 ///  3. Recherche avec les filtres du site, puis filtre local : critères du projet et forme exacte de la zone.
-///  4. Intégration : nouvelles annonces, changements, retraits, réapparitions, regroupement des doublons.
+///  4. Intégration : nouvelles annonces, changements, retraits, réapparitions, regroupement des doublons,
+///     puis envoi au catalogue.
 /// Un seul lancement à la fois (on reste discret avec les sites).
 /// </summary>
-public sealed class ProjectRunner(ProjectStore store, SiteRegistry sites, AreaPlanner planner, ILogger<ProjectRunner> log)
+public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegistry sites, AreaPlanner planner, ILogger<ProjectRunner> log)
 {
     /// <summary>Au-delà, la recherche par codes postaux passe aux départements.</summary>
     private const int MaxPostalCodes = 80;
@@ -166,6 +169,8 @@ public sealed class ProjectRunner(ProjectStore store, SiteRegistry sites, AreaPl
 
             // 4. Intégration et suivi.
             var applied = store.ApplyResults(project.Id, site.Id, incoming, outcome.Complete, started);
+            // Mêmes statuts et mêmes doublons que les annonces vues avec le plugin.
+            catalog.Sync(new SyncRequest("projet", incoming.Select(i => new Observation(site.Id, i.SiteId, "api", i.Data, started)).ToList(), null, null));
             var parts = new List<string> { $"{applied.Kept} annonce(s) retenue(s) sur {outcome.Items.Count} reçue(s)" };
             if (applied.New > 0) parts.Add($"{applied.New} nouvelle(s)");
             if (applied.Changed > 0) parts.Add($"{applied.Changed} modifiée(s)");

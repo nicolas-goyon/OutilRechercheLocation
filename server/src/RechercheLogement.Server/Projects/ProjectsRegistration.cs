@@ -31,6 +31,7 @@ public static class ProjectsRegistration
         services.AddSingleton<GeoContours>();
         services.AddSingleton<AreaPlanner>();
         services.AddSingleton<ProjectRunner>();
+        services.AddScoped<ProjectSelection>();
         if (settings.ProjectsAutoRun) services.AddHostedService<ProjectScheduler>();
         return services;
     }

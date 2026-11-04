@@ -39,5 +39,5 @@
     private IReadOnlyList<PropertySummary> _items = [];
 
     protected override void Load() =>
-        _items = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.ToContact }, Sort = PropertySort.LastUpdate, Take = 1000 });
+        _items = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.ToContact }, Sort = PropertySort.LastUpdate, Take = 1000, Scope = Selection.Scope });
 }

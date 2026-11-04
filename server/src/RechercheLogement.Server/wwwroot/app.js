@@ -1,5 +1,24 @@
 // Fonctions de la page. Blazor les appelle (JS interop), ou les boutons les appellent directement (onclick).
 window.rl = {
+  /** Préférences de ce navigateur. Le stockage peut être indisponible : la page fonctionne alors sans. */
+  prefs: {
+    get(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    },
+    set(key, value) {
+      try {
+        if (value === null || value === undefined) localStorage.removeItem(key);
+        else localStorage.setItem(key, value);
+      } catch {
+        // Préférence non mémorisée.
+      }
+    },
+  },
+
   /** Copie le texte. Retourne true si la copie a réussi. */
   async copy(text) {
     try {

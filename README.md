@@ -180,6 +180,11 @@ Pages du serveur local :
   (pour une variante avec d'autres critères), réordonner, ouvrir une ou toutes les recherches d'un
   site. Le tableau de bord affiche des raccourcis.
 - **🔎 Mes projets** : recherches complètes que le serveur lance lui-même (voir ci-dessous).
+
+Le sélecteur **Projet**, en haut de la barre latérale, limite le tableau de bord, À contacter, Tous les biens,
+Doublons et Recherches à un projet. Un bien en fait partie s'il a été trouvé par le projet, ou si une de ses
+annonces, vue avec le plugin, respecte les critères et la zone du projet. Les statuts sont communs à tous les
+projets : un bien rejeté l'est partout.
 - **Paramètres** : token (copier / régénérer), lien d'installation du plugin, export JSON.
 
 ### Mes projets

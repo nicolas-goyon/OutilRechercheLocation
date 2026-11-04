@@ -51,6 +51,7 @@ public class GeoLevelsTests
         Assert.Equal(new[] { PlaceType.PostalCode, PlaceType.Commune, PlaceType.Department, PlaceType.Region }, levels.Select(l => l.Type));
         Assert.Equal("65710", levels[0].Code);
         Assert.Equal(new[] { "Ariège", "Hautes-Pyrénées" }, levels[3].Departments);
+        Assert.Equal(new[] { "09", "65" }, levels[3].DepartmentCodes);
     }
 
     [Fact]
