@@ -30,6 +30,9 @@ public sealed class ServerSettings
     /// <summary>Lancement automatique des projets (intervalle choisi dans chaque projet). false : seulement à la demande.</summary>
     public bool ProjectsAutoRun { get; set; } = true;
 
+    /// <summary>Délai minimal entre deux requêtes exécutées par le plugin pour le serveur (SeLoger), en millisecondes.</summary>
+    public int SiteRelayDelayMs { get; set; } = 2000;
+
     /// <summary>"memory" : base en mémoire, perdue à l'arrêt (démo, tests).</summary>
     public string Storage { get; set; } = "sqlite";
 }

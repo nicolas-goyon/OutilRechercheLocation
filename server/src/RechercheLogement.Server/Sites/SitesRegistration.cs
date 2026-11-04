@@ -19,6 +19,7 @@ public static class SitesRegistration
             })
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AutomaticDecompression = DecompressionMethods.All });
 
+        services.AddSingleton(sp => new BrowserRelay(sp.GetRequiredService<ServerSettings>().SiteRelayDelayMs));
         services.AddSingleton<ISiteModule, BieniciSite>();
         services.AddSingleton<ISiteModule, SelogerSite>();
         services.AddSingleton<SiteRegistry>();

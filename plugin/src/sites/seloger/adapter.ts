@@ -37,6 +37,8 @@ export const selogerAdapter: SiteAdapter = {
   id: 'seloger',
   label: 'SeLoger',
 
+  relayPaths: [/^\/search-mfe-bff\/autocomplete\/suggestion$/, /^\/serp-bff\/search$/, /^\/classifiedList\/[^/]+$/],
+
   matches: (loc) => /(^|\.)seloger\.com$/.test(loc.hostname),
 
   // "/classified-search?..." (recherche avec filtres) ou "/recherche/location/appartement/<région>/<ville>/<id>" (page de ville).

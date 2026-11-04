@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using RechercheLogement.Core.Projects;
 using RechercheLogement.Server.Sites;
+using RechercheLogement.Server.Sites.Common;
 
 namespace RechercheLogement.Server.Projects;
 
@@ -28,7 +29,8 @@ public sealed class ProjectRunner(ProjectStore store, SiteRegistry sites, AreaPl
     /// <summary>Étape en cours pour ce projet (pour la page), sinon null.</summary>
     public string? RunningSite(string projectId) => _running.GetValueOrDefault(projectId);
 
-    public async Task RunAsync(string projectId, CancellationToken ct)
+    /// <summary>Lance un projet. <paramref name="onlySite"/> : un seul de ses sites (reprise d'une recherche en attente).</summary>
+    public async Task RunAsync(string projectId, CancellationToken ct, string? onlySite = null)
     {
         if (!_running.TryAdd(projectId, "en attente")) return;
         store.NotifyRunning();
@@ -54,7 +56,7 @@ public sealed class ProjectRunner(ProjectStore store, SiteRegistry sites, AreaPl
                 }
             }
 
-            foreach (var siteId in project.Sites.Distinct())
+            foreach (var siteId in project.Sites.Distinct().Where(s => onlySite is null || s == onlySite))
             {
                 if (sites.Get(siteId) is not { Available: true } entry) continue;
                 SetStep(projectId, entry.Info.Label);
@@ -67,6 +69,15 @@ public sealed class ProjectRunner(ProjectStore store, SiteRegistry sites, AreaPl
             _gate.Release();
             store.NotifyRunning();
         }
+    }
+
+    /// <summary>Un onglet vient de s'ouvrir : relance les recherches de ce site restées en attente d'un onglet.</summary>
+    public async Task ResumeWaitingAsync(string site, CancellationToken ct)
+    {
+        var waiting = store.Projects()
+            .Where(p => p.Active && store.Runs(p.Id).Any(r => r.Site == site && r.Message.StartsWith(BrowserRelay.NoTabPrefix, StringComparison.Ordinal)))
+            .Select(p => p.Id).ToList();
+        foreach (var id in waiting) await RunAsync(id, ct, onlySite: site);
     }
 
     private void SetStep(string projectId, string step)
@@ -180,10 +191,24 @@ public sealed class ProjectRunner(ProjectStore store, SiteRegistry sites, AreaPl
 }
 
 /// <summary>Lance automatiquement les projets dont l'intervalle (AutoRefreshHours) est écoulé. Vérification chaque minute.</summary>
-public sealed class ProjectScheduler(ProjectRunner runner, ProjectStore store, ILogger<ProjectScheduler> log) : BackgroundService
+public sealed class ProjectScheduler(ProjectRunner runner, ProjectStore store, BrowserRelay relay, ILogger<ProjectScheduler> log) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        void Resume(string site) => _ = Task.Run(async () =>
+        {
+            try
+            {
+                await runner.ResumeWaitingAsync(site, stoppingToken);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                log.LogError(e, "Reprise des recherches en attente de {Site}", site);
+            }
+        }, stoppingToken);
+        relay.SiteConnected += Resume;
+        using var unsubscribe = new Unsubscribe(() => relay.SiteConnected -= Resume);
+
         // Laisse le serveur démarrer avant le premier passage.
         await Task.Delay(TimeSpan.FromSeconds(20), stoppingToken);
         using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
@@ -203,4 +228,9 @@ public sealed class ProjectScheduler(ProjectRunner runner, ProjectStore store, I
         }
         while (await timer.WaitForNextTickAsync(stoppingToken));
     }
+}
+
+file sealed class Unsubscribe(Action action) : IDisposable
+{
+    public void Dispose() => action();
 }

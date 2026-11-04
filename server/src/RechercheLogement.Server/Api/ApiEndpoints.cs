@@ -1,6 +1,7 @@
 using System.Reflection;
 using RechercheLogement.Core.Contracts;
 using RechercheLogement.Core.Services;
+using RechercheLogement.Server.Sites.Common;
 
 namespace RechercheLogement.Server.Api;
 
@@ -24,6 +25,12 @@ public static class ApiEndpoints
                 return Results.BadRequest(new { error = "Lot trop grand. Maximum : 1000 observations et 1000 actions." });
             return Results.Ok(catalog.Sync(request));
         });
+
+        // Relais : prochaine requête à exécuter dans un onglet du site (attente longue), puis sa réponse.
+        api.MapGet("/relay/next", async (string site, BrowserRelay relay, CancellationToken ct) =>
+            await relay.NextAsync(site, BrowserRelay.PollWait, ct) is { } request ? Results.Ok(request) : Results.NoContent());
+        api.MapPost("/relay/{id}/result", (string id, RelayResult result, BrowserRelay relay) =>
+            relay.Complete(id, result) ? Results.NoContent() : Results.NotFound());
 
         // Renvoie l'état d'une annonce.
         api.MapGet("/listings/{key}", (string key, Catalog catalog) =>

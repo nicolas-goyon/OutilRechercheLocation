@@ -17,9 +17,11 @@ import { ApiClient, type ServerInfo } from './core/api';
 import { ConnectionStore, normalizeUrl, type ConnectionSettings } from './core/connection';
 import { DisplayPrefsStore, hiddenStatuses } from './core/displayPrefs';
 import { registerMenuCommand } from './core/menuCommand';
+import { RelayWorker } from './core/relay';
 import { createStore } from './core/storage';
 import { SyncEngine } from './core/sync';
 import type { PropertyStatus } from './core/types';
+import { getRootWindow } from './shared/dom/root';
 import { findAdapter } from './sites';
 import { installFloatingButton } from './ui/floatingButton';
 import { isModalOpen } from './ui/modal';
@@ -137,6 +139,14 @@ export function init(config: InitConfig = {}): PluginHandle | undefined {
   registerMenuCommand('Ouvrir le serveur local', () => window.open(connection.get().serverUrl, '_blank'));
 
   tracker.start();
+  if (adapter.relayPaths) {
+    new RelayWorker(api, {
+      site: adapter.id,
+      allowedPaths: adapter.relayPaths,
+      origin: location.origin,
+      fetch: (url, init) => getRootWindow().fetch(url, init),
+    }).start();
+  }
 
   // Première installation : le token est absent. Le plugin ouvre alors le panneau.
   if (!connection.isConfigured()) setTimeout(() => !isModalOpen() && openPanel(), 800);

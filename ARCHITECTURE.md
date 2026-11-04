@@ -243,6 +243,23 @@ fonctionnalités, une ligne dans `SitesRegistration.AddSites`, des tests de conv
 (`ProjectTests`). Ajouter une fonctionnalité à tous les sites : une interface dans `SiteModule.cs`,
 une propriété dans `ISiteModule`, une classe par dossier.
 
+## Relais navigateur (SeLoger)
+
+SeLoger refuse les appels du serveur. `SelogerSearchAdapter` passe donc par `Sites/Common/BrowserRelay.cs` :
+
+1. l'adaptateur dépose une requête et attend sa réponse ;
+2. le plugin (`plugin/src/core/relay.ts`), dans un onglet du site, la récupère par attente longue
+   (`GET /api/relay/next`), vérifie l'adresse (`relayPaths` de l'adaptateur), l'exécute avec `fetch` ;
+3. il renvoie la réponse brute (`POST /api/relay/{id}/result`), et le serveur la lit comme un appel direct.
+
+Choix retenu (issue #4) : pas d'image Docker de collecte, ni de copie de cookies vers le serveur. Le navigateur
+de l'utilisateur fait déjà foi, les sessions restent chez lui, et une image dédiée serait lourde sans garantie de
+passer. En contrepartie, il faut un onglet ouvert. Une requête à la fois, délai réglable, arrêt dès qu'une
+vérification apparaît.
+
+Pour un nouveau site bloqué : `relayPaths` dans son adaptateur de plugin, et `BrowserRelay` dans son
+adaptateur de recherche.
+
 ## Contours des lieux
 
 `GET /geo/contours/{type}/{code}` (`Geo/GeoContours.cs`) renvoie un GeoJSON au navigateur, qui l'affiche dans `ZoneMap` :
@@ -265,6 +282,4 @@ recherche, et la carte l'indique.
 
 - **Relier Mes projets au catalogue** : envoyer les résultats d'un projet dans `Catalog.Sync`
   (observations `api`), pour profiter des doublons et des statuts du plugin. Séparé pour l'instant.
-- **SeLoger bloqué côté serveur** : faire faire la recherche par le plugin (navigateur) pour le
-  compte du serveur.
 - Hash perceptuel des photos, pour les sites qui hébergent une nouvelle copie des images.

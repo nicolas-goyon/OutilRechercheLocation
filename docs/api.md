@@ -142,6 +142,22 @@ sont permis : la même URL peut être enregistrée plusieurs fois (par exemple a
 - Le serveur déduit `site` de l'URL (`bienici`, `seloger`, `leboncoin`, `pap`, `logicimmo`, sinon l'hôte).
 - Réponse `201` avec la recherche créée. URL absente ou pas en `http(s)` : `400 {"error": "…"}`.
 
+## `GET /api/relay/next?site=seloger`
+
+Attente longue (25 s au plus) de la prochaine requête à exécuter dans un onglet du site. `204` : rien à
+faire. Sinon :
+
+```json
+{ "id": "…", "method": "POST", "url": "https://www.seloger.com/serp-bff/search", "body": "{…}" }
+```
+
+Le plugin n'exécute que les adresses déclarées par l'adaptateur du site (`relayPaths`), sur l'origine de l'onglet.
+
+## `POST /api/relay/{id}/result`
+
+Réponse du site, sans modification : `{ "status": 200, "body": "…" }`, ou `{ "status": 0, "error": "…" }` si
+le navigateur n'a pas pu appeler le site. `404` : requête inconnue ou abandonnée.
+
 ## `GET /api/export`
 
 Retourne une sauvegarde complète (annonces, biens, liens, historique, recherches favorites).

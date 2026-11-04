@@ -34,6 +34,11 @@ export interface SiteAdapter {
   findCards(root: ParentNode): CardRef[];
   /** Données lisibles sur la carte. */
   parseCard(card: CardRef): ListingData;
+  /**
+   * Adresses que le serveur peut demander d'appeler dans cet onglet, quand le site refuse les appels hors
+   * navigateur (recherches de « Mes projets »). Sans cette liste, le plugin n'exécute rien pour le serveur.
+   */
+  relayPaths?: RegExp[];
   /** Élément à observer pour trouver les changements de page (SPA). Default: document.body. */
   observeRoot?(): Element | null;
   /**
