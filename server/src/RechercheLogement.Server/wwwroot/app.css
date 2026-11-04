@@ -205,5 +205,14 @@ ul.warn { color: var(--rejected); }
 /* Carte de la zone (ZoneMap) */
 .zone-map-wrap { grid-column: 1 / -1; }
 .zone-map { height: 360px; border: 1px solid var(--border); border-radius: 8px; z-index: 0; }
+.zone-map.picking, .zone-map.picking .leaflet-interactive { cursor: crosshair; }
 .zone-map-off { padding: 8px 0; }
+.zone-picker { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.zone-picker button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.zone-picker button:disabled { opacity: .45; cursor: default; }
+.zone-picker .levels { display: inline-flex; }
+.zone-picker .levels button { border-radius: 0; margin-left: -1px; }
+.zone-picker .levels button:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
+.zone-picker .levels button:last-child { border-radius: 0 6px 6px 0; }
+.zone-picker .levels button.on { background: var(--accent); border-color: var(--accent); color: #fff; position: relative; }
 .map-help { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0; }

@@ -62,6 +62,8 @@ public sealed class ProjectLocation
     public List<string> PostalCodes { get; set; } = [];
     /// <summary>Centre de la commune (ou de la première commune du code postal), pour la carte.</summary>
     public GeoPoint? Center { get; set; }
+    /// <summary>Région : noms de ses départements. Les sites reçoivent ces départements.</summary>
+    public List<string> Departments { get; set; } = [];
 
     public string Display() => string.IsNullOrWhiteSpace(Label) ? Query : Label;
 

@@ -255,6 +255,9 @@ une propriété dans `ISiteModule`, une classe par dossier.
   à plusieurs codes postaux apparaît entière ;
 - départements d'outre-mer : contours de leurs communes.
 
+La sélection à vue (`GeoServices.PlaceLevelsAtAsync`) renvoie les lieux sous un point, du code postal à la
+région. Une région est demandée aux sites département par département (`ProjectRunner.ToQueries`).
+
 Les réponses de `geo.api.gouv.fr` sont gardées en mémoire. Si un contour manque, le lieu reste utilisé pour la
 recherche, et la carte l'indique.
 

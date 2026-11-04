@@ -79,7 +79,7 @@ public sealed class ProjectRunner(ProjectStore store, SiteRegistry sites, AreaPl
     public static (List<PlaceQuery> Queries, string How) PlaceQueries(SearchProject p, PlaceKinds supported)
     {
         if (p.LocationMode == LocationMode.Places || p.Area is null)
-            return (p.Locations.Select(ToQuery).ToList(), "lieux saisis");
+            return (p.Locations.SelectMany(ToQueries).ToList(), "lieux saisis");
         var postalCodes = p.Area.PostalCodes();
         if (supported.HasFlag(PlaceKinds.PostalCode) && postalCodes.Count is > 0 and <= MaxPostalCodes)
             return (postalCodes.Select(cp => new PlaceQuery(PlaceKind.PostalCode, cp)).ToList(), $"{postalCodes.Count} code(s) postal(aux) de la zone");
@@ -87,6 +87,12 @@ public sealed class ProjectRunner(ProjectStore store, SiteRegistry sites, AreaPl
             return (p.Area.Departments.Values.Select(d => new PlaceQuery(PlaceKind.Department, d)).ToList(), $"département(s) {string.Join(", ", p.Area.Departments.Values)}");
         return (postalCodes.Select(cp => new PlaceQuery(PlaceKind.PostalCode, cp)).ToList(), $"{postalCodes.Count} code(s) postal(aux)");
     }
+
+    /// <summary>Lieu du projet -> lieux à demander au site. Une région est demandée département par département.</summary>
+    public static IEnumerable<PlaceQuery> ToQueries(ProjectLocation l) =>
+        l is { Type: PlaceType.Region, Departments.Count: > 0 }
+            ? l.Departments.Select(d => new PlaceQuery(PlaceKind.Department, d))
+            : [ToQuery(l)];
 
     /// <summary>Lieu du projet -> lieu à demander au site.</summary>
     public static PlaceQuery ToQuery(ProjectLocation l) => l.Type switch

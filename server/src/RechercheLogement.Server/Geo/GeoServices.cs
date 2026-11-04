@@ -85,9 +85,89 @@ public sealed class GeoServices(IHttpClientFactory factory)
         // Département en tête seulement si son nom correspond mieux que la première commune ("Aveyron" et non "Paris").
         var depFirst = deps.Count > 0 && DedupScorer.NormalizeText(deps[0].Label).StartsWith(DedupScorer.NormalizeText(text), StringComparison.Ordinal);
         if (depFirst) list.AddRange(deps.Take(1));
+        list.AddRange(await RegionsNamedAsync(q, ct));
         list.AddRange(towns.Select(CommuneSuggestion));
         list.AddRange(deps.Skip(depFirst ? 1 : 0));
         return list;
+    }
+
+    private async Task<List<PlaceSuggestion>> RegionsNamedAsync(string escapedName, CancellationToken ct)
+    {
+        var list = new List<PlaceSuggestion>();
+        var regions = await GetGeoAsync($"regions?nom={escapedName}&fields=nom,code", ct) as JsonArray ?? [];
+        foreach (var r in regions.Take(2))
+            if (JsonRead.Str(r?["nom"]) is { } name && JsonRead.Str(r?["code"]) is { } code)
+                list.Add(RegionSuggestion(name, code, await RegionDepartmentsAsync(code, ct)));
+        return list;
+    }
+
+    private async Task<List<string>> RegionDepartmentsAsync(string code, CancellationToken ct)
+    {
+        var json = await GetGeoAsync($"regions/{code}/departements?fields=nom,code", ct);
+        return (json as JsonArray ?? []).Select(d => JsonRead.Str(d?["nom"])).OfType<string>().ToList();
+    }
+
+    public static PlaceSuggestion RegionSuggestion(string name, string code, List<string> departments) =>
+        new(name, $"Région · {departments.Count} départements", "🧭",
+            new ProjectLocation { Type = PlaceType.Region, Query = name, Code = code, Label = name, Departments = departments }, null);
+
+    /// <summary>
+    /// Lieux qui contiennent le point, du plus petit au plus grand : code postal, commune, département, région
+    /// (sélection à vue sur la carte). Vide : pas de commune française à cet endroit. Un niveau indisponible est omis.
+    /// </summary>
+    public async Task<List<ProjectLocation>> PlaceLevelsAtAsync(GeoPoint p, CancellationToken ct)
+    {
+        var json = await GetGeoAsync(string.Create(CultureInfo.InvariantCulture, $"communes?lat={p.Lat}&lon={p.Lon}&{CommuneFields},codeRegion"), ct);
+        var raw = (json as JsonArray)?.FirstOrDefault();
+        if (ParseCommunes(json).FirstOrDefault() is not { } commune) return [];
+
+        var levels = new List<ProjectLocation>();
+        if (await PostalCodeAtAsync(p, commune, ct) is { } cp)
+        {
+            var communes = ParseCommunes(await GetGeoAsync($"communes?codePostal={cp}&{CommuneFields}", ct));
+            levels.Add(PostalCodeSuggestion(cp, communes.Count > 0 ? communes : [commune]).Location!);
+        }
+        levels.Add(CommuneSuggestion(commune).Location!);
+        await AddLevelAsync(levels, async () => (await DepartmentByCodeAsync(commune.Department, ct))?.Location);
+        if (JsonRead.Str(raw?["codeRegion"]) is { } region)
+        {
+            await AddLevelAsync(levels, async () =>
+            {
+                var name = JsonRead.Str((await GetGeoAsync($"regions/{region}?fields=nom,code", ct))["nom"]);
+                return name is null ? null : RegionSuggestion(name, region, await RegionDepartmentsAsync(region, ct)).Location;
+            });
+        }
+        return levels;
+    }
+
+    private static async Task AddLevelAsync(List<ProjectLocation> levels, Func<Task<ProjectLocation?>> load)
+    {
+        try
+        {
+            if (await load() is { } level) levels.Add(level);
+        }
+        catch (SiteException)
+        {
+            // Niveau omis : les autres restent utilisables.
+        }
+    }
+
+    /// <summary>Code postal du point : celui de l'adresse la plus proche s'il appartient à la commune, sinon le premier de la commune.</summary>
+    private async Task<string?> PostalCodeAtAsync(GeoPoint p, PlanCommune commune, CancellationToken ct)
+    {
+        if (commune.PostalCodes.Count <= 1) return commune.PostalCodes.FirstOrDefault();
+        try
+        {
+            var args = string.Create(CultureInfo.InvariantCulture, $"lon={p.Lon}&lat={p.Lat}&limit=1");
+            var json = await SiteHttp.GetJsonAsync(Http, $"https://data.geopf.fr/geocodage/reverse?{args}", "Géocodage IGN", ct);
+            var cp = JsonRead.Str((json["features"] as JsonArray)?.FirstOrDefault()?["properties"]?["postcode"]);
+            if (cp is not null && commune.PostalCodes.Contains(cp)) return cp;
+        }
+        catch (SiteException)
+        {
+            // Repli sur le premier code postal.
+        }
+        return commune.PostalCodes[0];
     }
 
     /// <summary>Commune qui contient le point (clic sur la carte en mode lieux).</summary>
