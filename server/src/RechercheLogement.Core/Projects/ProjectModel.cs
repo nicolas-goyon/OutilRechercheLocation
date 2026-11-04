@@ -42,6 +42,7 @@ public enum PlaceType
     Commune,
     PostalCode,
     Department,
+    Region,
 }
 
 /// <summary>

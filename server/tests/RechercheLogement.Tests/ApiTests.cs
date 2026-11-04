@@ -39,6 +39,27 @@ public class ApiTests(WebApplicationFactory<Program> factory) : IClassFixture<We
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
     }
 
+    [Theory]
+    [InlineData("department", "65", "Hautes-Pyrénées")]
+    [InlineData("department", "2a", "Corse-du-Sud")]
+    [InlineData("region", "76", "Occitanie")]
+    public async Task Contours_OfDepartmentsAndRegions_AreEmbedded(string type, string code, string name)
+    {
+        var json = JsonNode.Parse(await Client(null).GetStringAsync($"/geo/contours/{type}/{code}"))!;
+        Assert.Equal(name, (string?)json["features"]![0]!["properties"]!["nom"]);
+    }
+
+    [Theory]
+    [InlineData("region/999", HttpStatusCode.NotFound)]
+    [InlineData("free/rodez", HttpStatusCode.NotFound)]
+    [InlineData("inconnu/65", HttpStatusCode.BadRequest)]
+    [InlineData("department/..%2f65", HttpStatusCode.BadRequest)]
+    public async Task Contours_RejectUnknownPlaces(string path, HttpStatusCode expected)
+    {
+        var res = await Client(null).GetAsync($"/geo/contours/{path}");
+        Assert.Equal(expected, res.StatusCode);
+    }
+
     [Fact]
     public async Task Sync_UsesThePluginJsonFormat()
     {

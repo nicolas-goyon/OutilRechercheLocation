@@ -243,6 +243,21 @@ fonctionnalités, une ligne dans `SitesRegistration.AddSites`, des tests de conv
 (`ProjectTests`). Ajouter une fonctionnalité à tous les sites : une interface dans `SiteModule.cs`,
 une propriété dans `ISiteModule`, une classe par dossier.
 
+## Contours des lieux
+
+`GET /geo/contours/{type}/{code}` (`Geo/GeoContours.cs`) renvoie un GeoJSON au navigateur, qui l'affiche dans `ZoneMap` :
+
+- départements et régions de métropole : fichiers simplifiés embarqués (`Geo/Data/`, issus de
+  [france-geojson](https://github.com/gregoiredavid/france-geojson), données Admin Express de l'IGN, Licence
+  ouverte). Le serveur reste utilisable pour ces contours sans Internet ;
+- communes : `geo.api.gouv.fr` ;
+- codes postaux : pas de découpage officiel, donc les contours des communes du code postal. Une commune
+  à plusieurs codes postaux apparaît entière ;
+- départements d'outre-mer : contours de leurs communes.
+
+Les réponses de `geo.api.gouv.fr` sont gardées en mémoire. Si un contour manque, le lieu reste utilisé pour la
+recherche, et la carte l'indique.
+
 ## Pistes
 
 - **Relier Mes projets au catalogue** : envoyer les résultats d'un projet dans `Catalog.Sync`

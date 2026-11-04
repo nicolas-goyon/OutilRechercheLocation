@@ -28,6 +28,7 @@ public static class ProjectsRegistration
             return new ProjectStore(sp.GetRequiredService<IProjectPersistence>(), siteLabel: registry.Label);
         });
         services.AddSingleton<GeoServices>();
+        services.AddSingleton<GeoContours>();
         services.AddSingleton<AreaPlanner>();
         services.AddSingleton<ProjectRunner>();
         if (settings.ProjectsAutoRun) services.AddHostedService<ProjectScheduler>();

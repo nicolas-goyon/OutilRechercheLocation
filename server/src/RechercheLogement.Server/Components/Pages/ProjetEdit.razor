@@ -63,8 +63,8 @@
                                   Placeholder="@(_places.Count == 0 ? "Ville, code postal ou département…" : "Ajouter un lieu…")" />
                 </div>
                 <div class="muted small">
-                    Taper puis Entrée (ou choisir dans la liste) : chaque lieu reconnu devient une étiquette. Un clic sur la carte ajoute
-                    la commune cliquée. Chaque site reçoit ces lieux ; celui qu'il a reconnu s'affiche après le premier lancement.
+                    Taper puis Entrée (ou choisir dans la liste) : chaque lieu reconnu devient une étiquette, et sa zone s'affiche sur la carte.
+                    Un clic sur la carte ajoute la commune cliquée. Chaque site reçoit ces lieux ; celui qu'il a reconnu s'affiche après le premier lancement.
                 </div>
             </div>
         }
@@ -107,7 +107,7 @@
                 </div>
             }
         }
-        <ZoneMap Center="MapCenter" RadiusKm="MapRadiusKm" Rings="MapRings" Markers="MapMarkers" FitKey="@_fitKey.ToString(CultureInfo.InvariantCulture)" OnPoint="OnMapPoint" />
+        <ZoneMap Center="MapCenter" RadiusKm="MapRadiusKm" Rings="MapRings" Markers="MapMarkers" Zones="MapZones" FitKey="@_fitKey.ToString(CultureInfo.InvariantCulture)" OnPoint="OnMapPoint" />
         @if (_mapMessage is not null)
         {
             <div class="map-help muted small">@_mapMessage</div>
@@ -339,11 +339,14 @@
     {
         _places.Remove(l);
         _mapMessage = null;
+        _fitKey++;
     }
 
     private void RemoveLastPlace()
     {
-        if (_places.Count > 0) _places.RemoveAt(_places.Count - 1);
+        if (_places.Count == 0) return;
+        _places.RemoveAt(_places.Count - 1);
+        _fitKey++;
     }
 
     // ------------------------------------------------------------------ zone : point de départ et carte
@@ -353,7 +356,11 @@
     private List<List<GeoPoint>>? MapRings =>
         _mode == LocationMode.TravelTime && _previewKey is not null && _previewKey == TravelKey(_centerPoint, _travelMinutes, _travelBy) ? _previewRings : null;
     private List<ZoneMap.Marker> MapMarkers => _mode != LocationMode.Places ? [] :
-        _places.Where(l => l.Center is not null).Select(l => new ZoneMap.Marker(l.Center!, l.Display())).ToList();
+        _places.Where(l => !HasContour(l) && l.Center is not null).Select(l => new ZoneMap.Marker(l.Center!, l.Display())).ToList();
+    private List<ZoneMap.Zone> MapZones => _mode != LocationMode.Places ? [] :
+        _places.Where(HasContour).Select(l => new ZoneMap.Zone(l.Type, l.Code!, l.Display(), l.Center)).ToList();
+
+    private static bool HasContour(ProjectLocation l) => l.Type != PlaceType.Free && !string.IsNullOrEmpty(l.Code);
 
     private static string? TravelKey(GeoPoint? c, int minutes, TravelMode by) =>
         c is null ? null : FormattableString.Invariant($"{c.Lat:0.#####},{c.Lon:0.#####}|{minutes}|{by}");

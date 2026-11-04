@@ -93,7 +93,8 @@ window.rl = {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">contributeurs OpenStreetMap</a>',
       }).addTo(map);
       const layer = L.featureGroup().addTo(map);
-      const state = { map, layer, dotnet, fitKey: null };
+      const zones = L.featureGroup().addTo(map);
+      const state = { map, layer, zones, zoneLayers: new Map(), dotnet, fitKey: null, generation: 0, unavailable: '[]' };
       map.on('click', (e) => dotnet.invokeMethodAsync('Point', e.latlng.lat, e.latlng.lng));
       rl.zoneMap.maps.set(el, state);
       // Le bloc peut encore changer de taille juste après l'affichage.
@@ -123,13 +124,59 @@ window.rl = {
           .bindTooltip(m.label)
           .addTo(st.layer);
       }
-      if (s.fitKey !== st.fitKey) {
-        st.fitKey = s.fitKey;
-        const b = st.layer.getBounds();
-        if (!b.isValid()) return;
-        if (b.getNorthEast().equals(b.getSouthWest())) st.map.setView(b.getCenter(), 12);
-        else st.map.fitBounds(b, { padding: [24, 24], maxZoom: 13 });
+      const fit = s.fitKey !== st.fitKey;
+      st.fitKey = s.fitKey;
+      rl.zoneMap.syncZones(st, s.zones ?? [], color).then((current) => {
+        if (current && fit) rl.zoneMap.fit(st);
+      });
+    },
+
+    /** Recadre la carte sur tout ce qui est affiché. */
+    fit(st) {
+      const b = st.layer.getBounds();
+      if (st.zones.getLayers().length > 0) b.extend(st.zones.getBounds());
+      if (!b.isValid()) return;
+      if (b.getNorthEast().equals(b.getSouthWest())) st.map.setView(b.getCenter(), 12);
+      else st.map.fitBounds(b, { padding: [24, 24], maxZoom: 13 });
+    },
+
+    /**
+     * Affiche le contour de chaque lieu. Les contours sont gardés entre deux mises à jour. Contour indisponible :
+     * un point au centre du lieu, s'il est connu, et le nom du lieu est signalé à Blazor.
+     * Retourne false si une mise à jour plus récente a pris le relais.
+     */
+    async syncZones(st, zones, color) {
+      const generation = ++st.generation;
+      const wanted = new Set(zones.map((z) => z.key));
+      for (const [key, layer] of st.zoneLayers) {
+        if (wanted.has(key)) continue;
+        st.zones.removeLayer(layer);
+        st.zoneLayers.delete(key);
       }
+      const missing = [];
+      await Promise.all(zones.map(async (z) => {
+        if (st.zoneLayers.has(z.key)) return;
+        let layer = null;
+        try {
+          const res = await fetch(z.url);
+          if (!res.ok) throw new Error(String(res.status));
+          layer = L.geoJSON(await res.json(), { style: { color, weight: 2, fillOpacity: 0.14 } }).bindTooltip(z.label, { sticky: true });
+        } catch {
+          missing.push(z.label);
+          if (z.center) layer = L.circleMarker(z.center, { radius: 7, color: '#16a34a', weight: 2, fillOpacity: 0.6 }).bindTooltip(z.label);
+        }
+        if (layer && generation === st.generation) {
+          st.zoneLayers.set(z.key, layer);
+          st.zones.addLayer(layer);
+        }
+      }));
+      if (generation !== st.generation) return false;
+      const unavailable = JSON.stringify(missing.sort());
+      if (unavailable !== st.unavailable) {
+        st.unavailable = unavailable;
+        st.dotnet.invokeMethodAsync('ZonesUnavailable', missing);
+      }
+      return true;
     },
 
     dispose(el) {

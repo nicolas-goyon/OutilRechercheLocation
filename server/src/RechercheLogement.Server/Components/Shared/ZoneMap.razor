@@ -1,19 +1,27 @@
 @using System.Text.Json
+@using RechercheLogement.Server.Geo
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
-@* Carte (Leaflet + OpenStreetMap) : point de départ déplaçable, cercle ou zone de trajet, lieux choisis. Un clic renvoie le point. *@
+@* Carte (Leaflet + OpenStreetMap) : point de départ déplaçable, cercle ou zone de trajet, contours des lieux choisis. Un clic renvoie le point. *@
 <div class="zone-map-wrap">
     <div class="zone-map" @ref="_element"></div>
     @if (_failed)
     {
         <div class="zone-map-off muted">Carte indisponible : la bibliothèque Leaflet n'a pas pu être chargée (connexion internet ?).</div>
     }
+    @if (_unavailable.Length > 0)
+    {
+        <div class="zone-map-off muted">Contour indisponible pour : @string.Join(", ", _unavailable). Ces lieux restent utilisés pour la recherche.</div>
+    }
 </div>
 
 @code {
     /// <summary>Lieu affiché par un point vert (mode lieux).</summary>
     public sealed record Marker(GeoPoint Point, string Label);
+
+    /// <summary>Zone administrative affichée par son contour. <paramref name="Center"/> : point de repli si le contour manque.</summary>
+    public sealed record Zone(PlaceType Type, string Code, string Label, GeoPoint? Center);
 
     /// <summary>Point de départ (marqueur déplaçable).</summary>
     [Parameter] public GeoPoint? Center { get; set; }
@@ -22,6 +30,8 @@
     /// <summary>Zone exacte (isochrone).</summary>
     [Parameter] public List<List<GeoPoint>>? Rings { get; set; }
     [Parameter] public IReadOnlyList<Marker> Markers { get; set; } = [];
+    /// <summary>Lieux affichés par leur contour (mode lieux).</summary>
+    [Parameter] public IReadOnlyList<Zone> Zones { get; set; } = [];
     /// <summary>Changer cette valeur recadre la carte sur son contenu.</summary>
     [Parameter] public string FitKey { get; set; } = "";
     /// <summary>Clic sur la carte, ou marqueur déplacé.</summary>
@@ -31,6 +41,7 @@
     private DotNetObjectReference<ZoneMap>? _self;
     private bool _ready, _failed;
     private string? _sent;
+    private string[] _unavailable = [];
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -59,6 +70,13 @@
             radiusM = Center is not null && RadiusKm is > 0 ? RadiusKm * 1000 : null,
             rings = Rings?.Select(r => r.Select(p => new[] { p.Lat, p.Lon })),
             markers = Markers.Select(m => new { lat = m.Point.Lat, lon = m.Point.Lon, label = m.Label }),
+            zones = Zones.Select(z => new
+            {
+                key = $"{z.Type}/{z.Code}",
+                url = GeoContours.Url(z.Type, z.Code),
+                label = z.Label,
+                center = z.Center is { } zc ? new[] { zc.Lat, zc.Lon } : null,
+            }),
             fitKey = FitKey,
         });
         if (state == _sent) return;
@@ -68,6 +86,14 @@
 
     [JSInvokable]
     public Task Point(double lat, double lon) => OnPoint.InvokeAsync(new GeoPoint(lat, lon));
+
+    /// <summary>Contours que le navigateur n'a pas pu charger (service indisponible).</summary>
+    [JSInvokable]
+    public Task ZonesUnavailable(string[] labels)
+    {
+        _unavailable = labels;
+        return InvokeAsync(StateHasChanged);
+    }
 
     public async ValueTask DisposeAsync()
     {
