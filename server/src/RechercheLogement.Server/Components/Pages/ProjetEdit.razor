@@ -64,7 +64,7 @@
                 </div>
                 <div class="muted small">
                     Taper puis Entrée (ou choisir dans la liste) : chaque lieu reconnu devient une étiquette, et sa zone s'affiche sur la carte.
-                    Un clic sur la carte ajoute la commune cliquée ; « Sélectionner sur la carte » permet aussi de choisir un code postal, un département ou une région. Chaque site reçoit ces lieux ; celui qu'il a reconnu s'affiche après le premier lancement.
+                    Un clic sur la carte ajoute la commune cliquée ; « Sélectionner sur la carte » ouvre une fenêtre pour choisir aussi des codes postaux, départements, régions ou un rayon. Chaque site reçoit ces lieux ; celui qu'il a reconnu s'affiche après le premier lancement.
                 </div>
             </div>
         }
@@ -110,30 +110,10 @@
         @if (_mode == LocationMode.Places)
         {
             <div class="zone-picker">
-                <button type="button" class="@(_picking ? "active" : "")" aria-pressed="@(_picking ? "true" : "false")" @onclick="TogglePicking">
-                    @(_picking ? "Terminer la sélection" : "Sélectionner sur la carte")
-                </button>
-                @if (_picking && _levels is { Count: > 0 })
-                {
-                    <button type="button" disabled="@(_levelIndex == 0)" @onclick="() => SetLevel(_levelIndex - 1)">− Réduire</button>
-                    <div class="levels" role="group" aria-label="Niveau de la zone sélectionnée">
-                        @for (var i = 0; i < _levels.Count; i++)
-                        {
-                            var index = i;
-                            <button type="button" class="@(i == _levelIndex ? "on" : "")" title="@_levels[i].Display()" @onclick="() => SetLevel(index)">@LevelName(_levels[i].Type)</button>
-                        }
-                    </div>
-                    <button type="button" disabled="@(_levelIndex == _levels.Count - 1)" @onclick="() => SetLevel(_levelIndex + 1)">+ Élargir</button>
-                    <button type="button" class="danger" @onclick="RemovePicked">Retirer</button>
-                    <span class="muted small">@_levels[_levelIndex].Display()</span>
-                }
-                else if (_picking)
-                {
-                    <span class="muted small">Cliquer sur la carte pour choisir une zone, puis l'élargir ou la réduire.</span>
-                }
+                <button type="button" @onclick="() => _picking = true"><Icon Name="map" /> Sélectionner sur la carte</button>
             </div>
         }
-        <ZoneMap Center="MapCenter" RadiusKm="MapRadiusKm" Rings="MapRings" Markers="MapMarkers" Zones="MapZones" Picking="_picking" FitKey="@_fitKey.ToString(CultureInfo.InvariantCulture)" OnPoint="OnMapPoint" />
+        <ZoneMap Center="MapCenter" RadiusKm="MapRadiusKm" Rings="MapRings" Markers="MapMarkers" Zones="MapZones" FitKey="@_fitKey.ToString(CultureInfo.InvariantCulture)" OnPoint="OnMapPoint" />
         @if (_mapMessage is not null)
         {
             <div class="map-help muted small">@_mapMessage</div>
@@ -149,6 +129,11 @@
         }
     </div>
 </section>
+
+@if (_picking)
+{
+    <ZonePicker Places="_places" OnSave="SavePicked" OnClose="() => _picking = false" />
+}
 
 <section class="panel">
     <h2>Critères</h2>
@@ -271,14 +256,6 @@
     private string? _centerPicked;
     private int _fitKey;
     private bool _picking;
-    /// <summary>Lieux qui contiennent le dernier point cliqué, du plus petit au plus grand.</summary>
-    private List<ProjectLocation>? _levels;
-    private int _levelIndex;
-    /// <summary>La zone sélectionnée a été ajoutée par ce clic : changer de niveau la remplace.</summary>
-    private bool _pickOwned;
-    /// <summary>Niveau repris au clic suivant.</summary>
-    private PlaceType _pickLevel = PlaceType.PostalCode;
-    private int _pickRequest;
     private string? _mapMessage;
     private List<List<GeoPoint>>? _previewRings;
     private string? _previewKey;
@@ -375,7 +352,6 @@
     private void RemovePlace(ProjectLocation l)
     {
         _places.Remove(l);
-        if (_levels?[_levelIndex].Key() == l.Key()) _levels = null;
         _mapMessage = null;
         _fitKey++;
     }
@@ -385,63 +361,13 @@
         if (_places.Count > 0) RemovePlace(_places[^1]);
     }
 
-    // ------------------------------------------------------------------ zone : sélection à vue
-
-    private static string LevelName(PlaceType type) => type switch
+    /// <summary>« Enregistrer les zones » dans la modale de sélection.</summary>
+    private void SavePicked(List<ProjectLocation> places)
     {
-        PlaceType.PostalCode => "Code postal",
-        PlaceType.Commune => "Commune",
-        PlaceType.Department => "Département",
-        PlaceType.Region => "Région",
-        _ => "Lieu",
-    };
-
-    private void TogglePicking()
-    {
-        _picking = !_picking;
-        _levels = null;
+        _places = places;
+        _picking = false;
         _mapMessage = null;
-    }
-
-    /// <summary>Clic en mode sélection : ajoute la zone au niveau utilisé en dernier.</summary>
-    private async Task PickAt(GeoPoint point)
-    {
-        var request = ++_pickRequest;
-        _mapMessage = "Recherche de la zone…";
-        var levels = await Geo.PlaceLevelsAtAsync(point, CancellationToken.None);
-        if (request != _pickRequest) return;
-        _mapMessage = null;
-        if (levels.Count == 0)
-        {
-            _mapMessage = "Aucune commune française à cet endroit.";
-            return;
-        }
-        _levels = levels;
-        _levelIndex = Math.Max(0, levels.FindIndex(l => l.Type == _pickLevel));
-        Select(levels[_levelIndex]);
-    }
-
-    /// <summary>Change le niveau de la zone sélectionnée : elle remplace la précédente si le dernier clic l'avait ajoutée.</summary>
-    private void SetLevel(int index)
-    {
-        if (_levels is null || index < 0 || index >= _levels.Count) return;
-        if (_pickOwned) _places.RemoveAll(x => x.Key() == _levels[_levelIndex].Key());
-        _levelIndex = index;
-        _pickLevel = _levels[index].Type;
-        Select(_levels[index]);
-    }
-
-    private void Select(ProjectLocation l)
-    {
-        _pickOwned = _places.All(x => x.Key() != l.Key());
-        if (_pickOwned) _places.Add(l);
-        _mapMessage = _pickOwned ? null : $"« {l.Display()} » est déjà dans la liste.";
         _fitKey++;
-    }
-
-    private void RemovePicked()
-    {
-        if (_levels is not null) RemovePlace(_levels[_levelIndex]);
     }
 
     // ------------------------------------------------------------------ zone : point de départ et carte
@@ -463,8 +389,6 @@
     private void SetMode(LocationMode mode)
     {
         _mode = mode;
-        _picking = false;
-        _levels = null;
         _mapMessage = null;
         _fitKey++;
         PreviewTravel();
@@ -505,11 +429,6 @@
         _mapMessage = null;
         try
         {
-            if (_mode == LocationMode.Places && _picking)
-            {
-                await PickAt(point);
-                return;
-            }
             if (_mode == LocationMode.Places)
             {
                 if (await Geo.CommuneAtAsync(point, CancellationToken.None) is { } commune) AddPlace(commune);

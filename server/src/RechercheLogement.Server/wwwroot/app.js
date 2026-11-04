@@ -19,6 +19,11 @@ window.rl = {
     },
   },
 
+  /** Affiche une fenêtre modale : le navigateur gère le focus et la touche Échap. */
+  openDialog(dialog) {
+    dialog?.showModal();
+  },
+
   /** Copie le texte. Retourne true si la copie a réussi. */
   async copy(text) {
     try {
