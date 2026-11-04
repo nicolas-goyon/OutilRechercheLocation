@@ -1,0 +1,33 @@
+@* Photos d'un bien, une à la fois. Les boutons restent hors du lien : ils n'ouvrent pas la fiche. *@
+@if (Photos.Count == 0)
+{
+    <a class="photo-link" href="@Href" aria-hidden="true" tabindex="-1"><span class="nophoto"><Icon Name="house" /></span></a>
+}
+else
+{
+    <div class="carousel">
+        <a class="photo-link" href="@Href" aria-hidden="true" tabindex="-1">
+            <img src="@Format.Thumb(Photos[Index], Width, Height)" alt="" loading="lazy" />
+        </a>
+        @if (Photos.Count > 1)
+        {
+            <button type="button" class="carousel-nav prev" aria-label="Photo précédente" @onclick="() => Move(-1)"><Icon Name="arrow-left" /></button>
+            <button type="button" class="carousel-nav next" aria-label="Photo suivante" @onclick="() => Move(1)"><Icon Name="arrow-right" /></button>
+            <span class="carousel-count">@(Index + 1)/@Photos.Count</span>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<string> Photos { get; set; } = [];
+    [Parameter, EditorRequired] public string Href { get; set; } = "";
+    [Parameter] public int Width { get; set; } = 400;
+    [Parameter] public int Height { get; set; } = 240;
+
+    private int _index;
+
+    /// <summary>Les photos peuvent changer pendant l'affichage : la position reste valide.</summary>
+    private int Index => Photos.Count == 0 ? 0 : Math.Min(_index, Photos.Count - 1);
+
+    private void Move(int delta) => _index = (Index + delta + Photos.Count) % Photos.Count;
+}

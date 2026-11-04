@@ -19,6 +19,9 @@
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<PropertySummary> Items { get; set; } = [];
 
+    /// <summary>Photos envoyées par bien à l'aperçu de la carte : jusqu'à 300 biens passent à chaque mise à jour.</summary>
+    private const int MaxPhotos = 12;
+
     private ElementReference _element;
     private bool _ready, _failed;
     private string? _sent;
@@ -69,6 +72,7 @@
                 detail = $"{Format.Price(i.Price)}, {Format.Surface(i.Surface)}",
                 place = $"{i.PostalCode} {i.City}".Trim(),
                 status = Format.StatusClass(i.Property.Status),
+                photos = (i.Photos ?? []).Take(MaxPhotos).Select(u => Format.Thumb(u, 480, 300)),
             };
         }).OfType<object>().ToList();
         _exact = items.Count(i => i.Geo is not null);

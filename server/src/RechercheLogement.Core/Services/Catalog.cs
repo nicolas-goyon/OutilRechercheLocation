@@ -714,7 +714,8 @@ public sealed class Catalog
             listings.Select(l => l.Data.District).FirstOrDefault(x => x is not null),
             listings.SelectMany(l => l.Data.Photos ?? []).FirstOrDefault(),
             listings.Count == 0 ? 0 : listings.Max(l => l.LastSeenAt),
-            listings.Select(l => l.Data.Geo).FirstOrDefault(x => x is not null));
+            listings.Select(l => l.Data.Geo).FirstOrDefault(x => x is not null),
+            listings.SelectMany(l => l.Data.Photos ?? []).Distinct(StringComparer.Ordinal).ToList());
     }
 
     private void AddListingToIndexes(Listing l)
@@ -776,7 +777,8 @@ public sealed record PropertySummary(
     string? District,
     string? Photo,
     long LastSeenAt,
-    GeoPoint? Geo = null);
+    GeoPoint? Geo = null,
+    IReadOnlyList<string>? Photos = null);
 
 public sealed record PendingDuplicate(DuplicateLink Link, Listing A, Listing B, PropertyStatus StatusA, PropertyStatus StatusB);
 
