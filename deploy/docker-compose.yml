@@ -5,7 +5,7 @@
 #
 # Démarrer :            docker compose up -d                      puis ouvrir http://localhost:5080
 # Afficher le token :   docker compose logs server | grep "Token API"   (ou page Paramètres)
-# Mettre à jour :       docker compose up -d --pull always       (ou ./update.sh / .\update.ps1)
+# Mettre à jour :       ./update.sh ou .\update.ps1 (sauvegarde, vérification du démarrage)
 # Revenir en arrière :  RL_TAG=sha-<commit> docker compose up -d       (tags : latest, <version>, sha-<commit>)
 #
 # Les données (fichier SQLite) sont dans le volume Docker. Une mise à jour ne les efface pas :
@@ -28,6 +28,14 @@ services:
       # RechercheLogement__ApiToken: "change-moi"
     volumes:
       - data:/data
+    healthcheck:
+      # Pas de curl dans l'image : requête /health avec bash seul.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health HTTP/1.0\r\n\r\n' >&3 && grep -q ' 200 ' <&3"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      start_interval: 2s
+      retries: 3
     restart: unless-stopped
 
 volumes:

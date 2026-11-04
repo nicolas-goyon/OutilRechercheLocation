@@ -59,7 +59,8 @@ server/
   src/RechercheLogement.Server/    Hôte web
     Program.cs, ServerSettings.cs
     Api/                  /api/ping, /api/sync, /api/listings/{key}, /api/export + token
-    Storage/SqlitePersistence.cs   Schéma, migrations (PRAGMA user_version), écriture en transaction
+    Storage/SqlitePersistence.cs   Schéma, écriture en transaction
+    Storage/SqliteMigrator.cs      Migrations (PRAGMA user_version, SQL + données JSON), sauvegarde, refus d'une base trop récente
     Components/           Pages Blazor (interactive server) : tableau de bord, à contacter,
                           biens, fiche, doublons, paramètres
   tests/RechercheLogement.Tests/   xUnit : DedupScorer, Catalog, API (WebApplicationFactory)

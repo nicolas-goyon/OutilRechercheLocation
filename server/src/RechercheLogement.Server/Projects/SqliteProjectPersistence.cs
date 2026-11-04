@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using RechercheLogement.Core.Projects;
+using RechercheLogement.Server.Storage;
 
 namespace RechercheLogement.Server.Projects;
 
@@ -10,7 +11,7 @@ namespace RechercheLogement.Server.Projects;
 /// </summary>
 public sealed class SqliteProjectPersistence : IProjectPersistence
 {
-    private static readonly string[] Migrations =
+    public static readonly Migration[] Migrations =
     [
         // v1
         """
@@ -41,16 +42,7 @@ public sealed class SqliteProjectPersistence : IProjectPersistence
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
         _connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = true }.ToString();
         using var c = Open();
-        using var read = c.CreateCommand();
-        read.CommandText = "PRAGMA user_version";
-        var version = Convert.ToInt32(read.ExecuteScalar());
-        for (var v = version; v < Migrations.Length; v++)
-        {
-            using var tx = c.BeginTransaction();
-            Exec(c, tx, Migrations[v]);
-            Exec(c, tx, $"PRAGMA user_version = {v + 1}");
-            tx.Commit();
-        }
+        SqliteMigrator.Apply(c, path, Migrations);
     }
 
     public ProjectSnapshot Load()
