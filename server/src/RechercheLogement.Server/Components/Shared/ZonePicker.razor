@@ -1,0 +1,221 @@
+@using RechercheLogement.Server.Geo
+@inject GeoServices Geo
+@inject IJSRuntime JS
+
+@* Modale de sélection des zones. Travaille sur une copie : les zones reviennent au projet avec « Enregistrer les zones ». *@
+<dialog class="zone-dialog" @ref="_dialog" aria-labelledby="zone-dialog-title" @oncancel="OnCancel">
+    <div class="zone-dialog-map">
+        <ZoneMap Center="MapCenter" RadiusKm="MapRadiusKm" Zones="MapZones" Picking="true" FitKey="@_fitKey.ToString(CultureInfo.InvariantCulture)" OnPoint="OnPoint" />
+    </div>
+    <aside class="zone-dialog-side">
+        <h2 id="zone-dialog-title">Sélectionner les zones</h2>
+
+        <fieldset>
+            <legend>Un clic sur la carte ajoute</legend>
+            @foreach (var (mode, label) in Modes)
+            {
+                <label class="zone-option">
+                    <input type="radio" name="zone-mode" checked="@(_mode == mode)" @onchange="() => SetMode(mode)" /> @label
+                </label>
+            }
+            @if (_mode == PickMode.Radius)
+            {
+                <label class="zone-radius">
+                    Rayon
+                    <input type="number" min="1" max="100" step="1" @bind="_radiusKm" @bind:event="oninput" /> km
+                </label>
+            }
+        </fieldset>
+
+        @if (_message is not null) { <p class="muted small" role="status">@_message</p> }
+
+        @if (_levels is { Count: > 0 })
+        {
+            <div class="zone-last">
+                <span class="small">Dernière zone : @_levels[_levelIndex].Display()</span>
+                <div>
+                    <button type="button" disabled="@(_levelIndex == 0)" @onclick="() => SetLevel(_levelIndex - 1)">Réduire</button>
+                    <button type="button" disabled="@(_levelIndex == _levels.Count - 1)" @onclick="() => SetLevel(_levelIndex + 1)">Élargir</button>
+                </div>
+            </div>
+        }
+
+        <div class="zone-selected-head">
+            <h3>@_places.Count zone(s) choisie(s)</h3>
+            <button type="button" disabled="@(_history.Count == 0)" @onclick="Undo">Annuler le dernier ajout</button>
+        </div>
+        <ul class="zone-selected">
+            @foreach (var l in _places)
+            {
+                <li>
+                    <span>@l.Display()</span>
+                    <button type="button" aria-label="Retirer @l.Display()" title="Retirer" @onclick="() => Remove(l)"><Icon Name="x" /></button>
+                </li>
+            }
+        </ul>
+        @if (_places.Count == 0)
+        {
+            <p class="muted small">Cliquer sur la carte pour ajouter une zone. Recliquer sur une zone la retire.</p>
+        }
+
+        <div class="zone-dialog-actions">
+            <button type="button" class="primary" @onclick="Save">Enregistrer les zones</button>
+            <button type="button" @onclick="OnClose">Annuler</button>
+        </div>
+    </aside>
+</dialog>
+
+@code {
+    private enum PickMode { PostalCode, Commune, Department, Region, Radius }
+
+    private static readonly (PickMode Mode, string Label)[] Modes =
+    [
+        (PickMode.PostalCode, "Le code postal"),
+        (PickMode.Commune, "La commune"),
+        (PickMode.Department, "Le département"),
+        (PickMode.Region, "La région"),
+        (PickMode.Radius, "Tous les codes postaux dans un rayon"),
+    ];
+
+    /// <summary>Zones du projet à l'ouverture. La liste n'est pas modifiée.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<ProjectLocation> Places { get; set; } = [];
+    [Parameter] public EventCallback<List<ProjectLocation>> OnSave { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private ElementReference _dialog;
+    private List<ProjectLocation> _places = [];
+    private readonly Stack<List<ProjectLocation>> _history = new();
+    private PickMode _mode = PickMode.PostalCode;
+    private double _radiusKm = 20;
+    private GeoPoint? _radiusCenter;
+    private List<ProjectLocation>? _levels;
+    private int _levelIndex;
+    private string? _message;
+    private int _fitKey;
+    private int _request;
+
+    private GeoPoint? MapCenter => _mode == PickMode.Radius ? _radiusCenter : null;
+    private double? MapRadiusKm => _mode == PickMode.Radius ? _radiusKm : null;
+
+    /// <summary>Lieux sans contour (anciens lieux en texte libre) : gardés, mais absents de la carte.</summary>
+    private List<ZoneMap.Zone> MapZones =>
+        _places.Where(l => l.Type != PlaceType.Free && !string.IsNullOrEmpty(l.Code)).Select(l => new ZoneMap.Zone(l.Type, l.Code!, l.Display(), l.Center)).ToList();
+
+    protected override void OnInitialized()
+    {
+        _places = [.. Places];
+        // Cadrage à l'ouverture seulement : la carte ne bouge pas pendant qu'on clique.
+        if (_places.Count > 0) _fitKey++;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await JS.InvokeVoidAsync("rl.openDialog", _dialog);
+    }
+
+    private Task OnCancel() => OnClose.InvokeAsync();
+
+    private async Task Save() => await OnSave.InvokeAsync(_places);
+
+    private void SetMode(PickMode mode)
+    {
+        _mode = mode;
+        _radiusCenter = null;
+        _message = null;
+        // Le choix s'applique aussi à la dernière zone cliquée, quand ce niveau existe.
+        if (_levels is not null && _levels.FindIndex(l => l.Type == TypeOf(mode)) is >= 0 and var index) SetLevel(index);
+    }
+
+    private static PlaceType? TypeOf(PickMode mode) => mode switch
+    {
+        PickMode.PostalCode => PlaceType.PostalCode,
+        PickMode.Commune => PlaceType.Commune,
+        PickMode.Department => PlaceType.Department,
+        PickMode.Region => PlaceType.Region,
+        _ => null,
+    };
+
+    private void Remember() => _history.Push([.. _places]);
+
+    private void Undo()
+    {
+        if (_history.Count == 0) return;
+        _places = _history.Pop();
+        _levels = null;
+        _message = null;
+    }
+
+    private void Remove(ProjectLocation l)
+    {
+        Remember();
+        _places.RemoveAll(x => x.Key() == l.Key());
+        if (_levels?[_levelIndex].Key() == l.Key()) _levels = null;
+        _message = null;
+    }
+
+    private async Task OnPoint(GeoPoint point)
+    {
+        var request = ++_request;
+        _message = "Recherche de la zone…";
+        StateHasChanged();
+        try
+        {
+            if (_mode == PickMode.Radius) await PickRadius(point, request);
+            else await PickLevel(point, request);
+        }
+        catch (SiteException e)
+        {
+            if (request == _request) _message = e.Message;
+        }
+    }
+
+    private async Task PickLevel(GeoPoint point, int request)
+    {
+        var levels = await Geo.PlaceLevelsAtAsync(point, CancellationToken.None);
+        if (request != _request) return;
+        _message = null;
+        if (levels.Count == 0)
+        {
+            _message = "Aucune commune française à cet endroit.";
+            return;
+        }
+        var index = Math.Max(0, levels.FindIndex(l => l.Type == TypeOf(_mode)));
+        // Clic sur une zone déjà choisie : elle est retirée.
+        if (_places.FirstOrDefault(x => x.Key() == levels[index].Key()) is { } existing)
+        {
+            Remove(existing);
+            _levels = null;
+            return;
+        }
+        Remember();
+        _levels = levels;
+        _levelIndex = index;
+        _places.Add(levels[index]);
+    }
+
+    private async Task PickRadius(GeoPoint point, int request)
+    {
+        _radiusCenter = point;
+        var found = await Geo.PostalCodesAroundAsync(point, Math.Clamp(_radiusKm, 1, 100), CancellationToken.None);
+        if (request != _request) return;
+        var added = found.Where(l => _places.All(x => x.Key() != l.Key())).ToList();
+        _levels = null;
+        if (added.Count > 0)
+        {
+            Remember();
+            _places.AddRange(added);
+            }
+        _message = found.Count == 0 ? "Aucun code postal français dans ce rayon." : $"{added.Count} code(s) postal(aux) ajouté(s) sur {found.Count} dans ce rayon.";
+    }
+
+    /// <summary>Remplace la dernière zone par une zone plus large ou plus petite.</summary>
+    private void SetLevel(int index)
+    {
+        if (_levels is null || index < 0 || index >= _levels.Count || index == _levelIndex) return;
+        Remember();
+        _places.RemoveAll(x => x.Key() == _levels[_levelIndex].Key());
+        _levelIndex = index;
+        if (_places.All(x => x.Key() != _levels[index].Key())) _places.Add(_levels[index]);
+        if (TypeOf(_mode) is not null && _levels[index].Type is var type) _mode = Enum.Parse<PickMode>(type.ToString());
+    }
+}

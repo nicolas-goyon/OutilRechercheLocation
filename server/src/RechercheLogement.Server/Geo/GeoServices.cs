@@ -152,6 +152,35 @@ public sealed class GeoServices(IHttpClientFactory factory)
         return levels;
     }
 
+    /// <summary>Codes postaux des communes dont le centre est dans le rayon, du plus proche au plus loin.</summary>
+    public async Task<List<ProjectLocation>> PostalCodesAroundAsync(GeoPoint center, double radiusKm, CancellationToken ct)
+    {
+        var shape = GeoShape.Circle(center, radiusKm * 1000);
+        var departments = await Task.WhenAll(shape.BoundaryPoints(12).Prepend(center).Select(async p =>
+        {
+            try
+            {
+                return await DepartmentAtAsync(p, ct);
+            }
+            catch (SiteException)
+            {
+                return null; // Le reste du rayon reste utilisable.
+            }
+        }));
+        var codes = departments.OfType<string>().Distinct().ToList();
+
+        var communes = (await Task.WhenAll(codes.Select(d => CommunesAsync(d, ct))))
+            .SelectMany(c => c)
+            .Where(c => shape.Contains(c.Center))
+            .ToList();
+        return communes
+            .SelectMany(c => c.PostalCodes.Select(cp => (Code: cp, Commune: c)))
+            .GroupBy(x => x.Code)
+            .OrderBy(g => g.Min(x => DedupScorer.DistanceMeters(center, x.Commune.Center)))
+            .Select(g => PostalCodeSuggestion(g.Key, g.Select(x => x.Commune).ToList()).Location!)
+            .ToList();
+    }
+
     private static async Task AddLevelAsync(List<ProjectLocation> levels, Func<Task<ProjectLocation?>> load)
     {
         try

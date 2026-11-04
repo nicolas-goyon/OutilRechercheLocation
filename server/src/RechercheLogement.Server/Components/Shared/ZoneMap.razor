@@ -4,8 +4,9 @@
 @implements IAsyncDisposable
 
 @* Carte (Leaflet + OpenStreetMap) : point de départ déplaçable, cercle ou zone de trajet, contours des lieux choisis. Un clic renvoie le point. *@
-<div class="zone-map-wrap">
-    <div class="zone-map @(Picking ? "picking" : "")" @ref="_element"></div>
+@* La classe « picking » reste sur le parent : Leaflet ajoute ses propres classes au bloc de la carte. *@
+<div class="zone-map-wrap @(Picking ? "picking" : "")">
+    <div class="zone-map" @ref="_element"></div>
     @if (_failed)
     {
         <div class="zone-map-off muted">Carte indisponible : la bibliothèque Leaflet n'a pas pu être chargée. Recharger la page.</div>
@@ -32,7 +33,7 @@
     [Parameter] public IReadOnlyList<Marker> Markers { get; set; } = [];
     /// <summary>Lieux affichés par leur contour (mode lieux).</summary>
     [Parameter] public IReadOnlyList<Zone> Zones { get; set; } = [];
-    /// <summary>Sélection à vue active : curseur en croix.</summary>
+    /// <summary>Sélection des zones active : curseur en croix.</summary>
     [Parameter] public bool Picking { get; set; }
     /// <summary>Changer cette valeur recadre la carte sur son contenu.</summary>
     [Parameter] public string FitKey { get; set; } = "";

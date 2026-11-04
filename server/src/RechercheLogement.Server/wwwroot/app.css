@@ -230,17 +230,44 @@ ul.warn { color: var(--rejected); }
 /* Carte de la zone (ZoneMap) */
 .zone-map-wrap { grid-column: 1 / -1; }
 .zone-map { height: 360px; border: 1px solid var(--border); border-radius: 8px; z-index: 0; }
-.zone-map.picking, .zone-map.picking .leaflet-interactive { cursor: crosshair; }
+.zone-map-wrap.picking .leaflet-container, .zone-map-wrap.picking .leaflet-interactive { cursor: crosshair; }
 .zone-map-off { padding: 8px 0; }
 .zone-picker { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.zone-picker button.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-.zone-picker button:disabled { opacity: .45; cursor: default; }
-.zone-picker .levels { display: inline-flex; }
-.zone-picker .levels button { border-radius: 0; margin-left: -1px; }
-.zone-picker .levels button:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
-.zone-picker .levels button:last-child { border-radius: 0 6px 6px 0; }
-.zone-picker .levels button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); position: relative; }
+.zone-picker button { display: inline-flex; gap: 6px; align-items: center; }
 .map-help { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0; }
+
+/* Modale de sélection des zones */
+.zone-dialog { width: min(1280px, calc(100vw - 32px)); height: min(860px, calc(100vh - 32px)); max-width: none; max-height: none; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--fg); overflow: hidden; }
+.zone-dialog[open] { display: grid; grid-template-columns: minmax(0, 1fr) 340px; }
+.zone-dialog::backdrop { background: rgba(8, 16, 13, .6); }
+.zone-dialog-map { min-height: 0; min-width: 0; }
+.zone-dialog-map .zone-map-wrap { height: 100%; display: flex; flex-direction: column; }
+.zone-dialog-map .zone-map { flex: 1; height: auto; min-height: 0; border: none; border-radius: 0; }
+.zone-dialog-map .zone-map-off { padding: 8px 12px; }
+.zone-dialog-side { display: flex; flex-direction: column; gap: 12px; padding: 18px 20px; min-height: 0; border-left: 1px solid var(--border); }
+.zone-dialog-side h2 { margin: 0; }
+.zone-dialog-side h3 { margin: 0; }
+.zone-dialog-side p { margin: 0; }
+.zone-dialog-side fieldset { border: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.zone-dialog-side legend { padding: 0 0 6px; font-weight: 600; }
+.zone-option { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+.zone-radius { display: flex; gap: 8px; align-items: center; margin: 4px 0 0 24px; }
+.zone-radius input { width: 76px; }
+.zone-last { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--border); }
+.zone-last > div { display: flex; gap: 6px; }
+.zone-last button:disabled, .zone-selected-head button:disabled { opacity: .45; cursor: default; }
+.zone-selected-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+.zone-selected-head button { padding: 2px 8px; font-size: 13px; }
+.zone-selected { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 60px; overflow-y: auto; }
+.zone-selected li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 3px 0; }
+.zone-selected button { padding: 2px 4px; border: none; background: none; color: var(--muted); }
+.zone-selected button:hover { color: var(--rejected); }
+.zone-dialog-actions { display: flex; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+@media (max-width: 800px) {
+  .zone-dialog { width: 100vw; height: 100dvh; border: none; border-radius: 0; }
+  .zone-dialog[open] { grid-template-columns: 1fr; grid-template-rows: 45% minmax(0, 1fr); }
+  .zone-dialog-side { border-left: none; border-top: 1px solid var(--border); overflow-y: auto; padding: 12px 16px; }
+}
 
 /* Tous les biens : vues et carte */
 .view-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }

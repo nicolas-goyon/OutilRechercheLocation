@@ -106,6 +106,26 @@ public class GeoLevelsTests
     }
 
     [Fact]
+    public async Task PostalCodesAround_KeepCommunesInTheRadius_NearestFirst()
+    {
+        var fake = new Fake(p => p switch
+        {
+            _ when p.StartsWith("/communes?lat=") => """[{ "codeDepartement": "65" }]""",
+            _ when p.StartsWith("/departements/65/communes") => """
+                [{ "nom": "Loin", "code": "1", "codesPostaux": ["65999"], "centre": { "coordinates": [1.5, 43.06] } },
+                 { "nom": "Voisine", "code": "2", "codesPostaux": ["65200"], "centre": { "coordinates": [0.25, 43.06] } },
+                 { "nom": "Ici", "code": "3", "codesPostaux": ["65100"], "centre": { "coordinates": [0.15, 43.06] } }]
+                """,
+            _ => null,
+        });
+
+        var found = await new GeoServices(fake).PostalCodesAroundAsync(Point, 20, default);
+
+        Assert.Equal(new[] { "65100", "65200" }, found.Select(l => l.Code));
+        Assert.All(found, l => Assert.Equal(PlaceType.PostalCode, l.Type));
+    }
+
+    [Fact]
     public void Region_IsSearchedDepartmentByDepartment()
     {
         var project = new SearchProject
