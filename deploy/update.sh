@@ -5,19 +5,23 @@
 set -eu
 cd "$(dirname "$0")"
 version() { docker inspect -f '{{ index .Config.Labels "org.opencontainers.image.version" }}' recherche-logement 2>/dev/null || echo '?'; }
-health() { docker inspect -f '{{ if .State.Health }}{{ .State.Health.Status }}{{ else }}unknown{{ end }}' recherche-logement 2>/dev/null || echo missing; }
+health() { docker inspect -f '{{ if .State.Health }}{{ .State.Health.Status }}{{ else }}{{ .State.Status }}{{ end }}' recherche-logement 2>/dev/null || echo missing; }
 
 before=$(version)
 docker compose pull
 docker compose up -d
 
+# docker-compose.yml plus ancien, sans healthcheck : on accepte un conteneur encore en marche après 15 s.
+ok=
 i=0
-while [ "$i" -lt 90 ] && [ "$(health)" != healthy ]; do
+while [ "$i" -lt 90 ] && [ -z "$ok" ]; do
   sleep 2
+  state=$(health)
+  if [ "$state" = healthy ] || { [ "$state" = running ] && [ "$i" -ge 7 ]; }; then ok=1; fi
   i=$((i + 1))
 done
 
-if [ "$(health)" != healthy ]; then
+if [ -z "$ok" ]; then
   echo "ÉCHEC : le serveur ne répond pas après la mise à jour. Dernières lignes du journal :" >&2
   docker compose logs --tail 30 server >&2 || true
   echo "Revenir à la version précédente : RL_TAG=$before docker compose up -d" >&2
