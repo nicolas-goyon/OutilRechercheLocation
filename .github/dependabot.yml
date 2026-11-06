@@ -1,21 +1,37 @@
-# Mises à jour des dépendances : une PR groupée par écosystème et par semaine.
+# Mises à jour des dépendances, chaque lundi.
+# - Versions mineures et correctifs : une PR groupée par écosystème (normalement sans risque).
+# - Versions majeures : une PR par dépendance, pour qu'une seule incompatibilité ne bloque pas tout le reste.
+# - Ignorées : les majeures qui ne peuvent pas passer en l'état (voir chaque règle) ; à réviser à la main.
 version: 2
 updates:
   - package-ecosystem: nuget
     directory: /server
     schedule: { interval: weekly, day: monday }
     groups:
-      nuget: { patterns: ['*'] }
+      nuget:
+        update-types: [minor, patch]
+
   - package-ecosystem: npm
     directory: /plugin
     schedule: { interval: weekly, day: monday }
     groups:
-      npm: { patterns: ['*'] }
+      npm:
+        update-types: [minor, patch]
+    ignore:
+      # typescript-eslint n'accepte que typescript < 6.1 : le lint casserait (npm ci refuse l'installation).
+      - dependency-name: typescript
+        versions: ['>= 6.1']
+      # Types de Node alignés sur la version de Node de la CI (node-version: 22 dans les workflows).
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
+
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly, day: monday }
     groups:
-      actions: { patterns: ['*'] }
+      actions:
+        update-types: [minor, patch]
+
   - package-ecosystem: docker
     directory: /server
     schedule: { interval: weekly, day: monday }
