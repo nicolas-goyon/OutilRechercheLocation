@@ -84,7 +84,36 @@ public static class ProjectFormat
     {
         LocationMode.Radius => $"{p.RadiusKm.ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"))} km autour de {p.CenterLabel ?? p.CenterQuery}",
         LocationMode.TravelTime => $"{p.TravelMinutes} min {Travel(p.TravelBy)} depuis {p.CenterLabel ?? p.CenterQuery}",
-        _ => string.Join(", ", p.Locations.Select(l => l.Display())),
+        _ => Places(p.Locations),
+    };
+
+    /// <summary>Lieux affichés en entier jusqu'à ce nombre ; au-delà, un résumé par type et par département.</summary>
+    public const int PlacesShown = 6;
+
+    /// <summary>"Vignec (65170), Arreau (65240)" ou, pour une longue liste, "312 communes, 4 codes postaux (64, 65, 31)".</summary>
+    public static string Places(IReadOnlyList<ProjectLocation> places)
+    {
+        if (places.Count <= PlacesShown) return string.Join(", ", places.Select(l => l.Display()));
+        var counts = places.GroupBy(l => l.Type).OrderByDescending(g => g.Count()).Select(g => Count(g.Key, g.Count()));
+        var departments = places
+            .SelectMany(l => l.Type switch
+            {
+                PlaceType.Department => [l.Code ?? ""],
+                PlaceType.Region => l.DepartmentCodes,
+                _ => l.PostalCodes.Concat([l.Code ?? ""]).Where(c => c.Length == 5).Take(1).SelectMany(ProjectScope.DepartmentOf),
+            })
+            .Where(d => d.Length > 0).Distinct().Order().ToList();
+        var where = departments.Count is > 0 and <= 8 ? $" ({string.Join(", ", departments)})" : departments.Count > 8 ? $" ({departments.Count} départements)" : "";
+        return string.Join(", ", counts) + where;
+    }
+
+    private static string Count(PlaceType type, int n) => type switch
+    {
+        PlaceType.Commune => $"{n} commune{(n > 1 ? "s" : "")}",
+        PlaceType.PostalCode => $"{n} code{(n > 1 ? "s" : "")} postal{(n > 1 ? "aux" : "")}",
+        PlaceType.Department => $"{n} département{(n > 1 ? "s" : "")}",
+        PlaceType.Region => $"{n} région{(n > 1 ? "s" : "")}",
+        _ => $"{n} lieu{(n > 1 ? "x" : "")}",
     };
 
     public static string Travel(TravelMode m) => m switch { TravelMode.Bike => "à vélo", TravelMode.Walk => "à pied", _ => "en voiture" };
