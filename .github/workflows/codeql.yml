@@ -1,0 +1,42 @@
+name: CodeQL
+
+# Analyse de sécurité et de qualité du code (C# et TypeScript). Les résultats apparaissent dans l'onglet
+# Security > Code scanning du dépôt, et en commentaires sur les PR.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths: ['server/**', 'plugin/**', '.github/workflows/codeql.yml']
+  schedule:
+    - cron: '41 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: csharp
+            build-mode: none
+          - language: javascript-typescript
+            build-mode: none
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-and-quality
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}

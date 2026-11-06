@@ -31,9 +31,9 @@ export interface ToolbarModel {
 }
 
 export interface ToolbarHandlers {
-  onStatus(status: PropertyStatus): void;
-  onDetails(): void;
-  onSuggestion(): void;
+  onStatus: (status: PropertyStatus) => void;
+  onDetails: () => void;
+  onSuggestion: () => void;
 }
 
 export type ToolbarVariant = 'card' | 'detail';
