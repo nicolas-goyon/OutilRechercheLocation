@@ -361,7 +361,7 @@ public class ProjectTests
         var q = ProjectRunner.ToQuery(commune);
         Assert.Equal(PlaceKind.Auto, q.Kind);
         Assert.Equal("12850", q.PostalCode);
-        Assert.Equal("onet-le-château|12850", q.CacheKey);
+        Assert.Equal("onet-le-château@12850", q.CacheKey);
         Assert.Equal(PlaceKind.PostalCode, ProjectRunner.ToQuery(new ProjectLocation { Type = PlaceType.PostalCode, Query = "12850", Code = "12850" }).Kind);
         Assert.Equal(new PlaceQuery(PlaceKind.Department, "Aveyron"), ProjectRunner.ToQuery(new ProjectLocation { Type = PlaceType.Department, Query = "Aveyron", Code = "12" }));
         // Anciens projets : texte libre.
@@ -369,21 +369,23 @@ public class ProjectTests
         Assert.Equal("Rodez", new ProjectLocation { Query = "Rodez" }.Display());
         Assert.Equal("commune:12176", commune.Key());
 
-        // Bien'ici : le lieu qui a le code postal de la commune, sinon le premier.
+        // Bien'ici : le lieu qui a le code postal de la commune, ou une homonyme du même département ; jamais ailleurs.
         var places = JsonNode.Parse("""
             [ { "name": "Saint-Martin", "type": "city", "postalCodes": ["05120"], "zoneIds": ["-1"] },
               { "name": "Saint-Martin", "type": "city", "postalCodes": ["32300"], "zoneIds": ["-2"] } ]
             """)!;
         Assert.Equal("-2", BieniciSearchAdapter.PickPlace(places, new PlaceQuery(PlaceKind.Auto, "Saint-Martin", "32300"))!.Ids[0]);
-        Assert.Equal("-1", BieniciSearchAdapter.PickPlace(places, new PlaceQuery(PlaceKind.Auto, "Saint-Martin", "99999"))!.Ids[0]);
+        Assert.Equal("-2", BieniciSearchAdapter.PickPlace(places, new PlaceQuery(PlaceKind.Auto, "Saint-Martin", "32999"))!.Ids[0]);
+        Assert.Null(BieniciSearchAdapter.PickPlace(places, new PlaceQuery(PlaceKind.Auto, "Saint-Martin", "99999")));
 
-        // SeLoger : le libellé qui contient le code postal ou le département.
+        // SeLoger : le libellé qui contient le code postal ou le département ; sinon non reconnu.
         var suggestion = JsonNode.Parse("""
             { "items": [ { "text": "Saint-Martin (05)", "criteria": { "location": { "placeIds": ["A"] } } },
                          { "text": "Saint-Martin (32)", "criteria": { "location": { "placeIds": ["B"] } } } ] }
             """)!;
         Assert.Equal("B", SelogerSearchAdapter.PickPlace(suggestion, new PlaceQuery(PlaceKind.Auto, "Saint-Martin", "32300"))!.Ids[0]);
         Assert.Equal("A", SelogerSearchAdapter.PickPlace(suggestion, new PlaceQuery(PlaceKind.Auto, "Saint-Martin"))!.Ids[0]);
+        Assert.Null(SelogerSearchAdapter.PickPlace(suggestion, new PlaceQuery(PlaceKind.Auto, "Saint-Martin", "66000")));
     }
 
     [Fact]

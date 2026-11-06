@@ -167,7 +167,7 @@ public sealed class ProjectStore
 
     public IReadOnlyList<ProjectResult> Results(string projectId)
     {
-        lock (_lock) return _results.TryGetValue(projectId, out var r) ? r.Values.OrderByDescending(x => x.FirstSeenAt).ToList() : [];
+        lock (_lock) return Shown(projectId).OrderByDescending(x => x.FirstSeenAt).ToList();
     }
 
     /// <summary>Biens du projet (annonces regroupées), les plus récents d'abord.</summary>
@@ -313,8 +313,19 @@ public sealed class ProjectStore
         return r;
     }
 
+    /// <summary>
+    /// Annonces affichées : celles d'un lieu du projet. Une annonce enregistrée hors des lieux (homonyme reconnue
+    /// par erreur, ou lieu retiré du projet) est gardée en base, mais n'apparaît plus.
+    /// </summary>
+    private IEnumerable<ProjectResult> Shown(string projectId)
+    {
+        var all = _results.GetValueOrDefault(projectId)?.Values ?? Enumerable.Empty<ProjectResult>();
+        if (!_projects.TryGetValue(projectId, out var p) || p.LocationMode != LocationMode.Places) return all;
+        return all.Where(r => !ProjectScope.OutsidePlaces(p, r.Data));
+    }
+
     private IEnumerable<ProjectGroup> GroupsOf(string projectId) =>
-        (_results.GetValueOrDefault(projectId)?.Values ?? Enumerable.Empty<ProjectResult>())
+        Shown(projectId)
             .GroupBy(r => r.GroupId)
             .Select(g => new ProjectGroup(g.Key, g.OrderBy(x => x.FirstSeenAt).ToList()))
             .OrderByDescending(g => g.FirstSeenAt);

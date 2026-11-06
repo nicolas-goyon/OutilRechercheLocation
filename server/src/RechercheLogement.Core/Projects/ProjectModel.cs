@@ -278,6 +278,24 @@ public static class ProjectScope
         };
     }
 
+    /// <summary>
+    /// Mode lieux : true si le code postal de l'annonce n'appartient à aucun lieu du projet. Sans code postal, ou avec
+    /// un lieu en texte libre, on ne peut pas trancher : l'annonce est gardée.
+    /// </summary>
+    public static bool OutsidePlaces(SearchProject p, ListingData d)
+    {
+        var cp = d.PostalCode?.Trim();
+        if (cp is not { Length: 5 } || p.Locations.Count == 0) return false;
+        return !p.Locations.Any(l => l.Type switch
+        {
+            PlaceType.PostalCode => cp == (l.Code ?? l.Query).Trim(),
+            PlaceType.Commune => l.PostalCodes.Count == 0 || l.PostalCodes.Contains(cp),
+            PlaceType.Department => l.Code is null || DepartmentOf(cp).Contains(l.Code.ToUpperInvariant()),
+            PlaceType.Region => l.DepartmentCodes.Count == 0 || DepartmentOf(cp).Intersect(l.DepartmentCodes).Any(),
+            _ => true,
+        });
+    }
+
     /// <summary>Code(s) de département d'un code postal : Corse "20" -> 2A ou 2B, outre-mer sur trois chiffres.</summary>
     public static IReadOnlyList<string> DepartmentOf(string postalCode)
     {
