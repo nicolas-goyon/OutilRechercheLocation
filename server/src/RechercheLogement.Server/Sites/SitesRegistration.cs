@@ -1,6 +1,7 @@
 using System.Net;
 using RechercheLogement.Server.Sites.Bienici;
 using RechercheLogement.Server.Sites.Common;
+using RechercheLogement.Server.Sites.Etat;
 using RechercheLogement.Server.Sites.Seloger;
 
 namespace RechercheLogement.Server.Sites;
@@ -22,6 +23,7 @@ public static class SitesRegistration
         services.AddSingleton(sp => new BrowserRelay(sp.GetRequiredService<ServerSettings>().SiteRelayDelayMs));
         services.AddSingleton<ISiteModule, BieniciSite>();
         services.AddSingleton<ISiteModule, SelogerSite>();
+        services.AddSingleton<ISiteModule, EtatSite>();
         services.AddSingleton<SiteRegistry>();
         return services;
     }

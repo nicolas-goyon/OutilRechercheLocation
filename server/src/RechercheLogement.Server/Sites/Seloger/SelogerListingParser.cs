@@ -43,13 +43,7 @@ public sealed partial class SelogerListingParser : IListingParser
                 { } d when d.StartsWith("BUY", StringComparison.OrdinalIgnoreCase) || d.StartsWith("SALE", StringComparison.OrdinalIgnoreCase) => TransactionType.Buy,
                 _ => null,
             },
-            PropertyType = JsonRead.Str(raw?["propertyType"]) switch
-            {
-                "APARTMENT" or "FLAT" or "STUDIO" => "flat",
-                "HOUSE" or "VILLA" => "house",
-                "LOFT" => "loft",
-                _ => null,
-            },
+            PropertyType = PropertyTypes.Normalize(JsonRead.Str(raw?["propertyType"])),
             Price = JsonRead.Dec(raw?["price"]),
             Surface = surface,
             Rooms = rooms,

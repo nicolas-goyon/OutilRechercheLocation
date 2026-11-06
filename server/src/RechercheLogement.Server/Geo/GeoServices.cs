@@ -31,6 +31,22 @@ public sealed class GeoServices(IHttpClientFactory factory)
     private readonly ConcurrentDictionary<string, List<PlanCommune>> _communes = new();
     private readonly ConcurrentDictionary<string, string> _departmentNames = new();
     private readonly ConcurrentDictionary<string, List<PlanCommune>> _postalCommunes = new();
+    private readonly ConcurrentDictionary<string, string?> _postalOfInsee = new();
+
+    /// <summary>Premier code postal d'une commune d'après son code INSEE ("51454" -> "51100"). null : inconnu.</summary>
+    public async Task<string?> PostalCodeOfCommuneAsync(string insee, CancellationToken ct)
+    {
+        if (_postalOfInsee.TryGetValue(insee, out var known)) return known;
+        try
+        {
+            var json = await GetGeoAsync($"communes/{Uri.EscapeDataString(insee)}?fields=codesPostaux", ct);
+            return _postalOfInsee[insee] = JsonRead.Strings(json["codesPostaux"]).FirstOrDefault();
+        }
+        catch (SiteException)
+        {
+            return null; // Annonce gardée sans code postal.
+        }
+    }
 
     private HttpClient Http => factory.CreateClient(SiteHttp.ClientName);
 

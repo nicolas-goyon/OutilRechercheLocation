@@ -181,6 +181,40 @@ public class PhotoLimitTests
     }
 }
 
+
+public class PropertyTypeTests
+{
+    [Theory]
+    [InlineData("APARTMENT", "flat")]
+    [InlineData("VILLA", "house")]
+    [InlineData("Plot", "terrain")]
+    [InlineData("shop", "commercial")]
+    [InlineData("others", "other")]
+    [InlineData("CASTLE", "castle")]
+    [InlineData("hovercraft", null)]
+    [InlineData(null, null)]
+    public void SiteValues_BecomeCommonTypes(string? value, string? expected) =>
+        Assert.Equal(expected, PropertyTypes.Normalize(value));
+
+    [Fact]
+    public void EachSite_TranslatesTheCommonTypes()
+    {
+        string[] types = ["house", "castle", "terrain", "commercial", "other"];
+        Assert.Equal(new[] { "house", "castle", "terrain", "shop", "premises", "office", "others" }, RechercheLogement.Server.Sites.Bienici.BieniciSearchAdapter.SiteTypes(types));
+        Assert.Equal(new[] { "House", "Plot", "Office", "Trading", "Miscellaneous", "Agriculture_Forestry" }, RechercheLogement.Server.Sites.Seloger.SelogerSearchAdapter.SiteTypes(types));
+    }
+
+    [Fact]
+    public void Matcher_ComparesCommonTypes_AndKeepsUnknownTypes()
+    {
+        var p = new SearchProject { Id = "p", Transaction = TransactionType.Buy, PropertyTypes = ["house", "terrain"] };
+        Assert.True(ProjectMatcher.Matches(p, new ListingData { PropertyType = "VILLA" }, out _));
+        Assert.True(ProjectMatcher.Matches(p, new ListingData { PropertyType = "Plot" }, out _));
+        Assert.True(ProjectMatcher.Matches(p, new ListingData { PropertyType = "hovercraft" }, out _));
+        Assert.False(ProjectMatcher.Matches(p, new ListingData { PropertyType = "flat" }, out _));
+    }
+}
+
 public class ProjectFormatTests
 {
     [Fact]
@@ -194,4 +228,5 @@ public class ProjectFormatTests
         Assert.Equal("C0", RechercheLogement.Server.Components.ProjectFormat.Places(places.Take(1).ToList()));
     }
 }
+
 

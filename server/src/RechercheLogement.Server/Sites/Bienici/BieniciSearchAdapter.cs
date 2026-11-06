@@ -112,6 +112,22 @@ public sealed class BieniciSearchAdapter(IHttpClientFactory factory) : ISearchAd
         return new SearchOutcome(items, complete, total);
     }
 
+    /// <summary>Types communs -> valeurs "propertyType" de Bien'ici (relevées sur l'API en novembre 2026).</summary>
+    public static IEnumerable<string> SiteTypes(IEnumerable<string> types) => types.Select(PropertyTypes.Normalize).SelectMany(t => t switch
+    {
+        PropertyTypes.Flat => ["flat"],
+        PropertyTypes.House => ["house"],
+        PropertyTypes.TownHouse => ["townhouse"],
+        PropertyTypes.Castle => ["castle"],
+        PropertyTypes.Loft => ["loft"],
+        PropertyTypes.Terrain => ["terrain"],
+        PropertyTypes.Building => ["building"],
+        PropertyTypes.Commercial => ["shop", "premises", "office"],
+        PropertyTypes.Parking => ["parking"],
+        PropertyTypes.Other => ["others"],
+        _ => Array.Empty<string>(),
+    }).Distinct();
+
     /// <summary>Filtres de l'API (mêmes noms que le site : minPrice, maxArea, minRooms...).</summary>
     public static JsonObject BuildFilters(SearchProject p, IReadOnlyList<string> zoneIds, int page)
     {
@@ -121,7 +137,7 @@ public sealed class BieniciSearchAdapter(IHttpClientFactory factory) : ISearchAd
             ["from"] = page * PageSize,
             ["page"] = page + 1,
             ["filterType"] = p.Transaction == TransactionType.Buy ? "buy" : "rent",
-            ["propertyType"] = new JsonArray(p.PropertyTypes.Select(t => (JsonNode?)JsonValue.Create(t)).ToArray()),
+            ["propertyType"] = new JsonArray(SiteTypes(p.PropertyTypes).Select(t => (JsonNode?)JsonValue.Create(t)).ToArray()),
             ["sortBy"] = "publicationDate",
             ["sortOrder"] = "desc",
             ["onTheMarket"] = new JsonArray(true),

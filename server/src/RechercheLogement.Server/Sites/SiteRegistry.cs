@@ -36,6 +36,7 @@ public sealed class SiteRegistry(IEnumerable<ISiteModule> modules)
         SiteCategory.ImmoPortal => "Sites d'annonces immobilières",
         SiteCategory.GeneralClassifieds => "Sites d'annonces généralistes",
         SiteCategory.Agency => "Sites d'agences",
+        SiteCategory.PublicSales => "Ventes publiques",
         _ => c.ToString(),
     };
 }

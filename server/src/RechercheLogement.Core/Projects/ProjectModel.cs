@@ -17,6 +17,8 @@ public enum SiteCategory
     GeneralClassifieds,
     /// <summary>Site d'une agence immobilière.</summary>
     Agency,
+    /// <summary>Ventes publiques (cessions de l'État...).</summary>
+    PublicSales,
 }
 
 // ------------------------------------------------------------------ zone de recherche
@@ -111,7 +113,7 @@ public sealed class SearchProject
     public required string Id { get; init; }
     public string Name { get; set; } = "";
     public TransactionType Transaction { get; set; } = TransactionType.Rent;
-    /// <summary>Types communs : "flat", "house" (mêmes valeurs que ListingData.PropertyType).</summary>
+    /// <summary>Types communs (<see cref="Model.PropertyTypes"/>) : "flat", "house", "terrain"…</summary>
     public List<string> PropertyTypes { get; set; } = ["flat"];
 
     public LocationMode LocationMode { get; set; } = LocationMode.Places;
@@ -225,7 +227,7 @@ public static class ProjectMatcher
     {
         why = null;
         if (d.Transaction is not null && d.Transaction != p.Transaction) return Fail("transaction", out why);
-        if (d.PropertyType is not null && p.PropertyTypes.Count > 0 && !p.PropertyTypes.Contains(d.PropertyType)) return Fail("type de bien", out why);
+        if (PropertyTypes.Normalize(d.PropertyType) is { } type && p.PropertyTypes.Count > 0 && !p.PropertyTypes.Select(PropertyTypes.Normalize).Contains(type)) return Fail("type de bien", out why);
         if (d.Price is not null && (d.Price < p.PriceMin || d.Price > p.PriceMax)) return Fail("prix", out why);
         if (d.Surface is not null && (d.Surface < p.SurfaceMin || d.Surface > p.SurfaceMax)) return Fail("surface", out why);
         if (d.Rooms is not null && (d.Rooms < p.RoomsMin || d.Rooms > p.RoomsMax)) return Fail("pièces", out why);

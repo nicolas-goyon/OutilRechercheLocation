@@ -61,7 +61,7 @@ public sealed class BieniciListingParser : IListingParser
 
     private static string DefaultTitle(string? type, int? rooms, double? surface)
     {
-        var label = type switch { "house" => "Maison", "flat" => "Appartement", "loft" => "Loft", _ => "Bien" };
+        var label = PropertyTypes.Normalize(type) is { } common and not PropertyTypes.Other ? PropertyTypes.Label(common).Split(',')[0] : "Bien";
         if (rooms is not null) label += $" {rooms} pièce{(rooms > 1 ? "s" : "")}";
         if (surface is not null) label += $" {surface.Value.ToString("0.#", CultureInfo.GetCultureInfo("fr-FR"))} m²";
         return label;
