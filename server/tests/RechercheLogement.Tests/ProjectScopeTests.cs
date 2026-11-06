@@ -146,3 +146,18 @@ public class PhotoLimitTests
         Assert.True(ListingData.MaxPhotos > 4);
     }
 }
+
+public class ProjectFormatTests
+{
+    [Fact]
+    public void Places_AreSummarized_WhenTheListIsLong()
+    {
+        var places = Enumerable.Range(0, 8).Select(i => new ProjectLocation { Type = PlaceType.Commune, Query = $"C{i}", Code = $"6500{i}", PostalCodes = [i < 4 ? "65170" : "64490"] })
+            .Append(new ProjectLocation { Type = PlaceType.PostalCode, Query = "31110", Code = "31110" })
+            .ToList();
+
+        Assert.Equal("8 communes, 1 code postal (31, 64, 65)", RechercheLogement.Server.Components.ProjectFormat.Places(places));
+        Assert.Equal("C0", RechercheLogement.Server.Components.ProjectFormat.Places(places.Take(1).ToList()));
+    }
+}
+
