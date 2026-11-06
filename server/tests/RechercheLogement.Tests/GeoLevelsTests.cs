@@ -126,6 +126,30 @@ public class GeoLevelsTests
     }
 
     [Fact]
+    public async Task Stroke_KeepsOnlyPaintedCommunes_AcrossDepartments()
+    {
+        var fake = new Fake(p => p switch
+        {
+            _ when p.StartsWith("/communes?lat=") && p.Contains("lon=0.0") => """[{ "codeDepartement": "64" }]""",
+            _ when p.StartsWith("/communes?lat=") => """[{ "codeDepartement": "65" }]""",
+            _ when p.StartsWith("/departements/65/communes") => """
+                [{ "nom": "Village", "code": "65001", "codesPostaux": ["65100"], "centre": { "coordinates": [0.11, 43.0] } },
+                 { "nom": "Ville", "code": "65440", "codesPostaux": ["65000"], "centre": { "coordinates": [0.07, 43.23] } }]
+                """,
+            _ when p.StartsWith("/departements/64/communes") => """
+                [{ "nom": "Voisin", "code": "64001", "codesPostaux": ["64100", "64101"], "centre": { "coordinates": [0.05, 43.0] } }]
+                """,
+            _ => null,
+        });
+        var geo = new GeoServices(fake);
+
+        var communes = await geo.CommunesUnderStrokeAsync([new GeoPoint(43.0, 0.08), new GeoPoint(43.0, 0.10)], 3, default);
+
+        Assert.Equal(new[] { "Voisin", "Village" }, communes.Select(c => c.Name));
+        Assert.Equal(new[] { "64100", "64101", "65100" }, GeoServices.PostalCodesOf(communes).Select(l => l.Code).Order());
+    }
+
+    [Fact]
     public void Region_IsSearchedDepartmentByDepartment()
     {
         var project = new SearchProject

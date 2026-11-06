@@ -289,7 +289,8 @@ adaptateur de recherche.
 
 La modale de sélection (`ZonePicker`) travaille sur une copie des lieux du projet. `GeoServices.PlaceLevelsAtAsync`
 renvoie les lieux sous un point, du code postal à la région, et `PostalCodesAroundAsync` les codes postaux dont une
-commune a son centre dans un rayon. Une région est demandée aux sites département par département (`ProjectRunner.ToQueries`).
+commune a son centre dans un rayon. Le pinceau envoie les points de chaque trait ; `CommunesUnderStrokeAsync`
+garde les communes dont le centre est à moins d'une taille de pinceau d'un point. Une région est demandée aux sites département par département (`ProjectRunner.ToQueries`).
 
 Les réponses de `geo.api.gouv.fr` sont gardées en mémoire. Si un contour manque, le lieu reste utilisé pour la
 recherche, et la carte l'indique.

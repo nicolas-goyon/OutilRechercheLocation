@@ -1,11 +1,13 @@
 @using RechercheLogement.Server.Geo
+@using RechercheLogement.Core.Dedup
 @inject GeoServices Geo
 @inject IJSRuntime JS
 
 @* Modale de sélection des zones. Travaille sur une copie : les zones reviennent au projet avec « Enregistrer les zones ». *@
 <dialog class="zone-dialog" @ref="_dialog" aria-labelledby="zone-dialog-title" @oncancel="OnCancel">
     <div class="zone-dialog-map">
-        <ZoneMap Center="MapCenter" RadiusKm="MapRadiusKm" Zones="MapZones" Picking="true" FitKey="@_fitKey.ToString(CultureInfo.InvariantCulture)" OnPoint="OnPoint" />
+        <ZoneMap Center="MapCenter" RadiusKm="MapRadiusKm" Zones="MapZones" Picking="true"
+                 BrushKm="@(_mode == PickMode.Brush ? _brushKm : null)" Erasing="_erasing" OnStroke="OnStroke" FitKey="@_fitKey.ToString(CultureInfo.InvariantCulture)" OnPoint="OnPoint" />
     </div>
     <aside class="zone-dialog-side">
         <h2 id="zone-dialog-title">Sélectionner les zones</h2>
@@ -17,6 +19,26 @@
                 <label class="zone-option">
                     <input type="radio" name="zone-mode" checked="@(_mode == mode)" @onchange="() => SetMode(mode)" /> @label
                 </label>
+            }
+            @if (_mode == PickMode.Brush)
+            {
+                <div class="zone-brush">
+                    <div class="segmented" role="group" aria-label="Outil">
+                        <button type="button" class="@(!_erasing ? "on" : "")" aria-pressed="@(!_erasing ? "true" : "false")" @onclick="() => _erasing = false">Peindre</button>
+                        <button type="button" class="@(_erasing ? "on" : "")" aria-pressed="@(_erasing ? "true" : "false")" @onclick="() => _erasing = true">Gommer</button>
+                    </div>
+                    <label>
+                        Taille
+                        <input type="range" min="1" max="15" step="1" @bind="_brushKm" @bind:event="oninput" aria-label="Taille du pinceau en km" />
+                        <span class="small">@_brushKm km</span>
+                    </label>
+                    @if (!_erasing)
+                    {
+                        <label><input type="radio" name="brush-as" checked="@(!_brushPostal)" @onchange="() => _brushPostal = false" /> Ajouter les communes</label>
+                        <label><input type="radio" name="brush-as" checked="@_brushPostal" @onchange="() => _brushPostal = true" /> Ajouter leurs codes postaux</label>
+                    }
+                    <span class="muted small">@(_erasing ? "Les communes gommées, et leurs codes postaux, sont retirées." : "Les communes dont le centre est peint sont ajoutées. Zoomer avec la molette ou les boutons ; changer d'option pour déplacer la carte.")</span>
+                </div>
             }
             @if (_mode == PickMode.Radius)
             {
@@ -66,7 +88,7 @@
 </dialog>
 
 @code {
-    private enum PickMode { PostalCode, Commune, Department, Region, Radius }
+    private enum PickMode { PostalCode, Commune, Department, Region, Radius, Brush }
 
     private static readonly (PickMode Mode, string Label)[] Modes =
     [
@@ -75,6 +97,7 @@
         (PickMode.Department, "Le département"),
         (PickMode.Region, "La région"),
         (PickMode.Radius, "Tous les codes postaux dans un rayon"),
+        (PickMode.Brush, "Pinceau : peindre un secteur"),
     ];
 
     /// <summary>Zones du projet à l'ouverture. La liste n'est pas modifiée.</summary>
@@ -87,6 +110,9 @@
     private readonly Stack<List<ProjectLocation>> _history = new();
     private PickMode _mode = PickMode.PostalCode;
     private double _radiusKm = 20;
+    private double _brushKm = 3;
+    private bool _erasing;
+    private bool _brushPostal;
     private GeoPoint? _radiusCenter;
     private List<ProjectLocation>? _levels;
     private int _levelIndex;
@@ -206,6 +232,63 @@
             _places.AddRange(added);
             }
         _message = found.Count == 0 ? "Aucun code postal français dans ce rayon." : $"{added.Count} code(s) postal(aux) ajouté(s) sur {found.Count} dans ce rayon.";
+    }
+
+    /// <summary>Trait de pinceau : ajoute les communes peintes, ou retire les zones gommées.</summary>
+    private async Task OnStroke(List<GeoPoint> points)
+    {
+        if (points.Count == 0) return;
+        _levels = null;
+        var request = ++_request;
+        _message = _erasing ? "Recherche des communes gommées…" : "Recherche des communes peintes…";
+        StateHasChanged();
+        try
+        {
+            var communes = await Geo.CommunesUnderStrokeAsync(points, _brushKm, CancellationToken.None);
+            if (request != _request) return;
+            if (_erasing)
+            {
+                Erase(points, communes);
+                return;
+            }
+            var found = _brushPostal ? GeoServices.PostalCodesOf(communes) : communes.Select(GeoServices.CommuneLocation).ToList();
+            var added = found.Where(l => _places.All(x => x.Key() != l.Key())).ToList();
+            if (added.Count > 0)
+            {
+                Remember();
+                _places.AddRange(added);
+            }
+            var unit = _brushPostal ? "code(s) postal(aux)" : "commune(s)";
+            _message = found.Count == 0 ? "Aucune commune française sous ce trait." : $"{added.Count} {unit} ajouté(s), sur {found.Count} sous ce trait.";
+        }
+        catch (SiteException e)
+        {
+            if (request == _request) _message = e.Message;
+        }
+    }
+
+    /// <summary>
+    /// Gomme : retire les communes gommées, les codes postaux de ces communes, et les autres zones (département,
+    /// région) dont le centre est gommé.
+    /// </summary>
+    private void Erase(List<GeoPoint> points, List<PlanCommune> communes)
+    {
+        var codes = communes.Select(c => c.Code).ToHashSet();
+        var postalCodes = communes.SelectMany(c => c.PostalCodes).ToHashSet();
+        var radiusM = _brushKm * 1000;
+        bool Erased(ProjectLocation l) => l.Type switch
+        {
+            PlaceType.Commune => l.Code is not null && codes.Contains(l.Code),
+            PlaceType.PostalCode => l.Code is not null && postalCodes.Contains(l.Code),
+            _ => l.Center is { } c && points.Any(p => DedupScorer.DistanceMeters(p, c) <= radiusM),
+        };
+        var removed = _places.Count(Erased);
+        if (removed > 0)
+        {
+            Remember();
+            _places.RemoveAll(Erased);
+        }
+        _message = removed == 0 ? "Aucune zone sous ce trait." : $"{removed} zone(s) retirée(s).";
     }
 
     /// <summary>Remplace la dernière zone par une zone plus large ou plus petite.</summary>
