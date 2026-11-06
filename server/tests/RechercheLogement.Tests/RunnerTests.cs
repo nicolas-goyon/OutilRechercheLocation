@@ -93,4 +93,49 @@ public class RunnerTests
         Assert.Equal(1, a.Runs);
         Assert.Equal(0, b.Runs);
     }
+
+    /// <summary>Site qui cherche les communes par code postal (comme SeLoger) et ne reconnaît rien.</summary>
+    private sealed class ByPostalCode : ISiteModule, ISearchAdapter
+    {
+        public SiteInfo Info { get; } = new("cp", "CP", SiteCategory.ImmoPortal, "test");
+        public IListingParser? Parser => null;
+        public ISearchAdapter Search => this;
+        public PlaceKinds SupportedPlaces => PlaceKinds.PostalCode | PlaceKinds.Commune;
+        public List<PlaceQuery> Asked { get; } = [];
+
+        public PlaceQuery Prepare(PlaceQuery query) =>
+            query.PostalCode is { } cp ? new PlaceQuery(PlaceKind.PostalCode, cp) : query;
+
+        public Task<CachedPlace?> ResolvePlaceAsync(PlaceQuery query, TransactionType transaction, CancellationToken ct)
+        {
+            Asked.Add(query);
+            return Task.FromResult<CachedPlace?>(null);
+        }
+
+        public Task<SearchOutcome> SearchAsync(SearchRequest request, CancellationToken ct) => Task.FromResult(Empty);
+    }
+
+    [Fact]
+    public async Task CommunesOfOnePostalCode_AreAskedOnce_AndNamedWhenUnknown()
+    {
+        var site = new ByPostalCode();
+        var (runner, store, project) = Setup();
+        project.Sites = ["cp"];
+        project.Locations =
+        [
+            new ProjectLocation { Type = PlaceType.Commune, Query = "Espelette", Code = "64213", PostalCodes = ["64250"] },
+            new ProjectLocation { Type = PlaceType.Commune, Query = "Itxassou", Code = "64279", PostalCodes = ["64250"] },
+            new ProjectLocation { Type = PlaceType.Commune, Query = "Banca", Code = "64093", PostalCodes = ["64430"] },
+        ];
+        store.Save(project);
+        runner = new ProjectRunner(store, new Catalog(new InMemoryPersistence()), new SiteRegistry([site]),
+            new AreaPlanner(new GeoServices(new NoHttp())), NullLogger<ProjectRunner>.Instance);
+
+        await runner.RunAsync(project.Id, default);
+
+        Assert.Equal(new[] { "64250", "64430" }, site.Asked.Select(q => q.Text));
+        Assert.Equal(new[] { "cp:64250", "cp:64430" }, store.Get(project.Id)!.PlaceCache["cp"].Keys.Order());
+        var run = Assert.Single(store.Runs(project.Id));
+        Assert.Equal("Lieu non reconnu par CP : Espelette, Itxassou, Banca.", run.Message);
+    }
 }

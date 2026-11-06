@@ -291,12 +291,29 @@ public static class ProjectScope
         return !p.Locations.Any(l => l.Type switch
         {
             PlaceType.PostalCode => cp == (l.Code ?? l.Query).Trim(),
-            PlaceType.Commune => l.PostalCodes.Count == 0 || l.PostalCodes.Contains(cp),
+            PlaceType.Commune => l.PostalCodes.Count == 0 || (l.PostalCodes.Contains(cp) && SameCommune(l.Query, d.City)),
             PlaceType.Department => l.Code is null || DepartmentOf(cp).Contains(l.Code.ToUpperInvariant()),
             PlaceType.Region => l.DepartmentCodes.Count == 0 || DepartmentOf(cp).Intersect(l.DepartmentCodes).Any(),
             _ => true,
         });
     }
+
+    /// <summary>
+    /// La ville de l'annonce est-elle la commune choisie ? Un code postal couvre souvent plusieurs communes, et un site
+    /// peut chercher par code postal (SeLoger) : la ville départage. Ville inconnue : gardée. Accents, casse, tirets
+    /// et "St"/"Ste" ignorés ; "Paris 15e" correspond à "Paris".
+    /// </summary>
+    public static bool SameCommune(string commune, string? city)
+    {
+        if (string.IsNullOrWhiteSpace(city) || string.IsNullOrWhiteSpace(commune)) return true;
+        var a = CommuneName(commune);
+        var b = CommuneName(city);
+        return a == b || b.StartsWith(a + " ", StringComparison.Ordinal);
+    }
+
+    private static string CommuneName(string name) => string.Join(' ',
+        Dedup.DedupScorer.NormalizeText(name).Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => w switch { "st" => "saint", "ste" => "sainte", _ => w }));
 
     /// <summary>Code(s) de département d'un code postal : Corse "20" -> 2A ou 2B, outre-mer sur trois chiffres.</summary>
     public static IReadOnlyList<string> DepartmentOf(string postalCode)

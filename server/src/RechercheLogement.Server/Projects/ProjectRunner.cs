@@ -196,7 +196,11 @@ public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegis
         try
         {
             // 1-2. Lieux du site (cache du projet).
-            var (queries, how) = PlaceQueries(project, search.SupportedPlaces);
+            var (asked, how) = PlaceQueries(project, search.SupportedPlaces);
+            // Lieux tels que le site les cherche ; plusieurs communes d'un même code postal = une seule requête.
+            var groups = asked.GroupBy(q => search.Prepare(q).CacheKey).ToList();
+            var queries = groups.Select(g => search.Prepare(g.First())).ToList();
+            var names = groups.Select(g => string.Join(", ", g.Select(q => q.Text).Distinct())).ToList();
             // Le cache d'un site n'est modifié que par ce site ; le verrou protège l'enregistrement du projet, qui
             // lit les caches de tous les sites.
             Dictionary<string, CachedPlace?> cache;
@@ -205,8 +209,9 @@ public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegis
             var unknown = new List<string>();
             var cacheChanged = false;
             var done = 0;
-            foreach (var q in queries)
+            for (var i = 0; i < queries.Count; i++)
             {
+                var q = queries[i];
                 done++;
                 CachedPlace? place;
                 bool known;
@@ -221,7 +226,7 @@ public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegis
                     if (done % 20 == 0) lock (project) store.SaveQuietly(project);
                     await Task.Delay(200, ct);
                 }
-                if (place is null) unknown.Add(q.Text);
+                if (place is null) unknown.Add(names[i]);
                 else ids.AddRange(place.Ids);
             }
             // Lieux qui ne sont plus dans le projet (ou anciennes clés) : retirés du cache.

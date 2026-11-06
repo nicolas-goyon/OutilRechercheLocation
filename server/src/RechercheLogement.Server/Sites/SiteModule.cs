@@ -79,6 +79,13 @@ public interface ISearchAdapter
 {
     PlaceKinds SupportedPlaces { get; }
     Task<CachedPlace?> ResolvePlaceAsync(PlaceQuery query, TransactionType transaction, CancellationToken ct);
+
+    /// <summary>
+    /// Lieu réellement demandé au site pour un lieu du projet (par défaut : le même). Permet à un site de chercher
+    /// une commune par son code postal quand son nom ne suffit pas à la distinguer d'une homonyme.
+    /// </summary>
+    PlaceQuery Prepare(PlaceQuery query) => query;
+
     Task<SearchOutcome> SearchAsync(SearchRequest request, CancellationToken ct);
 }
 

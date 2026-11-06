@@ -31,9 +31,19 @@ public sealed class SelogerSearchAdapter(BrowserRelay relay) : ISearchAdapter
     }
 
     /// <summary>
-    /// Premier lieu proposé. Département : le libellé doit être le nom du département. Commune choisie dans les
-    /// suggestions : le libellé doit contenir son code postal ou son département ("Rodez (12)"), sinon le lieu n'est
-    /// pas reconnu (une homonyme ailleurs ferait chercher dans une autre région).
+    /// Commune au code postal connu : cherchée par son code postal. Les suggestions SeLoger ne donnent que le nom
+    /// ("Espelette"), sans département : impossible d'écarter une homonyme ("Saint-Pierre" renvoie La Réunion). Le
+    /// code postal est sans ambiguïté ; les annonces des autres communes de ce code postal sont écartées ensuite
+    /// (<c>ProjectScope.OutsidePlaces</c>).
+    /// </summary>
+    public PlaceQuery Prepare(PlaceQuery query) =>
+        query is { Kind: PlaceKind.Auto, PostalCode: { Length: 5 } cp } ? new PlaceQuery(PlaceKind.PostalCode, cp) : query;
+
+    /// <summary>
+    /// Lieu proposé qui correspond exactement à la demande. Code postal : libellé = le code postal. Département et
+    /// commune : libellé = le nom (sans tenir compte des accents et de la casse). Commune avec code postal : un
+    /// libellé qui contient son code postal ou son département ("Rodez (12)") est aussi accepté. Rien d'autre : une
+    /// suggestion approchante ("Saint-Pierre-d'Oléron" pour "Saint-Pierre") ferait chercher ailleurs.
     /// </summary>
     public static CachedPlace? PickPlace(JsonNode json, PlaceQuery? query = null)
     {
@@ -43,10 +53,21 @@ public sealed class SelogerSearchAdapter(BrowserRelay relay) : ISearchAdapter
             var ids = JsonRead.Strings(item["criteria"]?["location"]?["placeIds"]);
             if (ids.Count == 0) continue;
             var text = JsonRead.Str(item["text"]) ?? string.Join(", ", ids);
-            if (query?.Kind == PlaceKind.Department && DedupScorer.NormalizeText(text) != DedupScorer.NormalizeText(query.Text)) continue;
-            var place = new CachedPlace(query?.Kind == PlaceKind.Department ? $"{text} (département)" : text, ids);
-            if (query?.PostalCode is not { Length: 5 } cp) return place;
-            if (text.Contains(cp, StringComparison.Ordinal) || text.Contains($"({cp[..2]})", StringComparison.Ordinal)) return place;
+            if (query is null) return new CachedPlace(text, ids);
+            var wanted = query.Text.Trim();
+            var sameName = DedupScorer.NormalizeText(text) == DedupScorer.NormalizeText(wanted);
+            switch (query.Kind)
+            {
+                case PlaceKind.PostalCode when text.Trim() == wanted:
+                    return new CachedPlace(text, ids);
+                case PlaceKind.Department when sameName:
+                    return new CachedPlace($"{text} (département)", ids);
+                case PlaceKind.Auto when query.PostalCode is { Length: 5 } cp
+                    && (text.Contains(cp, StringComparison.Ordinal) || text.Contains($"({cp[..2]})", StringComparison.Ordinal)):
+                    return new CachedPlace(text, ids);
+                case PlaceKind.Auto when query.PostalCode is null && sameName:
+                    return new CachedPlace(text, ids);
+            }
         }
         return null;
     }

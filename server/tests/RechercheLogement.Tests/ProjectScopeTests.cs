@@ -67,6 +67,31 @@ public class ProjectScopeTests
         Assert.Equal(outside, ProjectScope.OutsidePlaces(project, new ListingData { PostalCode = cp }));
     }
 
+    [Theory]
+    [InlineData("Espelette", false)]
+    [InlineData("ESPELETTE", false)]
+    [InlineData(null, false)]
+    [InlineData("Cambo-les-Bains", false)]
+    [InlineData("Cambo les bains", false)]
+    [InlineData("Itxassou", true)]
+    [InlineData("Saint-Étienne-de-Baïgorry", true)]
+    public void OutsidePlaces_ChecksTheCommuneWhenAPostalCodeHasSeveral(string? city, bool outside)
+    {
+        // 64250 couvre Espelette, Cambo-les-Bains, Itxassou... : seules les communes choisies sont gardées.
+        var project = Chalet(
+            new ProjectLocation { Type = PlaceType.Commune, Query = "Espelette", Code = "64213", PostalCodes = ["64250"] },
+            new ProjectLocation { Type = PlaceType.Commune, Query = "Cambo-les-Bains", Code = "64160", PostalCodes = ["64250"] });
+        Assert.Equal(outside, ProjectScope.OutsidePlaces(project, new ListingData { PostalCode = "64250", City = city }));
+    }
+
+    [Theory]
+    [InlineData("Saint-Lary-Soulan", "St Lary Soulan", true)]
+    [InlineData("Paris", "Paris 15e", true)]
+    [InlineData("Saint-Pierre", "Saint-Pierre-d'Irube", true)]
+    [InlineData("Arreau", "Cadéac", false)]
+    public void SameCommune_IgnoresSpellingDifferences(string commune, string city, bool same) =>
+        Assert.Equal(same, ProjectScope.SameCommune(commune, city));
+
     [Fact]
     public void Store_HidesResultsOutsideThePlaces()
     {

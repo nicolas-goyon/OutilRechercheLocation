@@ -378,13 +378,12 @@ public class ProjectTests
         Assert.Equal("-2", BieniciSearchAdapter.PickPlace(places, new PlaceQuery(PlaceKind.Auto, "Saint-Martin", "32999"))!.Ids[0]);
         Assert.Null(BieniciSearchAdapter.PickPlace(places, new PlaceQuery(PlaceKind.Auto, "Saint-Martin", "99999")));
 
-        // SeLoger : le libellé qui contient le code postal ou le département ; sinon non reconnu.
+        // SeLoger (ancien format) : le libellé qui contient le code postal ou le département ; sinon non reconnu.
         var suggestion = JsonNode.Parse("""
             { "items": [ { "text": "Saint-Martin (05)", "criteria": { "location": { "placeIds": ["A"] } } },
                          { "text": "Saint-Martin (32)", "criteria": { "location": { "placeIds": ["B"] } } } ] }
             """)!;
         Assert.Equal("B", SelogerSearchAdapter.PickPlace(suggestion, new PlaceQuery(PlaceKind.Auto, "Saint-Martin", "32300"))!.Ids[0]);
-        Assert.Equal("A", SelogerSearchAdapter.PickPlace(suggestion, new PlaceQuery(PlaceKind.Auto, "Saint-Martin"))!.Ids[0]);
         Assert.Null(SelogerSearchAdapter.PickPlace(suggestion, new PlaceQuery(PlaceKind.Auto, "Saint-Martin", "66000")));
     }
 
