@@ -32,6 +32,32 @@ public sealed class GeoServices(IHttpClientFactory factory)
     private readonly ConcurrentDictionary<string, string> _departmentNames = new();
     private readonly ConcurrentDictionary<string, List<PlanCommune>> _postalCommunes = new();
     private readonly ConcurrentDictionary<string, string?> _postalOfInsee = new();
+    private readonly ConcurrentDictionary<string, Dictionary<string, List<string>>> _formerByDepartment = new();
+
+    /// <summary>
+    /// Anciennes communes d'un département (déléguées ou associées), par code INSEE de la commune actuelle :
+    /// "09334" (Val-de-Sos) -> Goulier, Sem, Suc-et-Sentenac, Vicdessos. null : service indisponible (réessayé plus tard).
+    /// </summary>
+    public async Task<Dictionary<string, List<string>>?> FormerCommunesAsync(string department, CancellationToken ct)
+    {
+        if (_formerByDepartment.TryGetValue(department, out var known)) return known;
+        try
+        {
+            var json = await GetGeoAsync($"communes_associees_deleguees?codeDepartement={Uri.EscapeDataString(department)}", ct);
+            return _formerByDepartment[department] = ParseFormerCommunes(json);
+        }
+        catch (SiteException)
+        {
+            return null;
+        }
+    }
+
+    public static Dictionary<string, List<string>> ParseFormerCommunes(JsonNode? json) =>
+        (json as JsonArray ?? new JsonArray())
+            .Select(n => (Chef: JsonRead.Str(n?["chefLieu"]), Name: JsonRead.Str(n?["nom"])))
+            .Where(x => x.Chef is not null && x.Name is not null)
+            .GroupBy(x => x.Chef!)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Name!).Distinct().ToList());
 
     /// <summary>Premier code postal d'une commune d'après son code INSEE ("51454" -> "51100"). null : inconnu.</summary>
     public async Task<string?> PostalCodeOfCommuneAsync(string insee, CancellationToken ct)

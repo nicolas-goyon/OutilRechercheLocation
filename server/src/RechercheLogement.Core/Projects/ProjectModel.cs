@@ -62,6 +62,11 @@ public sealed class ProjectLocation
     public string? Label { get; set; }
     /// <summary>Codes postaux de la commune (aide les sites à choisir la bonne commune en cas d'homonymes).</summary>
     public List<string> PostalCodes { get; set; } = [];
+    /// <summary>
+    /// Commune nouvelle : noms des anciennes communes (déléguées, associées), que les sites et les annonces utilisent
+    /// encore ("Vicdessos" pour Val-de-Sos). null : pas encore vérifié ; vide : aucune.
+    /// </summary>
+    public List<string>? FormerNames { get; set; }
     /// <summary>Centre de la commune (ou de la première commune du code postal), pour la carte.</summary>
     public GeoPoint? Center { get; set; }
     /// <summary>Région : noms de ses départements. Les sites reçoivent ces départements.</summary>
@@ -291,7 +296,8 @@ public static class ProjectScope
         return !p.Locations.Any(l => l.Type switch
         {
             PlaceType.PostalCode => cp == (l.Code ?? l.Query).Trim(),
-            PlaceType.Commune => l.PostalCodes.Count == 0 || (l.PostalCodes.Contains(cp) && SameCommune(l.Query, d.City)),
+            PlaceType.Commune => l.PostalCodes.Count == 0 || (l.PostalCodes.Contains(cp)
+                && (SameCommune(l.Query, d.City) || (l.FormerNames?.Any(n => SameCommune(n, d.City)) ?? false))),
             PlaceType.Department => l.Code is null || DepartmentOf(cp).Contains(l.Code.ToUpperInvariant()),
             PlaceType.Region => l.DepartmentCodes.Count == 0 || DepartmentOf(cp).Intersect(l.DepartmentCodes).Any(),
             _ => true,
