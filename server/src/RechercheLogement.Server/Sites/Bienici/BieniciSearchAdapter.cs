@@ -88,6 +88,7 @@ public sealed class BieniciSearchAdapter(IHttpClientFactory factory) : ISearchAd
         {
             for (var page = 0; ; page++)
             {
+                request.Report($"page {page + 1}, {items.Count} annonce(s) lue(s)");
                 var filters = BuildFilters(request.Project, chunk, page);
                 var url = $"https://www.bienici.com/realEstateAds.json?filters={Uri.EscapeDataString(filters.ToJsonString())}";
                 var json = await SiteHttp.GetJsonAsync(http, url, Label, ct);

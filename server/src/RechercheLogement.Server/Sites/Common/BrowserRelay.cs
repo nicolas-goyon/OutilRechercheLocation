@@ -18,7 +18,7 @@ public sealed record RelayResult(int Status, string? Body, string? Error);
 /// Le relais reste discret : une requête à la fois, avec un délai entre deux requêtes. Il ne contourne rien :
 /// si le site demande une vérification, la recherche s'arrête et l'utilisateur la passe lui-même dans son onglet.
 /// </summary>
-public sealed class BrowserRelay(int delayMs = 2000, TimeSpan? timeout = null, TimeProvider? clock = null)
+public sealed class BrowserRelay(int delayMs = 2000, TimeSpan? timeout = null, TimeProvider? clock = null, TimeSpan? connectedWindow = null)
 {
     /// <summary>Début du message quand aucun onglet n'est ouvert : le serveur relance ces recherches à l'ouverture d'un onglet.</summary>
     public const string NoTabPrefix = "En attente d'un onglet";
@@ -26,7 +26,8 @@ public sealed class BrowserRelay(int delayMs = 2000, TimeSpan? timeout = null, T
     /// <summary>Durée d'attente d'une requête GET /api/relay/next. Inférieure au délai du plugin.</summary>
     public static readonly TimeSpan PollWait = TimeSpan.FromSeconds(25);
     /// <summary>Onglet considéré ouvert si le plugin a interrogé le serveur il y a moins de ce temps.</summary>
-    private static readonly TimeSpan ConnectedWindow = TimeSpan.FromSeconds(45);
+    /// Le plugin revient au plus 2 s après chaque réponse : 20 s sans nouvelle, l'onglet est fermé ou a changé de page.
+    private static readonly TimeSpan DefaultConnectedWindow = TimeSpan.FromSeconds(20);
 
     private sealed record Pending(RelayRequest Request, TaskCompletionSource<RelayResult> Result);
 
@@ -42,6 +43,7 @@ public sealed class BrowserRelay(int delayMs = 2000, TimeSpan? timeout = null, T
 
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
     private readonly TimeSpan _timeout = timeout ?? TimeSpan.FromSeconds(90);
+    private readonly TimeSpan _connectedWindow = connectedWindow ?? DefaultConnectedWindow;
     private readonly ConcurrentDictionary<string, SiteState> _sites = new();
     private readonly ConcurrentDictionary<string, Pending> _sent = new();
 
@@ -50,7 +52,7 @@ public sealed class BrowserRelay(int delayMs = 2000, TimeSpan? timeout = null, T
 
     private SiteState State(string site) => _sites.GetOrAdd(site, _ => new SiteState());
 
-    private bool Connected(SiteState s) => s.Polling > 0 || _clock.GetUtcNow() - s.LastPoll < ConnectedWindow;
+    private bool Connected(SiteState s) => s.Polling > 0 || _clock.GetUtcNow() - s.LastPoll < _connectedWindow;
 
     public bool IsConnected(string site) => Connected(State(site));
 
@@ -74,15 +76,9 @@ public sealed class BrowserRelay(int delayMs = 2000, TimeSpan? timeout = null, T
             await state.Queue.Writer.WriteAsync(pending, ct);
             try
             {
-                using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                limit.CancelAfter(_timeout);
-                var result = await pending.Result.Task.WaitAsync(limit.Token);
+                var result = await WaitResultAsync(state, pending, label, ct);
                 if (result.Error is not null) throw new SiteException($"{label} injoignable depuis le navigateur : {result.Error}");
                 return Blocked(label, () => SiteHttp.ReadJson(result.Status, result.Body ?? "", label));
-            }
-            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-            {
-                throw new SiteException($"{label} : l'onglet du navigateur n'a pas répondu à temps. Vérifier qu'il est toujours ouvert.");
             }
             finally
             {
@@ -93,6 +89,26 @@ public sealed class BrowserRelay(int delayMs = 2000, TimeSpan? timeout = null, T
         finally
         {
             state.OneAtATime.Release();
+        }
+    }
+
+    /// <summary>
+    /// Attend la réponse de l'onglet. Onglet fermé ou parti sur une autre page : arrêt dans les secondes qui suivent,
+    /// avec un message « En attente d'un onglet » pour que la recherche reprenne toute seule à la réouverture.
+    /// </summary>
+    private async Task<RelayResult> WaitResultAsync(SiteState state, Pending pending, string label, CancellationToken ct)
+    {
+        var deadline = _clock.GetUtcNow() + _timeout;
+        var step = TimeSpan.FromMilliseconds(Math.Clamp(_timeout.TotalMilliseconds / 4, 10, 2000));
+        while (true)
+        {
+            var delay = Task.Delay(step, _clock, ct);
+            if (await Task.WhenAny(pending.Result.Task, delay) == pending.Result.Task) return await pending.Result.Task;
+            ct.ThrowIfCancellationRequested();
+            if (!Connected(state))
+                throw new SiteException($"{NoTabPrefix} {label} : l'onglet a été fermé ou a quitté le site pendant la recherche. Elle reprendra à la réouverture d'un onglet.");
+            if (_clock.GetUtcNow() > deadline)
+                throw new SiteException($"{NoTabPrefix} {label} : l'onglet n'a pas répondu à temps. La recherche reprendra à la réouverture d'un onglet, ou avec « Relancer ».");
         }
     }
 

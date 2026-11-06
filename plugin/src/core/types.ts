@@ -184,3 +184,10 @@ export interface RelayResult {
 
 /** Photos gardées par annonce. Même limite côté serveur (ListingData.MaxPhotos). */
 export const MAX_PHOTOS = 40;
+
+/** GET /api/relay/status : recherches du serveur en cours sur un site. */
+export interface RelayStatus {
+  running: { projectId: string; project: string; step: string }[];
+  /** Projets actifs qui utilisent ce site. */
+  projects: number;
+}

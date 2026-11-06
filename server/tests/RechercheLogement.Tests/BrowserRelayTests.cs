@@ -132,3 +132,21 @@ public class BrowserRelayTests(WebApplicationFactory<Program> factory) : IClassF
         Assert.Equal(1, (int)(await call)[0]!);
     }
 }
+
+/// <summary>Onglet fermé pendant une recherche, et lancement des sites d'un projet.</summary>
+public class RelayInterruptionTests
+{
+    [Fact]
+    public async Task ClosedTab_StopsQuickly_WithAMessageThatResumes()
+    {
+        var relay = new BrowserRelay(delayMs: 0, timeout: TimeSpan.FromSeconds(30), connectedWindow: TimeSpan.FromMilliseconds(300));
+        await relay.NextAsync("seloger", TimeSpan.FromMilliseconds(50), default);
+
+        var call = relay.SendJsonAsync("seloger", "SeLoger", HttpMethod.Get, "https://x", null, default);
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var e = await Assert.ThrowsAsync<SiteException>(() => call);
+
+        Assert.StartsWith(BrowserRelay.NoTabPrefix, e.Message);
+        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(10), $"{watch.Elapsed}");
+    }
+}
