@@ -41,12 +41,15 @@ public enum PlaceKind
 /// <param name="PostalCode">Code postal connu du lieu (commune choisie dans les suggestions) : départage les homonymes.</param>
 public sealed record PlaceQuery(PlaceKind Kind, string Text, string? PostalCode = null)
 {
-    /// <summary>Clé du cache des lieux du projet ("cp:12000", "dep:Aveyron", "rodez", "rodez|12000").</summary>
+    /// <summary>
+    /// Clé du cache des lieux du projet ("cp:12000", "dep:Aveyron", "rodez", "rodez@12000"). Commune : "@" depuis que
+    /// les homonymes d'autres départements sont refusées ; les anciennes clés "|" sont recalculées.
+    /// </summary>
     public string CacheKey => Kind switch
     {
         PlaceKind.PostalCode => $"cp:{Text.Trim()}",
         PlaceKind.Department => $"dep:{Text.Trim()}",
-        _ when PostalCode is not null => $"{Text.Trim().ToLowerInvariant()}|{PostalCode}",
+        _ when PostalCode is not null => $"{Text.Trim().ToLowerInvariant()}@{PostalCode}",
         _ => Text.Trim().ToLowerInvariant(),
     };
 }

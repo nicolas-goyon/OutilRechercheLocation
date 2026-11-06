@@ -25,7 +25,16 @@ else
         }
         <a class="button" href="/projets/@p.Id/modifier"><Icon Name="pencil" /> Modifier</a>
     </div>
-    <p class="muted">@ProjectFormat.Summary(p) · lancement @ProjectFormat.Refresh(p.AutoRefreshHours)@(p.Active ? "" : " (en pause)")</p>
+    <p class="muted project-summary">@ProjectFormat.Summary(p) · lancement @ProjectFormat.Refresh(p.AutoRefreshHours)@(p.Active ? "" : " (en pause)")</p>
+    @if (p.LocationMode == LocationMode.Places && p.Locations.Count > ProjectFormat.PlacesShown)
+    {
+        <details class="project-summary">
+            <summary>Voir les @p.Locations.Count lieux</summary>
+            <ul class="place-list">
+                @foreach (var l in p.Locations.OrderBy(l => l.Display(), StringComparer.Create(System.Globalization.CultureInfo.GetCultureInfo("fr-FR"), true))) { <li>@l.Display()</li> }
+            </ul>
+        </details>
+    }
 
     <section class="panel">
         <h2>Zone et sites</h2>
@@ -106,7 +115,7 @@ else
                             @foreach (var l in g.Listings)
                             {
                                 <a class="site @(l.Removed ? "ko" : "")" href="@l.Data.Url" target="_blank" rel="noopener"
-                                   title="@(l.Removed ? "Retirée" : "En ligne") · vue du @Format.Date(l.FirstSeenAt) au @Format.Date(l.LastSeenAt)">@Sites.Label(l.Site)@(l.Removed ? " (retirée)" : "") ↗</a>
+                                   title="@(l.Removed ? "Retirée" : "En ligne") · vue du @Format.Date(l.FirstSeenAt) au @Format.Date(l.LastSeenAt)">@Sites.Label(l.Site)@(l.Removed ? " (retirée)" : "") <Icon Name="arrow-up-right" /></a>
                             }
                         </div>
                         @if (isNew) { <span class="badge new">Nouveau</span> }

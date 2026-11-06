@@ -31,15 +31,31 @@ public sealed class BieniciSearchAdapter(IHttpClientFactory factory) : ISearchAd
 
     /// <summary>
     /// Choix dans les suggestions : département demandé -> type "department" ; code postal -> lieu qui a ce code ;
-    /// texte libre -> premier lieu avec des zoneIds (un code postal saisi, ou celui de la commune choisie, doit figurer dans le lieu).
+    /// texte libre -> premier lieu avec des zoneIds ; commune choisie -> lieu de son code postal ou de son département.
     /// </summary>
     public static CachedPlace? PickPlace(JsonNode json, PlaceQuery query)
     {
         if (json is not JsonArray places) return null;
         var text = query.Text.Trim();
         if (Regex.IsMatch(text, @"^\d{5}$")) return Pick(places, query, text);
-        // Commune choisie dans les suggestions : on préfère le lieu qui a son code postal, sinon le premier.
-        return (query.PostalCode is null ? null : Pick(places, query, query.PostalCode)) ?? Pick(places, query, null);
+        // Commune choisie dans les suggestions : le lieu qui a son code postal, ou à défaut une commune du même nom dans
+        // le même département. Jamais une homonyme ailleurs : la recherche partirait dans une autre région.
+        if (query.PostalCode is not { Length: 5 } cp) return Pick(places, query, null);
+        return Pick(places, query, cp) ?? PickSameDepartment(places, query, cp);
+    }
+
+    private static CachedPlace? PickSameDepartment(JsonArray places, PlaceQuery query, string cp)
+    {
+        var name = DedupScorer.NormalizeText(query.Text);
+        foreach (var place in places)
+        {
+            if (place is null || DedupScorer.NormalizeText(JsonRead.Str(place["name"]) ?? "") != name) continue;
+            var postalCodes = JsonRead.Strings(place["postalCodes"]);
+            var zones = JsonRead.Strings(place["zoneIds"]);
+            if (zones.Count > 0 && postalCodes.Any(x => x.Length == 5 && x[..2] == cp[..2]))
+                return new CachedPlace($"{JsonRead.Str(place["name"])} ({postalCodes[0]})", zones);
+        }
+        return null;
     }
 
     private static CachedPlace? Pick(JsonArray places, PlaceQuery query, string? cp)

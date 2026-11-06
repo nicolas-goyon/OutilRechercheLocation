@@ -140,6 +140,13 @@ public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegis
                 if (place is null) unknown.Add(q.Text);
                 else ids.AddRange(place.Ids);
             }
+            // Lieux qui ne sont plus dans le projet (ou anciennes clés) : retirés du cache.
+            var keys = queries.Select(q => q.CacheKey).ToHashSet();
+            foreach (var stale in cache.Keys.Where(k => !keys.Contains(k)).ToList())
+            {
+                cache.Remove(stale);
+                cacheChanged = true;
+            }
             if (cacheChanged) store.SaveQuietly(project);
             if (ids.Count == 0)
             {
@@ -163,6 +170,11 @@ public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegis
                         outside++;
                         continue;
                     }
+                }
+                else if (project.LocationMode == LocationMode.Places && ProjectScope.OutsidePlaces(project, item.Data))
+                {
+                    outside++;
+                    continue;
                 }
                 incoming.Add(new IncomingListing(item.SiteId, item.Data, distance));
             }

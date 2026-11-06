@@ -32,11 +32,11 @@ public sealed class SelogerSearchAdapter(BrowserRelay relay) : ISearchAdapter
 
     /// <summary>
     /// Premier lieu proposé. Département : le libellé doit être le nom du département. Commune choisie dans les
-    /// suggestions : on préfère le lieu dont le libellé contient son code postal ou son département ("Rodez (12)").
+    /// suggestions : le libellé doit contenir son code postal ou son département ("Rodez (12)"), sinon le lieu n'est
+    /// pas reconnu (une homonyme ailleurs ferait chercher dans une autre région).
     /// </summary>
     public static CachedPlace? PickPlace(JsonNode json, PlaceQuery? query = null)
     {
-        CachedPlace? first = null;
         foreach (var item in json["items"] as JsonArray ?? new JsonArray())
         {
             if (item is null) continue;
@@ -47,9 +47,8 @@ public sealed class SelogerSearchAdapter(BrowserRelay relay) : ISearchAdapter
             var place = new CachedPlace(query?.Kind == PlaceKind.Department ? $"{text} (département)" : text, ids);
             if (query?.PostalCode is not { Length: 5 } cp) return place;
             if (text.Contains(cp, StringComparison.Ordinal) || text.Contains($"({cp[..2]})", StringComparison.Ordinal)) return place;
-            first ??= place;
         }
-        return first;
+        return null;
     }
 
     public async Task<SearchOutcome> SearchAsync(SearchRequest request, CancellationToken ct)

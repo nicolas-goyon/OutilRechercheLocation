@@ -53,6 +53,40 @@ public class ProjectScopeTests
         Assert.False(ProjectScope.Contains(project, Data("64000")));
     }
 
+    [Theory]
+    [InlineData("65170", false)]
+    [InlineData("64490", false)]
+    [InlineData("66000", true)]
+    [InlineData("65000", true)]
+    [InlineData(null, false)]
+    public void OutsidePlaces_UsesThePostalCodesOfThePlaces(string? cp, bool outside)
+    {
+        var project = Chalet(
+            new ProjectLocation { Type = PlaceType.Commune, Query = "Vignec", Code = "65471", PostalCodes = ["65170"] },
+            new ProjectLocation { Type = PlaceType.PostalCode, Query = "64490", Code = "64490" });
+        Assert.Equal(outside, ProjectScope.OutsidePlaces(project, new ListingData { PostalCode = cp }));
+    }
+
+    [Fact]
+    public void Store_HidesResultsOutsideThePlaces()
+    {
+        var store = new ProjectStore(new InMemoryProjectPersistence());
+        var project = Chalet(new ProjectLocation { Type = PlaceType.PostalCode, Query = "65170", Code = "65170" });
+        project.PriceMax = null;
+        store.Save(project);
+        store.ApplyResults(project.Id, "seloger", [new("a", new ListingData { PostalCode = "65170" }), new("b", new ListingData { PostalCode = "66000" })], false, 0);
+
+        Assert.Equal("seloger:a", Assert.Single(store.Results(project.Id)).Key);
+        Assert.Single(store.Groups(project.Id));
+    }
+
+    [Fact]
+    public void OutsidePlaces_KeepsEverythingWithAFreeTextPlace()
+    {
+        var project = Chalet(new ProjectLocation { Type = PlaceType.Free, Query = "Pyrénées" });
+        Assert.False(ProjectScope.OutsidePlaces(project, new ListingData { PostalCode = "66000" }));
+    }
+
     [Fact]
     public void Criteria_AlsoApply()
     {
@@ -147,6 +181,7 @@ public class PhotoLimitTests
     }
 }
 
+
 public class PropertyTypeTests
 {
     [Theory]
@@ -179,3 +214,19 @@ public class PropertyTypeTests
         Assert.False(ProjectMatcher.Matches(p, new ListingData { PropertyType = "flat" }, out _));
     }
 }
+
+public class ProjectFormatTests
+{
+    [Fact]
+    public void Places_AreSummarized_WhenTheListIsLong()
+    {
+        var places = Enumerable.Range(0, 8).Select(i => new ProjectLocation { Type = PlaceType.Commune, Query = $"C{i}", Code = $"6500{i}", PostalCodes = [i < 4 ? "65170" : "64490"] })
+            .Append(new ProjectLocation { Type = PlaceType.PostalCode, Query = "31110", Code = "31110" })
+            .ToList();
+
+        Assert.Equal("8 communes, 1 code postal (31, 64, 65)", RechercheLogement.Server.Components.ProjectFormat.Places(places));
+        Assert.Equal("C0", RechercheLogement.Server.Components.ProjectFormat.Places(places.Take(1).ToList()));
+    }
+}
+
+
