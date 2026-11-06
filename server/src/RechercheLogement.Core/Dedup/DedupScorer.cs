@@ -44,7 +44,7 @@ public static class DedupScorer
         // --- 1. Rejets durs -------------------------------------------------
         if (a.Transaction is not null && b.Transaction is not null && a.Transaction != b.Transaction)
             return Rejected("transaction différente");
-        if (a.PropertyType is not null && b.PropertyType is not null && a.PropertyType != b.PropertyType)
+        if (PropertyTypes.Normalize(a.PropertyType) is { } ta && PropertyTypes.Normalize(b.PropertyType) is { } tb && ta != tb)
             return Rejected("type de bien différent");
 
         double? dist = a.Geo is not null && b.Geo is not null ? DistanceMeters(a.Geo, b.Geo) : null;

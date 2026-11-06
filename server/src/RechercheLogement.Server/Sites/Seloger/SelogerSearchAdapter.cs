@@ -93,10 +93,26 @@ public sealed class SelogerSearchAdapter(BrowserRelay relay) : ISearchAdapter
         return new SearchOutcome(items, complete, total);
     }
 
+    /// <summary>
+    /// Types communs -> "estateTypes" de SeLoger (relevés dans le site en novembre 2026). SeLoger n'a pas de château,
+    /// loft ni maison de ville à ce niveau : ce sont des maisons ou appartements, triés ensuite par le type de l'annonce.
+    /// </summary>
+    public static IEnumerable<string> SiteTypes(IEnumerable<string> types) => types.Select(PropertyTypes.Normalize).SelectMany(t => t switch
+    {
+        PropertyTypes.Flat or PropertyTypes.Loft => ["Apartment"],
+        PropertyTypes.House or PropertyTypes.TownHouse or PropertyTypes.Castle => ["House"],
+        PropertyTypes.Terrain => ["Plot"],
+        PropertyTypes.Building => ["Building"],
+        PropertyTypes.Commercial => ["Office", "Trading"],
+        PropertyTypes.Parking => ["Parking"],
+        PropertyTypes.Other => ["Miscellaneous", "Agriculture_Forestry"],
+        _ => Array.Empty<string>(),
+    }).Distinct();
+
     /// <summary>Corps de serp-bff/search (mêmes champs que le site : priceMax, spaceMin, numberOfRoomsMin...).</summary>
     public static JsonObject BuildSearch(SearchProject p, IReadOnlyList<string> placeIds, int page)
     {
-        var types = p.PropertyTypes.Select(t => t switch { "house" => "House", _ => "Apartment" }).Distinct().ToArray();
+        var types = SiteTypes(p.PropertyTypes).ToArray();
         var criteria = new JsonObject
         {
             ["distributionTypes"] = new JsonArray(Distribution(p.Transaction)),

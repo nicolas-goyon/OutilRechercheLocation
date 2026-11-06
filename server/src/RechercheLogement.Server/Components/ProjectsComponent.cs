@@ -41,12 +41,7 @@ public abstract class ProjectsComponent : ComponentBase, IDisposable
 /// <summary>Libellés des pages "Mes projets".</summary>
 public static class ProjectFormat
 {
-    public static string Types(IEnumerable<string> types) => string.Join(", ", types.Select(t => t switch
-    {
-        "flat" => "Appartement",
-        "house" => "Maison",
-        _ => t,
-    }));
+    public static string Types(IEnumerable<string> types) => string.Join(", ", types.Select(PropertyTypes.Label));
 
     /// <summary>"Location · Appartement · Rodez, Onet-le-Château · 400 à 700 € · ≥ 40 m² · ≥ 2 pièces".</summary>
     public static string Summary(SearchProject p)

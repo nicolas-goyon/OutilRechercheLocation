@@ -30,9 +30,13 @@
         </select>
 
         <label>Type de bien</label>
-        <div class="checks">
-            <label><input type="checkbox" @bind="_flat" /> Appartement</label>
-            <label><input type="checkbox" @bind="_house" /> Maison</label>
+        <div class="type-chips">
+            @foreach (var (id, label) in PropertyTypes.All)
+            {
+                <label class="chip @(_types.Contains(id) ? "on" : "")">
+                    <input type="checkbox" checked="@_types.Contains(id)" @onchange="() => ToggleType(id)" /> @label
+                </label>
+            }
         </div>
 
     </div>
@@ -244,8 +248,12 @@
 
     private string _name = "";
     private TransactionType _transaction = TransactionType.Rent;
-    private bool _flat = true;
-    private bool _house;
+    private HashSet<string> _types = [PropertyTypes.Flat];
+
+    private void ToggleType(string id)
+    {
+        if (!_types.Remove(id)) _types.Add(id);
+    }
     private LocationMode _mode = LocationMode.Places;
     private List<ProjectLocation> _places = [];
     private string _placeText = "";
@@ -285,8 +293,7 @@
         var p = _existing;
         _name = p.Name;
         _transaction = p.Transaction;
-        _flat = p.PropertyTypes.Contains("flat");
-        _house = p.PropertyTypes.Contains("house");
+        _types = p.PropertyTypes.Select(PropertyTypes.Normalize).OfType<string>().ToHashSet();
         _mode = p.LocationMode;
         _places = [.. p.Locations];
         _center = p.CenterLabel ?? p.CenterQuery ?? "";
@@ -502,7 +509,7 @@
         _errors.Clear();
         var sites = _sites.Where(s => Sites.Get(s) is { Available: true }).ToList();
         if (string.IsNullOrWhiteSpace(_name)) _errors.Add("Donner un nom au projet.");
-        if (!_flat && !_house) _errors.Add("Choisir au moins un type de bien.");
+        if (_types.Count == 0) _errors.Add("Choisir au moins un type de bien.");
         if (_mode == LocationMode.Places && _places.Count == 0) _errors.Add("Indiquer au moins un lieu (ville, code postal, département ou région).");
         if (_mode == LocationMode.Places && !string.IsNullOrWhiteSpace(_placeText)) _errors.Add($"Lieu non validé : « {_placeText.Trim()} ». Le choisir dans les suggestions (Entrée) ou l'effacer.");
         if (_mode != LocationMode.Places && _centerPoint is null && string.IsNullOrWhiteSpace(_center)) _errors.Add("Indiquer le point de départ (adresse, ville ou clic sur la carte).");
@@ -514,7 +521,7 @@
 
         var p = _existing ?? new SearchProject { Id = SearchProject.NewId() };
         p.Name = _name.Trim();
-        p.PropertyTypes = [.. new[] { _flat ? "flat" : null, _house ? "house" : null }.OfType<string>()];
+        p.PropertyTypes = PropertyTypes.All.Select(t => t.Id).Where(_types.Contains).ToList();
         // Transaction changée : les lieux reconnus par les sites (qui en dépendent) sont redemandés.
         if (_existing is not null && _existing.Transaction != _transaction) p.PlaceCache.Clear();
         p.Transaction = _transaction;
