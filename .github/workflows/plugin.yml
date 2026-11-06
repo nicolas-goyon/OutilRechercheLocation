@@ -10,7 +10,7 @@ name: Plugin — test & publication (jsDelivr + GitHub Release, mise à jour aut
 #     ⚠ Seul ce workflow publie des releases "latest" : "latest" = dernier plugin. Le workflow
 #       serveur publie seulement la pre-release "server-latest" (jamais "latest").
 #
-# - Pull request / push touchant plugin/ : typecheck + tests + build.
+# - Pull request / push touchant plugin/ : lint, typecheck, tests (+ couverture), build. Une tâche chacun.
 # - Push sur main : en plus, publication d'un nouveau tag (patch par défaut,
 #   "[minor]" ou "[major]" dans un message de commit pour monter plus haut).
 # - workflow_dispatch : republier un tag existant ("tag") ou forcer une montée ("bump").
@@ -38,29 +38,81 @@ permissions:
 
 concurrency:
   group: plugin-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
     working-directory: plugin
 
 jobs:
-  test:
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+          cache: npm
+          cache-dependency-path: plugin/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+
+  typecheck:
+    name: Types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: plugin/package-lock.json
+      - run: npm ci
       - run: npm run typecheck
-      - run: npm test
+
+  test:
+    name: Tests unitaires
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: plugin/package-lock.json
+      - run: npm ci
+      - name: Tests et couverture
+        run: |
+          set -o pipefail
+          npm run test:coverage | tee coverage.txt
+          {
+            echo '### Couverture du plugin'
+            echo '```'
+            sed -n '/start of coverage report/,/end of coverage report/p' coverage.txt | sed 's/^# //'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: plugin/package-lock.json
+      - run: npm ci
       - run: npm run build
       - name: Vérifier le bundle
         run: test -s dist/recherche-logement.js && echo "OK ($(wc -c < dist/recherche-logement.js) octets)"
+      - name: Audit des dépendances npm (élevées et critiques)
+        run: npm audit --audit-level=high
 
   release:
-    needs: test
+    name: Publication
+    needs: [lint, typecheck, test, build]
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
@@ -89,9 +141,9 @@ jobs:
             else
               messages="$(git log --pretty=%B "${BEFORE_SHA}..${AFTER_SHA}")"
             fi
-            if grep -qi '\[major\]' <<< "$messages"; then bump=major
-            elif grep -qi '\[minor\]' <<< "$messages"; then bump=minor
-            else bump=patch; fi
+            if grep -qi '\[major\]' <<< "$messages"; then bump="major"
+            elif grep -qi '\[minor\]' <<< "$messages"; then bump="minor"
+            else bump="patch"; fi
           fi
           latest="$(git tag -l 'plugin-v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -n1)"
           latest="${latest:-plugin-v0.1.0}"
@@ -115,7 +167,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - run: npm ci
       - name: Build (version = tag publié)
         env:
           RELEASE_VERSION: ${{ steps.tag.outputs.name }}

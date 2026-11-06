@@ -184,7 +184,7 @@ export class Tracker {
     setAttr(el, 'data-tmrl-dup', best ? (best.otherStatus === 'rejected' ? 'rejected' : 'suggested') : null);
 
     renderToolbar(
-      isDetail ? (card as DetailRef).anchor : (this.adapter.toolbarAnchor?.(card as CardRef) ?? el),
+      isDetail ? (card as DetailRef).anchor : (this.adapter.toolbarAnchor?.(card) ?? el),
       {
         status,
         contactStage: view?.contactStage,

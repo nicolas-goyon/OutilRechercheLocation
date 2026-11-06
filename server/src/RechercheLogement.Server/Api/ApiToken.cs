@@ -24,7 +24,8 @@ public sealed class ApiTokenService(Catalog catalog, ServerSettings settings, IL
     public string EnsureToken()
     {
         var token = Current;
-        logger.LogInformation("Token API du plugin : {Token}  (le coller dans le plugin : panneau 🏠 > Connexion)", token);
+        if (logger.IsEnabled(LogLevel.Information))
+            logger.LogInformation("Token API du plugin : {Token}  (le coller dans le plugin : panneau 🏠 > Connexion)", token);
         return token;
     }
 

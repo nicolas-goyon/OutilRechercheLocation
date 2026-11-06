@@ -18,7 +18,7 @@ namespace RechercheLogement.Server.Projects;
 ///     puis envoi au catalogue.
 /// Un seul lancement à la fois (on reste discret avec les sites).
 /// </summary>
-public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegistry sites, AreaPlanner planner, ILogger<ProjectRunner> log)
+public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegistry sites, AreaPlanner planner, ILogger<ProjectRunner> log) : IDisposable
 {
     /// <summary>Au-delà, la recherche par codes postaux passe aux départements.</summary>
     private const int MaxPostalCodes = 80;
@@ -28,6 +28,8 @@ public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegis
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly ConcurrentDictionary<string, string> _running = new();
+
+    public void Dispose() => _gate.Dispose();
 
     /// <summary>Étape en cours pour ce projet (pour la page), sinon null.</summary>
     public string? RunningSite(string projectId) => _running.GetValueOrDefault(projectId);

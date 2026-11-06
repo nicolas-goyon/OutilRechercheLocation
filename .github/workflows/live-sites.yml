@@ -1,0 +1,95 @@
+name: Sites réels
+
+# Vérifie, sur les vrais sites, que les données se récupèrent et se lisent toujours :
+#   - serveur : Bien'ici (lieux, recherche, annonces), cessions de l'État (liste, fiches), API géographiques
+#     (geo.api.gouv.fr, Géoplateforme IGN), SeLoger (format lu si l'appel n'est pas refusé ; refus attendu hors navigateur) ;
+#   - plugin : JSON de l'API Bien'ici lu par le parser du plugin.
+# Tous les jours, et sur les PR qui touchent un connecteur. En cas d'échec planifié, une issue est ouverte (ou
+# commentée) : un site a probablement changé de format.
+# Peu de requêtes, espacées : ces tests ne doivent pas charger les sites.
+
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  pull_request:
+    paths:
+      - 'server/src/RechercheLogement.Server/Sites/**'
+      - 'server/src/RechercheLogement.Server/Geo/**'
+      - 'server/tests/RechercheLogement.LiveTests/**'
+      - 'plugin/src/sites/**'
+      - 'plugin/tests-live/**'
+      - '.github/workflows/live-sites.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-sites-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  server:
+    name: Serveur (connecteurs et API géographiques)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: server/global.json
+      - name: Tests sur les sites réels
+        working-directory: server
+        run: >
+          dotnet test tests/RechercheLogement.LiveTests/RechercheLogement.LiveTests.csproj -c Release
+          --logger "console;verbosity=normal" --logger "trx;LogFileName=live.trx" --results-directory ../live-results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-results
+          path: live-results/
+          retention-days: 14
+
+  plugin:
+    name: Plugin (parsers)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: plugin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: plugin/package-lock.json
+      - run: npm ci
+      - run: npm run test:live
+
+  report:
+    name: Signaler un site cassé
+    needs: [server, plugin]
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Ouvrir ou commenter l'issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          title="Sites réels : un connecteur ne lit plus les données"
+          body="Les tests sur les sites réels ont échoué le $(date -u +%F). Un site a peut-être changé de format, ou était indisponible. Détails : ${RUN_URL}"
+          number="$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search "\"${title}\" in:title" --json number --jq '.[0].number // empty')"
+          if [ -n "$number" ]; then
+            gh issue comment "$number" -R "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create -R "$GITHUB_REPOSITORY" --title "$title" --label bug --body "$body"
+          fi

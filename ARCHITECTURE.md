@@ -63,13 +63,32 @@ server/
     Storage/SqliteMigrator.cs      Migrations (PRAGMA user_version, SQL + données JSON), sauvegarde, refus d'une base trop récente
     Components/           Pages Blazor (interactive server) : tableau de bord, à contacter,
                           biens, fiche, doublons, paramètres
-  tests/RechercheLogement.Tests/   xUnit : DedupScorer, Catalog, API (WebApplicationFactory)
+  tests/RechercheLogement.Tests/   xUnit, sans réseau : DedupScorer, Catalog, API (WebApplicationFactory), parsers
+  tests/RechercheLogement.LiveTests/ xUnit sur les vrais sites (Bien'ici, État, API géographiques), CI quotidienne
   Dockerfile
 docker-compose.yml        Build local depuis les sources (développement)
 deploy/                   docker-compose.yml (image GHCR :latest) + update.sh / update.ps1
-.github/workflows/        plugin.yml (tag plugin-v* + jsDelivr + GitHub Release = mise à jour auto)
-                          server.yml (tests + image GHCR + docker-compose sur la pre-release server-latest)
+.github/workflows/        voir « Intégration continue »
 ```
+
+## Intégration continue
+
+Une tâche par vérification, pour voir d'un coup d'œil ce qui échoue dans une PR :
+
+| Workflow | Tâches | Quand |
+| --- | --- | --- |
+| `server.yml` | Format (`dotnet format`), Build et analyse (avertissements = erreurs, `AnalysisMode Recommended`, règles dans `server/.editorconfig`), Tests unitaires + couverture, Audit des dépendances (faille élevée = échec), Image Docker (construite, démarrée, pages interrogées). Puis publication de l'image et de `server-latest`. | PR et push touchant `server/`, `deploy/` |
+| `plugin.yml` | Lint (ESLint + typescript-eslint), Types, Tests unitaires + couverture, Build (+ `npm audit`). Puis publication du tag `plugin-v*`. | PR et push touchant `plugin/` |
+| `live-sites.yml` | Tests sur les vrais sites : serveur (`RechercheLogement.LiveTests`) et parsers du plugin (`npm run test:live`). Échec planifié : une issue est ouverte ou commentée. | Chaque jour, PR touchant un connecteur |
+| `repo-checks.yml` | actionlint, shellcheck, PSScriptAnalyzer, dependency-review (PR) | Toujours |
+| `codeql.yml` | Analyse de sécurité et de qualité C# et TypeScript (onglet Security) | PR, push, chaque lundi |
+
+Les publications attendent toutes les vérifications. Dependabot (`.github/dependabot.yml`) propose chaque semaine
+une PR groupée par écosystème (NuGet, npm, Actions, image Docker).
+
+Lancer les vérifications en local : `dotnet format --verify-no-changes`, `dotnet build -c Release`,
+`dotnet test tests/RechercheLogement.Tests` (serveur) ; `npm run lint`, `npm run typecheck`, `npm test`,
+`npm run test:live` (plugin). Tests sur les vrais sites : `dotnet test tests/RechercheLogement.LiveTests`.
 
 ## Modèle de données
 

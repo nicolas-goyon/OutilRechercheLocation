@@ -5,17 +5,24 @@
   "description": "Plugin Tampermonkey. Masque et étiquette les annonces immobilières. Synchronise les annonces avec le serveur local (../server).",
   "type": "module",
   "scripts": {
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "build": "node scripts/build.mjs",
     "build:watch": "node scripts/build.mjs --watch",
-    "test": "node --import tsx --test tests/*.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:coverage": "node --import tsx --test --experimental-test-coverage --test-coverage-include='src/**' tests/*.test.ts",
+    "test:live": "node --import tsx --test tests-live/*.test.ts"
   },
   "devDependencies": {
-    "esbuild": "^0.21.5",
-    "typescript": "^5.5.4",
-    "tsx": "^4.19.0",
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^20.14.0",
+    "esbuild": "^0.25.12",
+    "eslint": "^9.39.5",
+    "globals": "^15.15.0",
     "linkedom": "^0.18.5",
-    "@types/node": "^20.14.0"
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.72.1"
   },
   "repository": {
     "type": "git",
