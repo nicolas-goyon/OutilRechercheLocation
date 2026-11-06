@@ -39,6 +39,16 @@ export function isAllowed(url: string, origin: string, allowedPaths: RegExp[]): 
 
 export class RelayWorker {
   private running = false;
+  private listeners = new Set<() => void>();
+  /** Requêtes exécutées pour le serveur depuis l'ouverture de l'onglet. */
+  handled = 0;
+  /** Heure (ms) de la dernière requête exécutée. */
+  lastAt?: number;
+
+  onChange(cb: () => void): () => void {
+    this.listeners.add(cb);
+    return () => this.listeners.delete(cb);
+  }
 
   constructor(
     private readonly api: RelayApi,
@@ -73,6 +83,9 @@ export class RelayWorker {
     const request = await this.api.relayNext(this.options.site);
     if (!request) return false;
     await this.api.relayResult(request.id, await this.execute(request));
+    this.handled++;
+    this.lastAt = Date.now();
+    for (const cb of this.listeners) cb();
     return true;
   }
 

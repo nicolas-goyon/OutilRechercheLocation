@@ -12,7 +12,7 @@
  * Chaque requête contient `Authorization: Bearer <token>`. Le serveur refuse
  * tout appel /api/* sans le bon token.
  */
-import type { RelayRequest, RelayResult, SavedSearchRequest, SavedSearchView, SyncRequest, SyncResponse } from './types';
+import type { RelayRequest, RelayResult, RelayStatus, SavedSearchRequest, SavedSearchView, SyncRequest, SyncResponse } from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -77,6 +77,16 @@ export class ApiClient {
   /** Prochaine requête à exécuter pour le serveur. Le serveur attend jusqu'à 25 s avant de répondre. */
   relayNext(site: string): Promise<RelayRequest | undefined> {
     return this.request<RelayRequest | undefined>('GET', `/api/relay/next?site=${encodeURIComponent(site)}`, undefined, 35_000);
+  }
+
+  /** Recherches du serveur en cours sur ce site, et projets qui l'utilisent. */
+  relayStatus(site: string): Promise<RelayStatus> {
+    return this.request<RelayStatus>('GET', `/api/relay/status?site=${encodeURIComponent(site)}`);
+  }
+
+  /** Lance les recherches de ce site pour tous les projets actifs qui l'utilisent. */
+  relayRun(site: string): Promise<{ projects: number }> {
+    return this.request<{ projects: number }>('POST', `/api/relay/run?site=${encodeURIComponent(site)}`, {});
   }
 
   /** Réponse du site à une requête du relais. */

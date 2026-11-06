@@ -158,6 +158,15 @@ Le plugin n'exécute que les adresses déclarées par l'adaptateur du site (`rel
 Réponse du site, sans modification : `{ "status": 200, "body": "…" }`, ou `{ "status": 0, "error": "…" }` si
 le navigateur n'a pas pu appeler le site. `404` : requête inconnue ou abandonnée.
 
+## `GET /api/relay/status?site=seloger`
+
+Recherches du serveur en cours sur ce site, pour le panneau du plugin :
+`{ "running": [{ "projectId": "…", "project": "Petit chalet", "step": "reconnaissance des lieux 12/746" }], "projects": 1 }`.
+
+## `POST /api/relay/run?site=seloger`
+
+Lance ce site pour tous les projets actifs qui l'utilisent (en arrière-plan). Réponse : `{ "projects": 1 }`.
+
 ## `GET /api/export`
 
 Retourne une sauvegarde complète (annonces, biens, liens, historique, recherches favorites).

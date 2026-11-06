@@ -11,7 +11,8 @@ namespace RechercheLogement.Server.Sites;
 // Ajouter une fonctionnalité : une interface ici, une propriété dans ISiteModule, une classe par site.
 
 /// <summary>Identité d'un site et sa catégorie.</summary>
-public sealed record SiteInfo(string Id, string Label, SiteCategory Category, string Description);
+/// <param name="BrowserTab">Le site passe par le plugin : il faut un onglet du site ouvert (voir BrowserRelay).</param>
+public sealed record SiteInfo(string Id, string Label, SiteCategory Category, string Description, bool BrowserTab = false);
 
 /// <summary>Types de lieux qu'un site sait chercher directement.</summary>
 [Flags]
@@ -58,7 +59,11 @@ public sealed record PlaceQuery(PlaceKind Kind, string Text, string? PostalCode 
 public sealed record CollectedItem(string SiteId, ListingData Data);
 
 /// <param name="MaxResults">Nombre maximal d'annonces à récupérer (les plus récentes d'abord).</param>
-public sealed record SearchRequest(SearchProject Project, IReadOnlyList<string> PlaceIds, int MaxResults);
+/// <param name="Progress">Étape en cours, affichée sur la page du projet ("page 3", "fiche 2/5").</param>
+public sealed record SearchRequest(SearchProject Project, IReadOnlyList<string> PlaceIds, int MaxResults, Action<string>? Progress = null)
+{
+    public void Report(string step) => Progress?.Invoke(step);
+}
 
 /// <param name="Complete">true : toutes les annonces de la recherche ont été récupérées (sert à détecter les retraits).</param>
 public sealed record SearchOutcome(IReadOnlyList<CollectedItem> Items, bool Complete, int Total);
@@ -74,6 +79,13 @@ public interface ISearchAdapter
 {
     PlaceKinds SupportedPlaces { get; }
     Task<CachedPlace?> ResolvePlaceAsync(PlaceQuery query, TransactionType transaction, CancellationToken ct);
+
+    /// <summary>
+    /// Lieu réellement demandé au site pour un lieu du projet (par défaut : le même). Permet à un site de chercher
+    /// une commune par son code postal quand son nom ne suffit pas à la distinguer d'une homonyme.
+    /// </summary>
+    PlaceQuery Prepare(PlaceQuery query) => query;
+
     Task<SearchOutcome> SearchAsync(SearchRequest request, CancellationToken ct);
 }
 

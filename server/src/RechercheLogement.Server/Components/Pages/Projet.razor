@@ -1,5 +1,6 @@
 @page "/projets/{Id}"
 @inherits ProjectsComponent
+@inject RechercheLogement.Server.Sites.Common.BrowserRelay Relay
 
 <PageTitle>@(_project?.Name ?? "Projet") — Recherche logement</PageTitle>
 
@@ -12,6 +13,7 @@ else
 {
     var p = _project;
     var running = Runner.RunningSite(p.Id);
+    var progress = Runner.Progress(p.Id);
     <div class="page-head">
         <h1>@p.Name</h1>
         <span class="spacer"></span>
@@ -21,7 +23,7 @@ else
         }
         else
         {
-            <button type="button" class="primary" @onclick="() => StartRun(p.Id)"><Icon Name="play" /> Lancer maintenant</button>
+            <button type="button" class="primary" @onclick="() => StartRun(p.Id)"><Icon Name="play" /> Lancer tous les sites</button>
         }
         <a class="button" href="/projets/@p.Id/modifier"><Icon Name="pencil" /> Modifier</a>
     </div>
@@ -52,15 +54,38 @@ else
         <table class="runs">
             @foreach (var site in p.Sites)
             {
+                var info = Sites.Get(site)?.Info;
                 var run = _runs.FirstOrDefault(r => r.Site == site);
+                var step = progress.GetValueOrDefault(site);
                 var places = p.PlaceCache.GetValueOrDefault(site)?.Values.Where(x => x is not null).Select(x => x!.Label).ToList() ?? [];
-                <tr class="@(run is null ? "" : run.Ok ? "ok" : "ko")">
+                <tr class="@(step is not null ? "running" : run is null ? "" : run.Ok ? "ok" : "ko")">
                     <td><b>@Sites.Label(site)</b></td>
-                    <td><Icon Name="@(run is null ? "circle" : run.Ok ? "check" : "triangle-alert")" /></td>
-                    <td>@(run?.Message ?? "Pas encore lancé.")</td>
+                    <td><Icon Name="@(step is not null ? "loader-circle" : run is null ? "circle" : run.Ok ? "check" : "triangle-alert")" Class="@(step is not null ? "spin" : null)" /></td>
+                    <td>
+                        @if (step is not null)
+                        {
+                            <span>Recherche en cours : @step</span>
+                        }
+                        else
+                        {
+                            @(run?.Message ?? "Pas encore lancé.")
+                        }
+                        @if (info?.BrowserTab == true)
+                        {
+                            <div class="small @(Relay.IsConnected(site) ? "muted" : "warn")">
+                                @(Relay.IsConnected(site) ? $"Onglet {info.Label} ouvert avec le plugin." : $"Aucun onglet {info.Label} ouvert : la recherche attendra l'ouverture d'un onglet avec le plugin.")
+                            </div>
+                        }
+                    </td>
                     <td class="muted">@(run is null ? "" : Format.DateTime(run.At))</td>
                     <td class="muted small" title="@string.Join(", ", places)">
                         @(places.Count == 0 ? "" : places.Count <= 4 ? $"Lieux : {string.Join(", ", places)}" : $"{places.Count} lieux reconnus")
+                    </td>
+                    <td>
+                        @if (step is null && Sites.Get(site) is { Available: true })
+                        {
+                            <button type="button" class="small-button" title="Relancer la recherche sur @Sites.Label(site)" @onclick="() => StartSite(p.Id, site)"><Icon Name="play" /> Relancer</button>
+                        }
                     </td>
                 </tr>
             }
@@ -187,6 +212,20 @@ else
             Store.MarkViewed(Id);
         }
         Load();
+    }
+
+    private Timer? _refresh;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        // Onglets des sites qui passent par le plugin : l'état change sans événement côté serveur.
+        if (firstRender) _refresh = new Timer(_ => _ = InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+    }
+
+    public override void Dispose()
+    {
+        _refresh?.Dispose();
+        base.Dispose();
     }
 
     protected override void Load()

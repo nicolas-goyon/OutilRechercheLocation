@@ -13,7 +13,7 @@ public sealed class SelogerSite(BrowserRelay relay) : ISiteModule
 {
     public const string Id = "seloger";
 
-    public SiteInfo Info { get; } = new(Id, "SeLoger", SiteCategory.ImmoPortal, "Recherche faite par le plugin, dans un onglet seloger.com ouvert.");
+    public SiteInfo Info { get; } = new(Id, "SeLoger", SiteCategory.ImmoPortal, "Recherche faite par le plugin, dans un onglet seloger.com ouvert.", BrowserTab: true);
     public IListingParser Parser { get; } = new SelogerListingParser();
     public ISearchAdapter Search { get; } = new SelogerSearchAdapter(relay);
 
