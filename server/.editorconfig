@@ -1,0 +1,19 @@
+# Règles d'analyse du code .NET (AnalysisMode Recommended, voir Directory.Build.props).
+# Les avertissements bloquent la compilation des projets src/ (TreatWarningsAsErrors).
+root = false
+
+[*.cs]
+# Journalisation : LoggerMessage n'apporte rien à un serveur local peu bavard.
+dotnet_diagnostic.CA1848.severity = none
+# "Property" est le nom métier du bien ; JsonRead.Int/Str/Dbl lisent un type JSON.
+dotnet_diagnostic.CA1716.severity = none
+dotnet_diagnostic.CA1720.severity = none
+
+[tests/**.cs]
+# Noms de tests lisibles (Methode_Cas_Resultat), tableaux littéraux dans les assertions.
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA1861.severity = none
+dotnet_diagnostic.CA1310.severity = none
+dotnet_diagnostic.CA1305.severity = none
+dotnet_diagnostic.CA1307.severity = none
+dotnet_diagnostic.CA2000.severity = none

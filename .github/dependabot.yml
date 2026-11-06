@@ -1,0 +1,21 @@
+# Mises à jour des dépendances : une PR groupée par écosystème et par semaine.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /server
+    schedule: { interval: weekly, day: monday }
+    groups:
+      nuget: { patterns: ['*'] }
+  - package-ecosystem: npm
+    directory: /plugin
+    schedule: { interval: weekly, day: monday }
+    groups:
+      npm: { patterns: ['*'] }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    groups:
+      actions: { patterns: ['*'] }
+  - package-ecosystem: docker
+    directory: /server
+    schedule: { interval: weekly, day: monday }

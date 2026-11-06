@@ -71,22 +71,22 @@ public sealed class InMemoryPersistence : IPersistence
 
     public StoreSnapshot Load() => _data;
 
-    public void Commit(ChangeSet c)
+    public void Commit(ChangeSet changes)
     {
         // Le catalogue utilise déjà les mêmes instances. Cette méthode met seulement les listes à jour.
-        foreach (var l in c.Listings.Values) if (!_data.Listings.Contains(l)) _data.Listings.Add(l);
-        foreach (var p in c.Properties.Values) if (!_data.Properties.Contains(p)) _data.Properties.Add(p);
-        _data.Properties.RemoveAll(p => c.DeletedProperties.Contains(p.Id));
-        foreach (var l in c.Links.Values) if (!_data.Links.Contains(l)) _data.Links.Add(l);
-        foreach (var e in c.Events)
+        foreach (var l in changes.Listings.Values) if (!_data.Listings.Contains(l)) _data.Listings.Add(l);
+        foreach (var p in changes.Properties.Values) if (!_data.Properties.Contains(p)) _data.Properties.Add(p);
+        _data.Properties.RemoveAll(p => changes.DeletedProperties.Contains(p.Id));
+        foreach (var l in changes.Links.Values) if (!_data.Links.Contains(l)) _data.Links.Add(l);
+        foreach (var e in changes.Events)
         {
             _data.Events.RemoveAll(x => x.Id == e.Id);
             _data.Events.Add(e);
         }
-        foreach (var (id, _) in c.AppliedActions) _data.AppliedActionIds.Add(id);
-        foreach (var (k, v) in c.Settings) _data.Settings[k] = v;
-        foreach (var s in c.Searches.Values) if (!_data.Searches.Contains(s)) _data.Searches.Add(s);
-        _data.Searches.RemoveAll(s => c.DeletedSearches.Contains(s.Id));
+        foreach (var (id, _) in changes.AppliedActions) _data.AppliedActionIds.Add(id);
+        foreach (var (k, v) in changes.Settings) _data.Settings[k] = v;
+        foreach (var s in changes.Searches.Values) if (!_data.Searches.Contains(s)) _data.Searches.Add(s);
+        _data.Searches.RemoveAll(s => changes.DeletedSearches.Contains(s.Id));
         Commits++;
     }
 }

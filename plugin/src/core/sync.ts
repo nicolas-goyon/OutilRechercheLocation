@@ -107,7 +107,7 @@ export class SyncEngine {
   }
 
   act(action: NewAction): void {
-    const full = { ...action, id: newId(), at: this.now() } as Action;
+    const full = { ...action, id: newId(), at: this.now() };
     this.queue.push(full);
     this.persistQueue();
     this.applyOptimistic(full);

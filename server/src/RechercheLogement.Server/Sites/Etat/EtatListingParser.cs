@@ -95,13 +95,13 @@ public static partial class EtatListingParser
         }
         return l switch
         {
-            _ when l.StartsWith("maison") => PropertyTypes.House,
-            _ when l.StartsWith("appartement") => PropertyTypes.Flat,
-            _ when l.StartsWith("chateau") || l.StartsWith("hotels particuliers") => PropertyTypes.Castle,
-            _ when l.StartsWith("foncier") || l.StartsWith("terrain") || l.StartsWith("vignes") => PropertyTypes.Terrain,
-            _ when l.StartsWith("parking") => PropertyTypes.Parking,
-            _ when l.StartsWith("immeuble") || l.StartsWith("ensembles immobiliers") => PropertyTypes.Building,
-            _ when l.StartsWith("bureau") || l.StartsWith("boutique") || l.StartsWith("locaux commerciaux") || l.StartsWith("fonds de commerce") => PropertyTypes.Commercial,
+            _ when l.StartsWith("maison", StringComparison.Ordinal) => PropertyTypes.House,
+            _ when l.StartsWith("appartement", StringComparison.Ordinal) => PropertyTypes.Flat,
+            _ when l.StartsWith("chateau", StringComparison.Ordinal) || l.StartsWith("hotels particuliers", StringComparison.Ordinal) => PropertyTypes.Castle,
+            _ when l.StartsWith("foncier", StringComparison.Ordinal) || l.StartsWith("terrain", StringComparison.Ordinal) || l.StartsWith("vignes", StringComparison.Ordinal) => PropertyTypes.Terrain,
+            _ when l.StartsWith("parking", StringComparison.Ordinal) => PropertyTypes.Parking,
+            _ when l.StartsWith("immeuble", StringComparison.Ordinal) || l.StartsWith("ensembles immobiliers", StringComparison.Ordinal) => PropertyTypes.Building,
+            _ when l.StartsWith("bureau", StringComparison.Ordinal) || l.StartsWith("boutique", StringComparison.Ordinal) || l.StartsWith("locaux commerciaux", StringComparison.Ordinal) || l.StartsWith("fonds de commerce", StringComparison.Ordinal) => PropertyTypes.Commercial,
             _ => PropertyTypes.Other,
         };
     }
