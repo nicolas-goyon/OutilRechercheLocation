@@ -28,6 +28,7 @@ public static class Labels
     {
         "bienici" => "Bien'ici",
         "seloger" => "SeLoger",
+        "etat" => "Cessions de l'État",
         "leboncoin" => "Leboncoin",
         "pap" => "PAP",
         "logicimmo" => "Logic-Immo",

@@ -17,4 +17,7 @@
     <ProjectReference Include="..\..\src\RechercheLogement.Core\RechercheLogement.Core.csproj" />
     <ProjectReference Include="..\..\src\RechercheLogement.Server\RechercheLogement.Server.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

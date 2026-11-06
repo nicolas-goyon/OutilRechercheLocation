@@ -258,6 +258,13 @@ statuts que le plugin. Le catalogue ne connaît pas les projets. Une page passe 
 (`ProjectScope`). Ce périmètre n'est pas stocké : il suit les modifications du projet, et les anciennes annonces
 y entrent sans migration. Les recherches favorites, elles, ont un `ProjectId` optionnel.
 
+## Cessions de l'État
+
+`Sites/Etat/` lit des pages HTML (Drupal), pas une API : `EtatListingParser` repose sur des classes relevées en
+novembre 2026 (`fr-card__link`, `property-title`, `data-lat`/`data-lon`, `Procédure de vente`). Les tests
+utilisent des extraits réels (`Fixtures/etat-*.html`). Si le site change, ce sont eux qu'il faut mettre à jour.
+Les lieux du projet deviennent des départements ; le code postal d'un bien vient de son code INSEE (geo.api.gouv.fr).
+
 ## Relais navigateur (SeLoger)
 
 SeLoger refuse les appels du serveur. `SelogerSearchAdapter` passe donc par `Sites/Common/BrowserRelay.cs` :
