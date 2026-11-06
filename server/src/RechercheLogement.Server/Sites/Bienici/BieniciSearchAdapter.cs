@@ -24,10 +24,21 @@ public sealed class BieniciSearchAdapter(IHttpClientFactory factory) : ISearchAd
 
     public async Task<CachedPlace?> ResolvePlaceAsync(PlaceQuery query, TransactionType transaction, CancellationToken ct)
     {
-        var http = factory.CreateClient(SiteHttp.ClientName);
-        var json = await SiteHttp.GetJsonAsync(http, $"https://res.bienici.com/suggest.json?q={Uri.EscapeDataString(query.Text.Trim())}", Label, ct);
-        return PickPlace(json, query);
+        var place = PickPlace(await SuggestAsync(query.Text, ct), query);
+        if (place is not null || query is not { Kind: PlaceKind.Auto, PostalCode: { Length: 5 } cp }) return place;
+        // Bien'ici ne propose que 10 lieux : pour un nom courant (Saint-Michel, Villeneuve...), la bonne commune n'y
+        // est souvent pas. Avec le code postal, elle passe en tête.
+        place = PickPlace(await SuggestAsync($"{query.Text.Trim()} {cp}", ct), query);
+        if (place is not null) return place;
+        // Commune inconnue de Bien'ici (commune nouvelle : Val-de-Sos, découpée en ses anciennes communes) : tout son
+        // code postal. Les annonces des autres communes de ce code postal sont écartées par le filtre du projet.
+        var zone = PickPlace(await SuggestAsync(cp, ct), new PlaceQuery(PlaceKind.PostalCode, cp));
+        return zone is null ? null : new CachedPlace($"{query.Text.Trim()} (tout le code postal {cp})", zone.Ids);
     }
+
+    private async Task<JsonNode> SuggestAsync(string text, CancellationToken ct) =>
+        await SiteHttp.GetJsonAsync(factory.CreateClient(SiteHttp.ClientName),
+            $"https://res.bienici.com/suggest.json?q={Uri.EscapeDataString(text.Trim())}", Label, ct);
 
     /// <summary>
     /// Choix dans les suggestions : département demandé -> type "department" ; code postal -> lieu qui a ce code ;
@@ -37,7 +48,9 @@ public sealed class BieniciSearchAdapter(IHttpClientFactory factory) : ISearchAd
     {
         if (json is not JsonArray places) return null;
         var text = query.Text.Trim();
-        if (Regex.IsMatch(text, @"^\d{5}$")) return Pick(places, query, text);
+        if (Regex.IsMatch(text, @"^\d{5}$"))
+            return Pick(new JsonArray(places.Where(p => JsonRead.Str(p?["type"]) == "postalCode").Select(p => p?.DeepClone()).ToArray()), query, text)
+                ?? Pick(places, query, text);
         // Commune choisie dans les suggestions : le lieu qui a son code postal, ou à défaut une commune du même nom dans
         // le même département. Jamais une homonyme ailleurs : la recherche partirait dans une autre région.
         if (query.PostalCode is not { Length: 5 } cp) return Pick(places, query, null);
@@ -71,6 +84,8 @@ public sealed class BieniciSearchAdapter(IHttpClientFactory factory) : ISearchAd
             var name = JsonRead.Str(place["name"]) ?? text;
             if (query.Kind == PlaceKind.Department && (type != "department" || DedupScorer.NormalizeText(name) != DedupScorer.NormalizeText(text))) continue;
             if (cp is not null && !postalCodes.Contains(cp)) continue;
+            // Commune : le même nom, pas une autre commune du même code postal ("Orus" pour "Val-de-Sos 09220").
+            if (query is { Kind: PlaceKind.Auto, PostalCode: not null } && !ProjectScope.SameCommune(text, name)) continue;
             var label = type == "department" ? $"{name} (département)" : postalCodes.Count == 1 && name != postalCodes[0] ? $"{name} ({postalCodes[0]})" : name;
             return new CachedPlace(label, zones);
         }

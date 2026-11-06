@@ -1,3 +1,4 @@
+using RechercheLogement.Core.Dedup;
 using RechercheLogement.Core.Geo;
 using RechercheLogement.Core.Model;
 using RechercheLogement.Core.Projects;
@@ -17,6 +18,30 @@ namespace RechercheLogement.Server.Projects;
 /// </summary>
 public sealed class AreaPlanner(GeoServices geo)
 {
+    /// <summary>
+    /// Complète les communes nouvelles du projet avec leurs anciennes communes (une requête par département, retenue).
+    /// true : au moins une commune complétée (projet à enregistrer). Service indisponible : réessayé au lancement suivant.
+    /// </summary>
+    public async Task<bool> AddFormerNamesAsync(SearchProject project, CancellationToken ct)
+    {
+        var todo = project.Locations.Where(l => l is { Type: PlaceType.Commune, FormerNames: null, Code.Length: 5 }).ToList();
+        var changed = false;
+        foreach (var department in todo.GroupBy(l => l.Code!.StartsWith("97", StringComparison.Ordinal) ? l.Code[..3] : l.Code[..2]))
+        {
+            var former = await geo.FormerCommunesAsync(department.Key, ct);
+            if (former is null) continue;
+            foreach (var l in department)
+            {
+                var name = DedupScorer.NormalizeText(l.Query);
+                l.FormerNames = former.TryGetValue(l.Code!, out var names)
+                    ? names.Where(n => DedupScorer.NormalizeText(n) != name).ToList()
+                    : [];
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
     private const long MaxAgeMs = 30L * 24 * 3_600_000;
     private const double CommuneMarginM = 1500;
 

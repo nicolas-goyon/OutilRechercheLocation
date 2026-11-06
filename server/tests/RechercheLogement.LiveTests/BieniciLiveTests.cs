@@ -22,6 +22,24 @@ public class BieniciLiveTests(ITestOutputHelper output)
         Assert.NotEmpty(postalCode!.Ids);
     }
 
+    /// <summary>
+    /// Noms portés par des dizaines de communes (Bien'ici ne propose que 10 lieux) et commune nouvelle inconnue de
+    /// Bien'ici (Val-de-Sos) : toutes reconnues, et jamais une homonyme d'un autre département.
+    /// </summary>
+    [Theory]
+    [InlineData("Saint-Michel", "64220")]
+    [InlineData("Mont", "64300")]
+    [InlineData("Sainte-Marie", "65370")]
+    [InlineData("Villeneuve", "09800")]
+    [InlineData("Val-de-Sos", "09220")]
+    public async Task CommonNames_AreRecognizedInTheirDepartment(string name, string cp)
+    {
+        var place = await LiveHttp.Retry(() => _adapter.ResolvePlaceAsync(new PlaceQuery(PlaceKind.Auto, name, cp), TransactionType.Buy, default));
+        Assert.NotNull(place);
+        output.WriteLine($"{name} ({cp}) -> {place.Label} : {string.Join(", ", place.Ids)}");
+        Assert.Contains(cp, place.Label, StringComparison.Ordinal); // "Saint-Michel (64220)", pas une homonyme
+    }
+
     [Fact]
     public async Task Search_ReturnsReadableListings()
     {
