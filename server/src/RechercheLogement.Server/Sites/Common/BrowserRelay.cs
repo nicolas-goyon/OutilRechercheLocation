@@ -30,6 +30,7 @@ public sealed class BrowserRelay(int delayMs = 2000, TimeSpan? timeout = null, T
 
     private sealed record Pending(RelayRequest Request, TaskCompletionSource<RelayResult> Result);
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1001", Justification = "Un état par site, gardé toute la vie du serveur.")]
     private sealed class SiteState
     {
         public readonly Channel<Pending> Queue = Channel.CreateUnbounded<Pending>();
@@ -85,7 +86,7 @@ public sealed class BrowserRelay(int delayMs = 2000, TimeSpan? timeout = null, T
             }
             finally
             {
-                pending.Result.TrySetCanceled();
+                pending.Result.TrySetCanceled(CancellationToken.None);
                 _sent.TryRemove(pending.Request.Id, out _);
             }
         }

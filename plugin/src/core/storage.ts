@@ -47,7 +47,7 @@ export function createStore(namespace: string): KeyValueStore {
       const raw = ls ? ls.getItem(k(key)) : memory.get(k(key)) ?? null;
       if (raw == null) return fallback;
       try {
-        return JSON.parse(raw);
+        return JSON.parse(raw) as typeof fallback;
       } catch {
         return fallback;
       }

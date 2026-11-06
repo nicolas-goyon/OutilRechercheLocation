@@ -112,7 +112,7 @@ export class ApiClient {
             try {
               resolve(parse(r.status, r.responseText));
             } catch (e) {
-              reject(e);
+              reject(e instanceof Error ? e : new Error(String(e)));
             }
           },
           onerror: () => reject(new ApiError('Le serveur ne répond pas.', 0)),

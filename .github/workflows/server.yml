@@ -1,22 +1,20 @@
-name: Serveur — build, tests, image Docker & docker-compose
+name: Serveur
 
-# - Pull request / push touchant server/ ou deploy/ : build + tests (.NET 10) + validation du docker-compose.
-# - Push sur main : en plus,
-#     1. image Docker publiée sur GitHub Container Registry :
-#          ghcr.io/nicolas-goyon/outilrecherchelocation-server:latest | :<version> | :sha-<commit>
-#     2. docker-compose.yml + scripts de mise à jour publiés :
-#          - en artefact du run ("server-deploy"),
-#          - sur la release GitHub "server-latest" (adresse fixe, toujours la dernière version) :
-#            https://github.com/<owner>/<repo>/releases/download/server-latest/docker-compose.yml
-#        ⚠ Cette release est une "pre-release" : elle ne devient jamais "latest". La release
-#          "latest" reste celle du plugin (mise à jour automatique de Tampermonkey).
+# Vérifications du serveur (.NET), une tâche par sujet :
+#   format      style du code (dotnet format)
+#   build       compilation Release, avertissements = erreurs, analyse du code (AnalysisMode Recommended)
+#   tests       tests unitaires + couverture (résumé dans la page du run)
+#   audit       paquets NuGet avec une faille connue (élevée ou critique : échec)
+#   docker      image construite, démarrée, puis interrogée (/health, pages, contours)
+# Push sur main, après toutes les vérifications : image publiée sur GHCR et release "server-latest".
+#   ⚠ "server-latest" est une pre-release : la release "latest" reste celle du plugin (mise à jour Tampermonkey).
 
 on:
   push:
     branches: [main]
-    paths: ['server/**', 'deploy/**', '.github/workflows/server.yml']
+    paths: ['server/**', 'deploy/**', 'docker-compose.yml', '.github/workflows/server.yml']
   pull_request:
-    paths: ['server/**', 'deploy/**', '.github/workflows/server.yml']
+    paths: ['server/**', 'deploy/**', 'docker-compose.yml', '.github/workflows/server.yml']
   workflow_dispatch:
 
 permissions:
@@ -24,29 +22,140 @@ permissions:
 
 concurrency:
   group: server-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
     working-directory: server
 
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
 jobs:
-  test:
+  format:
+    name: Format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: server/global.json
-      - run: dotnet restore tests/RechercheLogement.Tests/RechercheLogement.Tests.csproj
-      - run: dotnet build tests/RechercheLogement.Tests/RechercheLogement.Tests.csproj --no-restore -c Release
-      - run: dotnet test tests/RechercheLogement.Tests/RechercheLogement.Tests.csproj --no-build -c Release --logger "console;verbosity=normal"
-      - name: Valider deploy/docker-compose.yml
-        working-directory: deploy
-        run: docker compose -f docker-compose.yml config --quiet
+      - run: dotnet format RechercheLogement.sln --verify-no-changes --severity warn
+
+  build:
+    name: Build et analyse
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: server/global.json
+          cache: true
+          cache-dependency-path: server/**/*.csproj
+      - run: dotnet restore RechercheLogement.sln
+      # TreatWarningsAsErrors (Directory.Build.props) : une alerte de l'analyse du code fait échouer la tâche.
+      - run: dotnet build RechercheLogement.sln --no-restore -c Release
+
+  tests:
+    name: Tests unitaires
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: server/global.json
+          cache: true
+          cache-dependency-path: server/**/*.csproj
+      - name: Tests (sans réseau) et couverture
+        run: >
+          dotnet test tests/RechercheLogement.Tests/RechercheLogement.Tests.csproj -c Release
+          --logger "trx;LogFileName=tests.trx" --results-directory ../test-results
+          --collect "XPlat Code Coverage"
+      - name: Résumé de couverture
+        if: always()
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: test-results/**/coverage.cobertura.xml
+          format: markdown
+          output: file
+          thresholds: '50 70'
+      - name: Publier le résumé
+        if: always()
+        working-directory: .
+        run: |
+          if [ -f code-coverage-results.md ]; then
+            { echo '### Couverture du serveur'; cat code-coverage-results.md; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: server-test-results
+          path: test-results/
+          retention-days: 14
+
+  audit:
+    name: Audit des dépendances
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: server/global.json
+      - run: dotnet restore RechercheLogement.sln
+      - name: Paquets vulnérables
+        run: |
+          set -euo pipefail
+          dotnet list RechercheLogement.sln package --vulnerable --include-transitive | tee vulnerable.txt
+          if grep -Eq '\b(High|Critical)\b' vulnerable.txt; then
+            echo "::error::Paquet NuGet avec une faille élevée ou critique (voir ci-dessus)."
+            exit 1
+          fi
 
   docker:
-    needs: test
+    name: Image Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Construire l'image
+        uses: docker/build-push-action@v6
+        with:
+          context: server
+          load: true
+          tags: recherche-logement:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Démarrer et interroger le serveur
+        working-directory: .
+        run: |
+          set -euo pipefail
+          docker run -d --name rl -p 8080:8080 -e RechercheLogement__ProjectsAutoRun=false recherche-logement:ci
+          for _ in $(seq 1 60); do
+            curl -fsS http://localhost:8080/health >/dev/null 2>&1 && break
+            sleep 1
+          done
+          check() { code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8080$1"); echo "$code $1"; [ "$code" = "$2" ]; }
+          check /health 200
+          check / 200
+          check /biens 200
+          check /projets 200
+          check /projets/nouveau 200
+          check /geo/contours/department/65 200
+          check /api/searches 401
+      - name: Journal du conteneur
+        if: always()
+        working-directory: .
+        run: docker logs rl 2>&1 | tail -50 || true
+      - name: Valider les docker-compose
+        working-directory: .
+        run: |
+          docker compose -f deploy/docker-compose.yml config --quiet
+          docker compose -f docker-compose.yml config --quiet
+
+  publish:
+    name: Publication (image et docker-compose)
+    needs: [format, build, tests, audit, docker]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -71,6 +180,7 @@ jobs:
           context: server
           push: true
           build-args: VERSION=${{ steps.img.outputs.version }}
+          cache-from: type=gha
           tags: |
             ${{ steps.img.outputs.name }}:latest
             ${{ steps.img.outputs.name }}:${{ steps.img.outputs.version }}
@@ -122,7 +232,7 @@ jobs:
           Windows (PowerShell) : \`Invoke-WebRequest ${base}/docker-compose.yml -OutFile docker-compose.yml\`, puis \`docker compose up -d\`.
           Puis ouvrir http://localhost:5080 (page Paramètres : token du plugin).
 
-          **Mise à jour** : \`docker compose up -d --pull always\`, ou les scripts \`update.sh\` / \`update.ps1\`.
+          **Mise à jour** : scripts \`update.sh\` / \`update.ps1\` (sauvegarde des bases, vérification du démarrage).
           Les données (volume Docker) sont conservées.
 
           **Revenir à cette version** : \`RL_TAG=${VERSION} docker compose up -d\`
@@ -137,5 +247,4 @@ jobs:
             echo "### Serveur v${VERSION}"
             echo "- Image : \`${IMAGE}:latest\` (\`:${VERSION}\`, \`:sha-${GITHUB_SHA}\`)"
             echo "- docker-compose : ${base}/docker-compose.yml"
-            echo "- Mise à jour : \`docker compose up -d --pull always\` (ou update.sh / update.ps1)"
           } >> "$GITHUB_STEP_SUMMARY"

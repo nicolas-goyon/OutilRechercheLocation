@@ -128,7 +128,7 @@ export function parseFloor(text: string | undefined): number | undefined {
 export function parseKeyfacts(facts: string[]): ListingData {
   const out: ListingData = {};
   for (const raw of facts) {
-    const f = raw.replace(/[  ]/g, ' ').trim();
+    const f = raw.replace(/[\u00a0\u202f]/g, ' ').trim();
     const t = normalizeText(f);
     if (/^\d+\s*pieces?$/.test(t) || /^studio$/.test(t)) out.rooms = t === 'studio' ? 1 : parseNumber(f);
     else if (/^\d+\s*chambres?$/.test(t)) out.bedrooms = parseNumber(f);
@@ -143,7 +143,7 @@ export function parseKeyfacts(facts: string[]): ListingData {
 /** "Bordeaux Sud, Bordeaux (33800)" -> quartier, ville, CP. "Bordeaux (33000)" -> ville, CP. */
 export function parseAddress(address: string | undefined): ListingData {
   if (!address) return {};
-  const a = address.replace(/[  ]/g, ' ').replace(/\s+/g, ' ').trim();
+  const a = address.replace(/[\u00a0\u202f]/g, ' ').replace(/\s+/g, ' ').trim();
   const m = a.match(/^(?:(.+),\s*)?([^,]+?)\s*\((\d{5})\)$/);
   if (!m) return { city: a };
   return { postalCode: m[3], city: m[2].trim(), district: m[1]?.trim() || undefined };

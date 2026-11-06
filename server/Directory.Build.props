@@ -8,5 +8,9 @@
     <!-- Les alertes de vulnérabilité NuGet restent des avertissements (ne bloquent pas la CI du jour au lendemain). -->
     <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
     <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- Analyse du code (qualité, sécurité, style) : règles recommandées, réglées dans .editorconfig. -->
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>Recommended</AnalysisMode>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
 </Project>
