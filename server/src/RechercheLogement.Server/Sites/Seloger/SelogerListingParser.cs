@@ -31,7 +31,7 @@ public sealed partial class SelogerListingParser : IListingParser
         var reference = JsonRead.Str(raw?["offererMarketingKey"]);
         var legal = string.Join("\n", JsonRead.Strings(c["provider"]?["agencyLegalInformations"]));
         var photos = (c["gallery"]?["images"] as JsonArray)?
-            .Select(i => JsonRead.Str(i?["url"])).Where(u => u is not null).Cast<string>().Take(4).ToList();
+            .Select(i => JsonRead.Str(i?["url"])).Where(u => u is not null).Cast<string>().Take(ListingData.MaxPhotos).ToList();
         var otherRefs = RefExtractor.FromText(description).Where(r => !string.Equals(r, reference, StringComparison.OrdinalIgnoreCase)).ToList();
         var data = new ListingData
         {

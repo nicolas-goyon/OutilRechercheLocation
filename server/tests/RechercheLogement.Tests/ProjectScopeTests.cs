@@ -134,3 +134,15 @@ public class PropertySummaryGeoTests
         Assert.Equal(new[] { "1.jpg", "2.jpg" }, Assert.Single(catalog.QueryProperties(new PropertyQuery())).Photos);
     }
 }
+
+public class PhotoLimitTests
+{
+    [Fact]
+    public void Merge_KeepsUpToMaxPhotos()
+    {
+        var many = Enumerable.Range(1, 50).Select(i => $"{i}.jpg").ToArray();
+        var merged = new ListingData { Photos = ["a.jpg"] }.Merge(new ListingData { Photos = many }, fillOnly: false);
+        Assert.Equal(ListingData.MaxPhotos, merged.Photos!.Count);
+        Assert.True(ListingData.MaxPhotos > 4);
+    }
+}
