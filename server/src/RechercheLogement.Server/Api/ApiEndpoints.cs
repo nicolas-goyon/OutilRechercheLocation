@@ -1,6 +1,8 @@
 using System.Reflection;
 using RechercheLogement.Core.Contracts;
+using RechercheLogement.Core.Projects;
 using RechercheLogement.Core.Services;
+using RechercheLogement.Server.Projects;
 using RechercheLogement.Server.Sites.Common;
 
 namespace RechercheLogement.Server.Api;
@@ -32,6 +34,19 @@ public static class ApiEndpoints
         api.MapPost("/relay/{id}/result", (string id, RelayResult result, BrowserRelay relay) =>
             relay.Complete(id, result) ? Results.NoContent() : Results.NotFound());
 
+        // Recherches du serveur sur un site (panneau du plugin) : en cours, ou à lancer.
+        api.MapGet("/relay/status", (string site, ProjectRunner runner, ProjectStore store) =>
+            new RelayStatus(runner.RunningOn(site)
+                .Select(r => new RelayRun(r.ProjectId, store.Get(r.ProjectId)?.Name ?? r.ProjectId, r.Step))
+                .ToList(),
+                store.Projects().Count(p => p.Active && p.Sites.Contains(site))));
+        api.MapPost("/relay/run", (string site, ProjectRunner runner, ProjectStore store) =>
+        {
+            var ids = store.Projects().Where(p => p.Active && p.Sites.Contains(site)).Select(p => p.Id).ToList();
+            foreach (var id in ids) _ = Task.Run(() => runner.RunAsync(id, CancellationToken.None, onlySite: site));
+            return new RelayStarted(ids.Count);
+        });
+
         // Renvoie l'état d'une annonce.
         api.MapGet("/listings/{key}", (string key, Catalog catalog) =>
             catalog.View(key) is { } v ? Results.Ok(v) : Results.NotFound());
@@ -57,3 +72,10 @@ public static class ApiEndpoints
             Results.Json(catalog.Export(), JsonDefaults.Options, statusCode: 200));
     }
 }
+
+/// <summary>Recherches en cours sur un site, et nombre de projets actifs qui l'utilisent.</summary>
+public sealed record RelayStatus(IReadOnlyList<RelayRun> Running, int Projects);
+
+public sealed record RelayRun(string ProjectId, string Project, string Step);
+
+public sealed record RelayStarted(int Projects);

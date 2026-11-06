@@ -16,7 +16,8 @@ namespace RechercheLogement.Server.Projects;
 ///  3. Recherche avec les filtres du site, puis filtre local : critères du projet et forme exacte de la zone.
 ///  4. Intégration : nouvelles annonces, changements, retraits, réapparitions, regroupement des doublons,
 ///     puis envoi au catalogue.
-/// Un seul lancement à la fois (on reste discret avec les sites).
+/// Les sites d'un projet tournent en parallèle, mais une seule recherche à la fois par site, tous projets
+/// confondus (on reste discret avec chaque site). L'avancement de chaque site est visible (<see cref="Progress"/>).
 /// </summary>
 public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegistry sites, AreaPlanner planner, ILogger<ProjectRunner> log) : IDisposable
 {
@@ -26,54 +27,130 @@ public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegis
     private const int MaxResultsPlaces = 300;
     private const int MaxResultsArea = 1000;
 
-    private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly ConcurrentDictionary<string, string> _running = new();
+    /// <summary>Une recherche à la fois par site.</summary>
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _siteGates = new();
+    /// <summary>Calcul de la zone d'un projet (avant ses sites).</summary>
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _planGates = new();
+    /// <summary>(projet, site) en cours -> étape affichée ("lieux 12/746", "page 3"...).</summary>
+    private readonly ConcurrentDictionary<(string Project, string Site), string> _progress = new();
+    private readonly ConcurrentDictionary<string, string> _planning = new();
+    private long _lastNotify;
 
-    public void Dispose() => _gate.Dispose();
+    public void Dispose()
+    {
+        foreach (var g in _siteGates.Values.Concat(_planGates.Values)) g.Dispose();
+    }
 
-    /// <summary>Étape en cours pour ce projet (pour la page), sinon null.</summary>
-    public string? RunningSite(string projectId) => _running.GetValueOrDefault(projectId);
+    /// <summary>Sites en cours pour ce projet, avec leur étape. Vide : rien en cours.</summary>
+    public IReadOnlyDictionary<string, string> Progress(string projectId) =>
+        _progress.Where(x => x.Key.Project == projectId).ToDictionary(x => x.Key.Site, x => x.Value);
 
-    /// <summary>Lance un projet. <paramref name="onlySite"/> : un seul de ses sites (reprise d'une recherche en attente).</summary>
+    /// <summary>Résumé pour l'en-tête ("Bien'ici, SeLoger"), sinon null.</summary>
+    public string? RunningSite(string projectId)
+    {
+        if (_planning.TryGetValue(projectId, out var step)) return step;
+        var running = Progress(projectId).Keys.Select(sites.Label).ToList();
+        return running.Count == 0 ? null : string.Join(", ", running);
+    }
+
+    /// <summary>Recherches en cours sur ce site : (projet, étape).</summary>
+    public IReadOnlyList<(string ProjectId, string Step)> RunningOn(string site) =>
+        _progress.Where(x => x.Key.Site == site).Select(x => (x.Key.Project, x.Value)).ToList();
+
+    public bool IsRunning(string projectId, string site) => _progress.ContainsKey((projectId, site));
+
+    /// <summary>Lance un projet. <paramref name="onlySite"/> : un seul de ses sites (relance, reprise d'une recherche en attente).</summary>
     public async Task RunAsync(string projectId, CancellationToken ct, string? onlySite = null)
     {
-        if (!_running.TryAdd(projectId, "en attente")) return;
-        store.NotifyRunning();
-        await _gate.WaitAsync(ct);
+        var project = store.Get(projectId);
+        if (project is null) return;
+        if (!await PlanAsync(project, ct)) return;
+
+        var targets = project.Sites.Distinct()
+            .Where(s => onlySite is null || s == onlySite)
+            .Select(sites.Get)
+            .Where(e => e is { Available: true })
+            .Select(e => e!)
+            .Where(e => _progress.TryAdd((projectId, e.Info.Id), "en attente"))
+            .ToList();
+        if (targets.Count == 0) return;
+        lock (project)
+        {
+            foreach (var t in targets) project.PlaceCache.TryAdd(t.Info.Id, []);
+        }
+        Notify(force: true);
+        await Task.WhenAll(targets.Select(t => RunSiteGatedAsync(project, t, ct)));
+    }
+
+    /// <summary>Zone des modes rayon et temps de trajet. false : calcul impossible (erreur notée sur chaque site).</summary>
+    private async Task<bool> PlanAsync(SearchProject project, CancellationToken ct)
+    {
+        if (!AreaPlanner.NeedsPlan(project) || AreaPlanner.IsFresh(project, store.Now)) return true;
+        var gate = _planGates.GetOrAdd(project.Id, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
         try
         {
-            var project = store.Get(projectId);
-            if (project is null) return;
-
-            if (AreaPlanner.NeedsPlan(project) && !AreaPlanner.IsFresh(project, store.Now))
+            if (AreaPlanner.IsFresh(project, store.Now)) return true;
+            _planning[project.Id] = "calcul de la zone";
+            Notify(force: true);
+            project.Area = await planner.BuildAsync(project, store.Now, ct);
+            lock (project)
             {
-                SetStep(projectId, "calcul de la zone");
-                try
-                {
-                    project.Area = await planner.BuildAsync(project, store.Now, ct);
-                    project.PlaceCache.Clear(); // nouvelle zone : nouveaux lieux à reconnaître
-                    store.SaveQuietly(project);
-                }
-                catch (SiteException e)
-                {
-                    foreach (var siteId in project.Sites) store.AddRun(new ProjectRun(project.Id, siteId, store.Now, false, 0, 0, $"Zone : {e.Message}"));
-                    return;
-                }
+                project.PlaceCache.Clear(); // nouvelle zone : nouveaux lieux à reconnaître
+                store.SaveQuietly(project);
             }
-
-            foreach (var siteId in project.Sites.Distinct().Where(s => onlySite is null || s == onlySite))
-            {
-                if (sites.Get(siteId) is not { Available: true } entry) continue;
-                SetStep(projectId, entry.Info.Label);
-                await RunSiteAsync(project, entry.Info, entry.Module!.Search!, ct);
-            }
+            return true;
+        }
+        catch (SiteException e)
+        {
+            foreach (var siteId in project.Sites) store.AddRun(new ProjectRun(project.Id, siteId, store.Now, false, 0, 0, $"Zone : {e.Message}"));
+            return false;
         }
         finally
         {
-            _running.TryRemove(projectId, out _);
-            _gate.Release();
-            store.NotifyRunning();
+            _planning.TryRemove(project.Id, out _);
+            gate.Release();
+            Notify(force: true);
         }
+    }
+
+    private async Task RunSiteGatedAsync(SearchProject project, SiteEntry entry, CancellationToken ct)
+    {
+        var key = (project.Id, entry.Info.Id);
+        var gate = _siteGates.GetOrAdd(entry.Info.Id, _ => new SemaphoreSlim(1, 1));
+        var acquired = false;
+        try
+        {
+            if (!gate.Wait(0, ct))
+            {
+                SetProgress(key, "en attente d'une autre recherche sur ce site", force: true);
+                await gate.WaitAsync(ct);
+            }
+            acquired = true;
+            SetProgress(key, "démarrage", force: true);
+            await RunSiteAsync(project, entry.Info, entry.Module!.Search!, step => SetProgress(key, step), ct);
+        }
+        finally
+        {
+            if (acquired) gate.Release();
+            _progress.TryRemove(key, out _);
+            Notify(force: true);
+        }
+    }
+
+    private void SetProgress((string, string) key, string step, bool force = false)
+    {
+        _progress[key] = step;
+        Notify(force);
+    }
+
+    /// <summary>Prévient les pages ouvertes, au plus deux fois par seconde (avancement).</summary>
+    private void Notify(bool force = false)
+    {
+        var now = Environment.TickCount64;
+        if (!force && now - Interlocked.Read(ref _lastNotify) < 500) return;
+        Interlocked.Exchange(ref _lastNotify, now);
+        store.NotifyRunning();
     }
 
     /// <summary>Un onglet vient de s'ouvrir : relance les recherches de ce site restées en attente d'un onglet.</summary>
@@ -83,12 +160,6 @@ public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegis
             .Where(p => p.Active && store.Runs(p.Id).Any(r => r.Site == site && r.Message.StartsWith(BrowserRelay.NoTabPrefix, StringComparison.Ordinal)))
             .Select(p => p.Id).ToList();
         foreach (var id in waiting) await RunAsync(id, ct, onlySite: site);
-    }
-
-    private void SetStep(string projectId, string step)
-    {
-        _running[projectId] = step;
-        store.NotifyRunning();
     }
 
     /// <summary>Lieux à demander au site, selon le mode de zone et ce que le site sait chercher.</summary>
@@ -119,24 +190,35 @@ public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegis
         _ => new PlaceQuery(PlaceKind.Auto, l.Query),
     };
 
-    private async Task RunSiteAsync(SearchProject project, SiteInfo site, ISearchAdapter search, CancellationToken ct)
+    private async Task RunSiteAsync(SearchProject project, SiteInfo site, ISearchAdapter search, Action<string> progress, CancellationToken ct)
     {
         var started = store.Now;
         try
         {
             // 1-2. Lieux du site (cache du projet).
             var (queries, how) = PlaceQueries(project, search.SupportedPlaces);
-            if (!project.PlaceCache.TryGetValue(site.Id, out var cache)) project.PlaceCache[site.Id] = cache = [];
+            // Le cache d'un site n'est modifié que par ce site ; le verrou protège l'enregistrement du projet, qui
+            // lit les caches de tous les sites.
+            Dictionary<string, CachedPlace?> cache;
+            lock (project) cache = project.PlaceCache.TryGetValue(site.Id, out var c) ? c : project.PlaceCache[site.Id] = [];
             var ids = new List<string>();
             var unknown = new List<string>();
             var cacheChanged = false;
+            var done = 0;
             foreach (var q in queries)
             {
-                if (!cache.TryGetValue(q.CacheKey, out var place))
+                done++;
+                CachedPlace? place;
+                bool known;
+                lock (project) known = cache.TryGetValue(q.CacheKey, out place);
+                if (!known)
                 {
+                    progress($"reconnaissance des lieux {done}/{queries.Count}");
                     place = await search.ResolvePlaceAsync(q, project.Transaction, ct);
-                    cache[q.CacheKey] = place;
+                    lock (project) cache[q.CacheKey] = place;
                     cacheChanged = true;
+                    // Lieux déjà reconnus gardés même si la suite échoue (onglet fermé...) : la reprise repart d'ici.
+                    if (done % 20 == 0) lock (project) store.SaveQuietly(project);
                     await Task.Delay(200, ct);
                 }
                 if (place is null) unknown.Add(q.Text);
@@ -144,12 +226,15 @@ public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegis
             }
             // Lieux qui ne sont plus dans le projet (ou anciennes clés) : retirés du cache.
             var keys = queries.Select(q => q.CacheKey).ToHashSet();
-            foreach (var stale in cache.Keys.Where(k => !keys.Contains(k)).ToList())
+            lock (project)
             {
-                cache.Remove(stale);
-                cacheChanged = true;
+                foreach (var stale in cache.Keys.Where(k => !keys.Contains(k)).ToList())
+                {
+                    cache.Remove(stale);
+                    cacheChanged = true;
+                }
+                if (cacheChanged) store.SaveQuietly(project);
             }
-            if (cacheChanged) store.SaveQuietly(project);
             if (ids.Count == 0)
             {
                 store.AddRun(new ProjectRun(project.Id, site.Id, started, false, 0, 0,
@@ -159,7 +244,9 @@ public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegis
 
             // 3. Recherche, puis zone exacte.
             var max = project.LocationMode == LocationMode.Places ? MaxResultsPlaces : MaxResultsArea;
-            var outcome = await search.SearchAsync(new SearchRequest(project, ids.Distinct().ToList(), max), ct);
+            progress("recherche des annonces");
+            var outcome = await search.SearchAsync(new SearchRequest(project, ids.Distinct().ToList(), max, progress), ct);
+            progress("enregistrement");
             var incoming = new List<IncomingListing>();
             var outside = 0;
             foreach (var item in outcome.Items)

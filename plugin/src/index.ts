@@ -87,6 +87,16 @@ export function init(config: InitConfig = {}): PluginHandle | undefined {
 
   display.onChange((p) => tracker.setHideStatuses(hiddenStatuses(baseHidden, p)));
 
+  // Recherches du serveur qui passent par cet onglet (sites qui refusent les appels hors navigateur).
+  const relay = adapter.relayPaths
+    ? new RelayWorker(api, {
+        site: adapter.id,
+        allowedPaths: adapter.relayPaths,
+        origin: location.origin,
+        fetch: (url, init) => getRootWindow().fetch(url, init),
+      })
+    : undefined;
+
   const testConnection = async (s: ConnectionSettings): Promise<string> => {
     const info: ServerInfo = await new ApiClient({ baseUrl: normalizeUrl(s.serverUrl), token: s.token.trim(), timeoutMs: 5000 }).ping();
     return `Connecté (${info.name} v${info.version})`;
@@ -102,6 +112,13 @@ export function init(config: InitConfig = {}): PluginHandle | undefined {
       showHidden: tracker.showHidden,
       setShowHidden: (v) => tracker.setShowHidden(v),
       display,
+      relay: relay && {
+        label: adapter.label,
+        activity: () => ({ handled: relay.handled, lastAt: relay.lastAt }),
+        onActivity: (cb) => relay.onChange(cb),
+        status: () => api.relayStatus(adapter.id),
+        run: () => api.relayRun(adapter.id),
+      },
       searches: connection.isConfigured()
         ? {
             canSaveCurrent: adapter.isSearchPage?.(location) ?? false,
@@ -139,14 +156,7 @@ export function init(config: InitConfig = {}): PluginHandle | undefined {
   registerMenuCommand('Ouvrir le serveur local', () => window.open(connection.get().serverUrl, '_blank'));
 
   tracker.start();
-  if (adapter.relayPaths) {
-    new RelayWorker(api, {
-      site: adapter.id,
-      allowedPaths: adapter.relayPaths,
-      origin: location.origin,
-      fetch: (url, init) => getRootWindow().fetch(url, init),
-    }).start();
-  }
+  relay?.start();
 
   // Première installation : le token est absent. Le plugin ouvre alors le panneau.
   if (!connection.isConfigured()) setTimeout(() => !isModalOpen() && openPanel(), 800);

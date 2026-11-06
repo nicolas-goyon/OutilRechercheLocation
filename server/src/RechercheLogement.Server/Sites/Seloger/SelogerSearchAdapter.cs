@@ -61,6 +61,7 @@ public sealed class SelogerSearchAdapter(BrowserRelay relay) : ISearchAdapter
         {
             for (var page = 1; ; page++)
             {
+                request.Report($"page {page}, {ids.Count} annonce(s) trouvée(s)");
                 var json = await relay.SendJsonAsync(SelogerSite.Id, Label, HttpMethod.Post, "https://www.seloger.com/serp-bff/search", BuildSearch(request.Project, chunk, page).ToJsonString(), ct);
                 var pageIds = (json["classifieds"] as JsonArray ?? new JsonArray())
                     .Select(c => JsonRead.Str(c?["id"])).Where(x => x is not null).Cast<string>().ToList();
@@ -82,8 +83,12 @@ public sealed class SelogerSearchAdapter(BrowserRelay relay) : ISearchAdapter
         }
 
         var items = new List<CollectedItem>();
-        foreach (var chunk in ids.Distinct().Chunk(PageSize))
+        var read = 0;
+        var distinct = ids.Distinct().ToList();
+        foreach (var chunk in distinct.Chunk(PageSize))
         {
+            request.Report($"lecture des annonces {read}/{distinct.Count}");
+            read += chunk.Length;
             var json = await GetAsync($"https://www.seloger.com/classifiedList/{string.Join(',', chunk)}", ct);
             foreach (var c in json as JsonArray ?? new JsonArray())
                 if (c is not null && SelogerListingParser.ParseClassified(c) is { } item) items.Add(item);

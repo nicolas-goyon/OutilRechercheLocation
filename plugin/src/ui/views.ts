@@ -8,7 +8,7 @@
 import type { ConnectionSettings, ConnectionStore } from '../core/connection';
 import type { DisplayPrefsStore } from '../core/displayPrefs';
 import type { SyncEngine } from '../core/sync';
-import type { ListingKey, ListingRef, PropertyStatus, SavedSearchView, SuggestionView } from '../core/types';
+import type { ListingKey, ListingRef, PropertyStatus, RelayStatus, SavedSearchView, SuggestionView } from '../core/types';
 import { h } from '../shared/dom/h';
 import { siteLabel } from '../sites';
 import { closeModal, showModal } from './modal';
@@ -139,6 +139,14 @@ export interface PanelContext {
   pageCounts(): { total: number; hidden: number; seen: number; toContact: number; suggested: number };
   showHidden: boolean;
   setShowHidden(v: boolean): void;
+  /** Recherches que le serveur fait passer par cet onglet (SeLoger). Absent : site non concerné. */
+  relay?: {
+    label: string;
+    activity(): { handled: number; lastAt?: number };
+    onActivity(cb: () => void): () => void;
+    status(): Promise<RelayStatus>;
+    run(): Promise<{ projects: number }>;
+  };
   /** Réglages d'affichage (masquer les annonces vues / à contacter). */
   display?: DisplayPrefsStore;
   /** Recherches favorites (serveur local). Absent : la section n'est pas affichée. */
@@ -158,13 +166,24 @@ export function showPanel(ctx: PanelContext): void {
   const conn = ctx.connection.get();
   const toggle = h('input', { type: 'checkbox', checked: ctx.showHidden, on: { change: () => ctx.setShowHidden(toggle.checked) } });
 
-  const stateText = {
-    online: ['🟢', 'Connecté au serveur local.'],
-    offline: ['🟠', 'Le serveur local ne répond pas. Le plugin garde les actions. Il les envoie quand le serveur répond de nouveau.'],
-    unauthorized: ['🔴', 'Le serveur local refuse le token. Copier de nouveau le token depuis la page Paramètres du serveur local.'],
-    unconfigured: ['🔴', 'Token absent. Coller le token ci-dessous (page Paramètres du serveur local).'],
-    unknown: ['⚪', 'Connexion en cours...'],
-  }[sync.state];
+  // État de la connexion, mis à jour en direct tant que le panneau est ouvert.
+  const stateLine = h('div', null);
+  const errorLine = h('div', { style: { color: THEME.muted, fontSize: '11px' } });
+  const pendingLine = h('div', { style: { marginTop: '4px', color: THEME.muted } });
+  const renderState = () => {
+    const [icon, text] = {
+      online: ['🟢', 'Connecté au serveur local.'],
+      offline: ['🟠', 'Le serveur local ne répond pas. Le plugin garde les actions. Il les envoie quand le serveur répond de nouveau.'],
+      unauthorized: ['🔴', 'Le serveur local refuse le token. Copier de nouveau le token depuis la page Paramètres du serveur local.'],
+      unconfigured: ['🔴', 'Token absent. Coller le token ci-dessous (page Paramètres du serveur local).'],
+      unknown: ['⚪', 'Vérification de la connexion...'],
+    }[sync.state];
+    stateLine.textContent = `${icon} ${text}`;
+    errorLine.textContent = sync.lastError && !['online', 'unconfigured'].includes(sync.state) ? sync.lastError : '';
+    pendingLine.textContent = `${sync.pendingCount()} élément(s) en attente d'envoi`;
+  };
+  renderState();
+  const stopState = sync.onChange(() => (stateLine.isConnected ? renderState() : stopState()));
 
   const input = (value: string, placeholder: string, type = 'text') =>
     h('input', {
@@ -190,9 +209,9 @@ export function showPanel(ctx: PanelContext): void {
       null,
       section(
         'Connexion au serveur local',
-        h('div', null, `${stateText[0]} ${stateText[1]}`),
-        sync.lastError && !['online', 'unconfigured'].includes(sync.state) && h('div', { style: { color: THEME.muted, fontSize: '11px' } }, sync.lastError),
-        h('div', { style: { marginTop: '4px', color: THEME.muted } }, `${sync.pendingCount()} élément(s) en attente d'envoi`),
+        stateLine,
+        errorLine,
+        pendingLine,
         h('div', { style: { display: 'grid', gridTemplateColumns: '60px 1fr', gap: '6px 8px', alignItems: 'center', marginTop: '10px' } },
           h('label', null, 'URL'), urlInput,
           h('label', null, 'Token'), tokenInput,
@@ -211,6 +230,7 @@ export function showPanel(ctx: PanelContext): void {
           webLink(`${conn.serverUrl}/parametres`, 'Obtenir le token ↗'),
         ),
       ),
+      ctx.relay && sync.state !== 'unconfigured' && relaySection(ctx.relay),
       ctx.searches && searchesSection(ctx.searches, conn.serverUrl),
       section(
         'Cette page',
@@ -224,6 +244,65 @@ export function showPanel(ctx: PanelContext): void {
       ),
     ),
   });
+}
+
+// ------------------------------------------------------------------ recherches du serveur (relais)
+
+/**
+ * Recherches que le serveur fait passer par cet onglet : en cours (projet, étape) ou bouton pour les lancer.
+ * Actualisé toutes les 3 s tant que le panneau est ouvert.
+ */
+function relaySection(relay: NonNullable<PanelContext['relay']>): HTMLElement {
+  const statusLine = h('div', null, 'Vérification...');
+  const activityLine = h('div', { style: { color: THEME.muted, fontSize: '12px', marginTop: '4px' } });
+  const actions = h('div', { style: { marginTop: '8px' } });
+  const el = section(`Recherches du serveur sur ${relay.label}`, statusLine, activityLine, actions);
+
+  const renderActivity = () => {
+    const a = relay.activity();
+    activityLine.textContent = a.handled === 0
+      ? 'Cet onglet n\'a encore rien cherché pour le serveur. Il doit rester ouvert pendant les recherches.'
+      : `Cet onglet a fait ${a.handled} requête(s) pour le serveur, la dernière il y a ${Math.max(0, Math.round((Date.now() - (a.lastAt ?? Date.now())) / 1000))} s.`;
+  };
+  const run = button(`Lancer les recherches ${relay.label}`, () => {
+    run.disabled = true;
+    relay.run().then(
+      (r) => {
+        statusLine.textContent = r.projects === 0 ? `Aucun projet actif n'utilise ${relay.label}.` : `Recherche lancée pour ${r.projects} projet(s).`;
+        setTimeout(refresh, 1000);
+      },
+      (e: Error) => {
+        statusLine.textContent = `✕ ${e.message}`;
+        run.disabled = false;
+      },
+    );
+  }, THEME.ok);
+
+  const refresh = () => {
+    if (!el.isConnected && el.dataset.shown === '1') return; // panneau fermé : on arrête.
+    el.dataset.shown = '1';
+    renderActivity();
+    relay.status().then(
+      (s) => {
+        if (s.running.length > 0) {
+          statusLine.textContent = `⏳ En cours : ${s.running.map((r) => `${r.project} (${r.step})`).join(', ')}.`;
+          actions.replaceChildren();
+        } else {
+          statusLine.textContent = s.projects === 0 ? `Aucun projet actif n'utilise ${relay.label}.` : `Aucune recherche en cours (${s.projects} projet(s) avec ${relay.label}).`;
+          run.disabled = false;
+          actions.replaceChildren(...(s.projects > 0 ? [run] : []));
+        }
+      },
+      (e: Error) => {
+        statusLine.textContent = `Serveur injoignable : ${e.message}`;
+        actions.replaceChildren();
+      },
+    );
+    setTimeout(refresh, 3000);
+  };
+  setTimeout(refresh, 0);
+  const stop = relay.onActivity(() => (activityLine.isConnected ? renderActivity() : stop()));
+  return el;
 }
 
 // ------------------------------------------------------------------ recherches favorites

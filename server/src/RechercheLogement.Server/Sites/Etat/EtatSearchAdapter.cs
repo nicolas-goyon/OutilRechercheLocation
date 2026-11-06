@@ -46,6 +46,7 @@ public sealed class EtatSearchAdapter(IHttpClientFactory factory, GeoServices ge
         for (var page = 0; page < MaxPages; page++)
         {
             if (page > 0) await Task.Delay(delayMs, ct);
+            request.Report($"liste, page {page + 1}");
             var found = EtatListingParser.ParseList(await GetHtmlAsync(http, $"{EtatListingParser.Origin}/recherche-biens?page={page}", ct));
             var fresh = found.Where(c => cards.All(x => x.Path != c.Path)).ToList();
             if (fresh.Count == 0)
@@ -57,8 +58,10 @@ public sealed class EtatSearchAdapter(IHttpClientFactory factory, GeoServices ge
         }
 
         var items = new List<CollectedItem>();
-        foreach (var card in cards.Where(c => c.Department is { } d && departments.Contains(d)).Take(request.MaxResults))
+        var wanted = cards.Where(c => c.Department is { } d && departments.Contains(d)).Take(request.MaxResults).ToList();
+        foreach (var card in wanted)
         {
+            request.Report($"fiche {items.Count + 1}/{wanted.Count}");
             await Task.Delay(delayMs, ct);
             var detail = EtatListingParser.ParseDetail(await GetHtmlAsync(http, EtatListingParser.Origin + card.Path, ct), card);
             var data = detail.Data;

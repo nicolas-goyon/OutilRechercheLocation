@@ -191,6 +191,9 @@ a.button.primary { background: var(--accent); border-color: var(--accent); color
 .runs { border-collapse: collapse; width: 100%; }
 .runs td { padding: 6px 8px; border-top: 1px solid var(--border); vertical-align: top; }
 .runs tr.ko td { color: var(--rejected); }
+.runs tr.running td { color: var(--accent); }
+.runs .warn { color: var(--suggest); }
+.runs .small-button { padding: 3px 8px; font-size: 13px; display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
 .form-grid { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 10px 14px; align-items: start; }
 .form-grid > label { padding-top: 6px; color: var(--muted); }
 .form-grid input:not([type=checkbox]), .form-grid select, .form-grid textarea { width: 100%; max-width: 520px; box-sizing: border-box; }

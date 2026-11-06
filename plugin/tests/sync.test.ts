@@ -16,6 +16,14 @@ class FakeApi {
     return this.token.length > 0;
   }
 
+  pings = 0;
+
+  async ping(): Promise<{ name: string; version: string }> {
+    this.pings++;
+    if (!this.online) throw new ApiError('Le serveur ne répond pas.', 0);
+    return { name: 'recherche-logement', version: 'test' };
+  }
+
   async sync(req: SyncRequest): Promise<SyncResponse> {
     if (!this.online) throw new ApiError('Le serveur ne répond pas.', 0);
     this.requests.push(structuredClone(req));
@@ -119,4 +127,29 @@ test('sans token : rien n\'est envoyé, tout reste en file', async () => {
   await sync.flush();
   assert.equal(sync.state, 'online');
   assert.equal(api.status['bienici:d'], 'rejected');
+});
+
+test('sans rien à envoyer, le moteur vérifie quand même la connexion', async () => {
+  const api = new FakeApi();
+  const engine = newEngine(api);
+  const states: string[] = [];
+  engine.onChange(() => states.push(engine.state));
+
+  await engine.flush();
+
+  assert.equal(engine.state, 'online');
+  assert.equal(api.pings, 1);
+  assert.equal(api.requests.length, 0);
+  await engine.flush();
+  assert.equal(api.pings, 1, 'déjà en ligne : pas de nouvelle vérification');
+});
+
+test('serveur arrêté au démarrage : état hors ligne, sans file d\'attente', async () => {
+  const api = new FakeApi();
+  api.online = false;
+  const engine = newEngine(api);
+
+  await engine.flush();
+
+  assert.equal(engine.state, 'offline');
 });

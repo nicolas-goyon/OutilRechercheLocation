@@ -130,6 +130,26 @@ export class SyncEngine {
     (this.timer as unknown as { unref?: () => void }).unref?.();
   }
 
+  /** Interroge /api/ping pour connaître l'état de la connexion. Hors ligne : nouvel essai avec un délai croissant. */
+  private async checkServer(): Promise<void> {
+    this.inflight = true;
+    try {
+      await this.api.ping();
+      this.state = 'online';
+      this.lastError = undefined;
+      this.backoffMs = 0;
+    } catch (e) {
+      const err = e as ApiError;
+      this.state = err.status === 401 ? 'unauthorized' : 'offline';
+      this.lastError = err.message;
+      this.backoffMs = Math.min(MAX_BACKOFF_MS, this.backoffMs ? this.backoffMs * 2 : 5_000);
+    } finally {
+      this.inflight = false;
+      this.emit();
+    }
+    if (this.state === 'offline') this.schedule(this.backoffMs);
+  }
+
   async flush(): Promise<void> {
     if (this.inflight) return;
     // Token absent : le moteur garde tout dans la file et n'appelle pas le serveur.
@@ -143,7 +163,11 @@ export class SyncEngine {
     const obsEntries = Object.entries(this.pendingObs).slice(0, MAX_BATCH_OBS);
     const actions = [...this.queue];
     const want = [...this.want];
-    if (obsEntries.length === 0 && actions.length === 0 && want.length === 0) return;
+    if (obsEntries.length === 0 && actions.length === 0 && want.length === 0) {
+      // Rien à envoyer : le moteur vérifie quand même le serveur, sinon l'état resterait « inconnu ».
+      if (this.state !== 'online') await this.checkServer();
+      return;
+    }
 
     this.inflight = true;
     const request: SyncRequest = {

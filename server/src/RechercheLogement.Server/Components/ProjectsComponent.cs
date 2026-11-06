@@ -31,6 +31,9 @@ public abstract class ProjectsComponent : ComponentBase, IDisposable
     /// <summary>Lance le projet en arrière-plan. La page suit l'avancement par l'événement Changed.</summary>
     protected void StartRun(string projectId) => _ = Task.Run(() => Runner.RunAsync(projectId, CancellationToken.None));
 
+    /// <summary>Relance un seul site du projet.</summary>
+    protected void StartSite(string projectId, string site) => _ = Task.Run(() => Runner.RunAsync(projectId, CancellationToken.None, onlySite: site));
+
     public virtual void Dispose()
     {
         Store.Changed -= OnChanged;
