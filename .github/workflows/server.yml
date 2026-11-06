@@ -37,8 +37,8 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: server/global.json
       - run: dotnet format RechercheLogement.sln --verify-no-changes --severity warn
@@ -47,8 +47,8 @@ jobs:
     name: Build et analyse
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: server/global.json
           cache: true
@@ -61,8 +61,8 @@ jobs:
     name: Tests unitaires
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: server/global.json
           cache: true
@@ -87,7 +87,7 @@ jobs:
           if [ -f code-coverage-results.md ]; then
             { echo '### Couverture du serveur'; cat code-coverage-results.md; } >> "$GITHUB_STEP_SUMMARY"
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: server-test-results
@@ -98,8 +98,8 @@ jobs:
     name: Audit des dépendances
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: server/global.json
       - run: dotnet restore RechercheLogement.sln
@@ -116,10 +116,10 @@ jobs:
     name: Image Docker
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
       - name: Construire l'image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: server
           load: true
@@ -162,20 +162,20 @@ jobs:
       contents: write   # tag + release "server-latest"
       packages: write   # image GHCR
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Nom et version de l'image
         id: img
         working-directory: .
         run: |
           echo "name=ghcr.io/${GITHUB_REPOSITORY,,}-server" >> "$GITHUB_OUTPUT"
           echo "version=0.2.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: server
           push: true
@@ -202,7 +202,7 @@ jobs:
           chmod +x out/update.sh
           docker compose -f out/docker-compose.yml config --quiet
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: server-deploy
           path: out/
