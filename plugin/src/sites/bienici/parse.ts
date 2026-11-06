@@ -16,6 +16,7 @@
  * sont dans .search-results-list__leading-ads-box.
  */
 import type { ListingData } from '../../core/types';
+import { MAX_PHOTOS } from '../../core/types';
 import { extractRefs, normalizeSiren, normalizeText, parseNumber } from '../../shared/text';
 
 export const CARD_SELECTOR = 'article.ad-overview[data-id]';
@@ -114,7 +115,7 @@ export function parseBieniciDetail(section: Element): ListingData {
     transaction: transactionWord === 'location' || perMonth ? 'rent' : transactionWord ? 'buy' : undefined,
     agencyRef: ref,
     otherRefs: nonEmpty(extractRefs(description).filter((r) => r !== ref?.toUpperCase())),
-    photos: photos.length ? [...new Set(photos)].slice(0, 4) : undefined,
+    photos: photos.length ? [...new Set(photos)].slice(0, MAX_PHOTOS) : undefined,
     descriptionExcerpt: description ? normalizeText(description).slice(0, 600) : undefined,
     url: id ? detailUrl(id, section) : undefined,
   };
@@ -231,7 +232,7 @@ export function parseBieniciApiAd(ad: BieniciApiAd): ListingData {
     city: ad.city,
     district: ad.district?.libelle || ad.district?.name || undefined,
     geo: pos ? { lat: pos.lat, lon: pos.lon, precisionM: ad.blurInfo?.radius } : undefined,
-    photos: ad.photos?.map((p) => p.url || p.url_photo).filter((u): u is string => !!u).slice(0, 4),
+    photos: ad.photos?.map((p) => p.url || p.url_photo).filter((u): u is string => !!u).slice(0, MAX_PHOTOS),
     photoKeys: ad.photos?.map((p) => photoKey(p.url_photo)).filter((u): u is string => !!u).slice(0, 6),
     descriptionExcerpt: ad.description ? normalizeText(ad.description).slice(0, 600) : undefined,
     publishedAt: ad.publicationDate,

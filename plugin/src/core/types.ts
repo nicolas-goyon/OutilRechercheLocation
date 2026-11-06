@@ -181,3 +181,6 @@ export interface RelayResult {
   body?: string;
   error?: string;
 }
+
+/** Photos gardées par annonce. Même limite côté serveur (ListingData.MaxPhotos). */
+export const MAX_PHOTOS = 40;

@@ -94,7 +94,7 @@ public sealed record ListingData
         OtherRefs = PickList(OtherRefs, incoming.OtherRefs, fillOnly, 6),
         AgencyName = Pick(AgencyName, incoming.AgencyName, fillOnly),
         AgencySiren = Pick(AgencySiren, incoming.AgencySiren, fillOnly),
-        Photos = PickList(Photos, incoming.Photos, fillOnly, 4),
+        Photos = PickList(Photos, incoming.Photos, fillOnly, MaxPhotos),
         PhotoKeys = PickList(PhotoKeys, incoming.PhotoKeys, fillOnly, 6),
         DescriptionExcerpt = Pick(DescriptionExcerpt, Truncate(incoming.DescriptionExcerpt, 600), fillOnly),
         PublishedAt = Pick(PublishedAt, incoming.PublishedAt, fillOnly),
@@ -104,6 +104,9 @@ public sealed record ListingData
     public bool SameAs(ListingData other) =>
         this with { Photos = null, PhotoKeys = null, OtherRefs = null } == other with { Photos = null, PhotoKeys = null, OtherRefs = null }
         && SeqEq(Photos, other.Photos) && SeqEq(PhotoKeys, other.PhotoKeys) && SeqEq(OtherRefs, other.OtherRefs);
+
+    /// <summary>Photos gardées par annonce. Même limite dans le plugin (MAX_PHOTOS).</summary>
+    public const int MaxPhotos = 40;
 
     private static T? Pick<T>(T? current, T? incoming, bool fillOnly) where T : class =>
         incoming is null || (fillOnly && current is not null) ? current : (incoming is string s && s.Length == 0 ? current : incoming);

@@ -23,7 +23,7 @@ public sealed class BieniciListingParser : IListingParser
         var lon = JsonRead.Dbl(pos?["lon"]);
         var photos = (ad["photos"] as JsonArray)?
             .Select(p => JsonRead.Str(p?["url"]) ?? JsonRead.Str(p?["url_photo"]))
-            .Where(u => u is not null).Cast<string>().Take(4).ToList();
+            .Where(u => u is not null).Cast<string>().Take(ListingData.MaxPhotos).ToList();
         var rooms = JsonRead.Int(ad["roomsQuantity"]);
         var surface = JsonRead.Dbl(ad["surfaceArea"]);
         var type = JsonRead.Str(ad["propertyType"]);

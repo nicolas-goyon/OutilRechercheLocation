@@ -39,16 +39,11 @@ else
 
     <div class="two-cols">
         <section class="panel">
+            <PhotoGallery Photos="s.Photos ?? []" />
             <h2>Annonces (@s.Listings.Count)</h2>
             @foreach (var l in s.Listings)
             {
                 <div class="listing">
-                    @if (l.Data.Photos is { Count: > 0 })
-                    {
-                        <div class="photos">
-                            @foreach (var ph in l.Data.Photos) { <img src="@Thumb(ph)" alt="" loading="lazy" /> }
-                        </div>
-                    }
                     <div><b>@Labels.Site(l.Site)</b> — <a href="@l.Data.Url" target="_blank" rel="noopener">@(l.Data.Title ?? l.SiteId) <Icon Name="arrow-up-right" /></a></div>
                     <dl>
                         <dt>Prix</dt><dd>@Format.Price(l.Data.Price)@(l.Data.Charges is not null ? $" (dont {Format.Price(l.Data.Charges)} de charges)" : "")</dd>

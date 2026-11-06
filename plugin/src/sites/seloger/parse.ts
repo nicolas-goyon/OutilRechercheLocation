@@ -32,6 +32,7 @@
  * pas à trouver un doublon sur un autre site : pas de photoKeys.
  */
 import type { ListingData, TransactionType } from '../../core/types';
+import { MAX_PHOTOS } from '../../core/types';
 import { extractRefs, extractSiren, normalizeText, parseNumber } from '../../shared/text';
 
 export const CARD_SELECTOR = '[data-testid="serp-core-classified-card-testid"]';
@@ -222,7 +223,7 @@ export function parseSelogerSerpClassified(c: SelogerSerpClassified): ListingDat
   const raw = c.rawData ?? {};
   const kf = parseKeyfacts(c.hardFacts?.keyfacts ?? []);
   const addr = c.location?.address;
-  const photos = (c.gallery?.images ?? []).map((i) => i.url).filter((u): u is string => !!u).slice(0, 4);
+  const photos = (c.gallery?.images ?? []).map((i) => i.url).filter((u): u is string => !!u).slice(0, MAX_PHOTOS);
   return {
     ...kf,
     url: c.url ? canonicalUrl(c.url) : undefined,
@@ -303,7 +304,7 @@ export function parseSelogerDetailClassified(c: SelogerDetailClassified, pageUrl
   const furnishedValue = (s.features?.details?.categories ?? [])
     .flatMap((cat) => cat.elements ?? [])
     .find((e) => e.icon === 'furnished')?.value;
-  const photos = (c.domains?.medias?.images ?? []).map((i) => i.url).filter((u): u is string => !!u).slice(0, 4);
+  const photos = (c.domains?.medias?.images ?? []).map((i) => i.url).filter((u): u is string => !!u).slice(0, MAX_PHOTOS);
 
   return {
     ...kf,

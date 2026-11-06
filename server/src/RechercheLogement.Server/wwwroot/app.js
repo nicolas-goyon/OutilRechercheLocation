@@ -24,6 +24,11 @@ window.rl = {
     dialog?.showModal();
   },
 
+  /** Fait défiler une bande de miniatures jusqu'à l'élément actif (classe « on »). */
+  showActive(strip) {
+    strip?.querySelector('.on')?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  },
+
   /** Copie le texte. Retourne true si la copie a réussi. */
   async copy(text) {
     try {
