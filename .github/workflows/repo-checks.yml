@@ -1,7 +1,7 @@
 name: Dépôt
 
-# Contrôles transverses : workflows (actionlint), scripts shell (shellcheck) et PowerShell (PSScriptAnalyzer),
-# et, sur les PR, nouvelles dépendances avec une faille connue (dependency-review).
+# Contrôles transverses : workflows (actionlint), scripts shell (shellcheck) et PowerShell (PSScriptAnalyzer).
+# Les failles des dépendances sont vérifiées par les tâches « Audit » des workflows Serveur et Plugin.
 
 on:
   push:
@@ -41,17 +41,3 @@ jobs:
           $issues = Invoke-ScriptAnalyzer -Path deploy/update.ps1 -Severity Warning,Error -ExcludeRule PSAvoidUsingWriteHost
           $issues | Format-Table -AutoSize
           if ($issues) { throw "PSScriptAnalyzer : $($issues.Count) problème(s)" }
-
-  dependencies:
-    name: Nouvelles dépendances
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: high
-          comment-summary-in-pr: on-failure
