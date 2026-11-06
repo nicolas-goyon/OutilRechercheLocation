@@ -181,6 +181,55 @@ public sealed class GeoServices(IHttpClientFactory factory)
             .ToList();
     }
 
+    /// <summary>
+    /// Communes dont le centre est sous un trait de pinceau (cercles de <paramref name="radiusKm"/> autour des points),
+    /// de l'ouest vers l'est. Les départements sont cherchés sous des points du trait et au bord du pinceau.
+    /// </summary>
+    public async Task<List<PlanCommune>> CommunesUnderStrokeAsync(IReadOnlyList<GeoPoint> points, double radiusKm, CancellationToken ct)
+    {
+        if (points.Count == 0) return [];
+        var radiusM = radiusKm * 1000;
+        var samples = new List<GeoPoint>();
+        foreach (var p in points)
+            if (samples.All(q => DedupScorer.DistanceMeters(p, q) >= Math.Max(radiusM, 3000))) samples.Add(p);
+        var probes = samples.Take(40).SelectMany(p => GeoShape.Circle(p, radiusM).BoundaryPoints(4).Prepend(p)).ToList();
+
+        using var limit = new SemaphoreSlim(6);
+        var departments = await Task.WhenAll(probes.Select(async p =>
+        {
+            await limit.WaitAsync(ct);
+            try
+            {
+                return await DepartmentAtAsync(p, ct);
+            }
+            catch (SiteException)
+            {
+                return null; // Le reste du trait reste utilisable.
+            }
+            finally
+            {
+                limit.Release();
+            }
+        }));
+
+        var communes = await Task.WhenAll(departments.OfType<string>().Distinct().Select(d => CommunesAsync(d, ct)));
+        return communes.SelectMany(c => c)
+            .Where(c => points.Any(p => DedupScorer.DistanceMeters(p, c.Center) <= radiusM))
+            .DistinctBy(c => c.Code)
+            .OrderBy(c => c.Center.Lon)
+            .ToList();
+    }
+
+    /// <summary>Communes -> codes postaux (un code par groupe de communes).</summary>
+    public static List<ProjectLocation> PostalCodesOf(IEnumerable<PlanCommune> communes) =>
+        communes
+            .SelectMany(c => c.PostalCodes.Select(cp => (Code: cp, Commune: c)))
+            .GroupBy(x => x.Code)
+            .Select(g => PostalCodeSuggestion(g.Key, g.Select(x => x.Commune).ToList()).Location!)
+            .ToList();
+
+    public static ProjectLocation CommuneLocation(PlanCommune c) => CommuneSuggestion(c).Location!;
+
     private static async Task AddLevelAsync(List<ProjectLocation> levels, Func<Task<ProjectLocation?>> load)
     {
         try

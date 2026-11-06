@@ -123,8 +123,12 @@ window.rl = {
       }).addTo(map);
       const layer = L.featureGroup().addTo(map);
       const zones = L.featureGroup().addTo(map);
-      const state = { map, layer, zones, zoneLayers: new Map(), dotnet, fitKey: null, generation: 0, unavailable: '[]' };
-      map.on('click', (e) => dotnet.invokeMethodAsync('Point', e.latlng.lat, e.latlng.lng));
+      const paint = L.featureGroup().addTo(map);
+      const state = { map, layer, zones, paint, zoneLayers: new Map(), dotnet, fitKey: null, generation: 0, unavailable: '[]', brushM: null, erasing: false };
+      map.on('click', (e) => {
+        if (!state.brushM) dotnet.invokeMethodAsync('Point', e.latlng.lat, e.latlng.lng);
+      });
+      rl.zoneMap.brush(el, state);
       rl.zoneMap.maps.set(el, state);
       // Le bloc peut encore changer de taille juste après l'affichage.
       setTimeout(() => map.invalidateSize(), 50);
@@ -153,11 +157,66 @@ window.rl = {
           .bindTooltip(m.label)
           .addTo(st.layer);
       }
+      rl.zoneMap.setBrush(st, s.brushM ?? null, !!s.erasing);
       const fit = s.fitKey !== st.fitKey;
       st.fitKey = s.fitKey;
       rl.zoneMap.syncZones(st, s.zones ?? [], color).then((current) => {
         if (current && fit) rl.zoneMap.fit(st);
       });
+    },
+
+    /**
+     * Pinceau : un trait (souris ou doigt) dessine des cercles de la taille du pinceau, puis ses points partent à
+     * Blazor. Pendant ce mode, la carte ne se déplace plus en glissant ; la molette et les boutons zooment toujours.
+     */
+    brush(el, st) {
+      let stroke = null;
+      const add = (e) => {
+        const p = st.map.mouseEventToLatLng(e);
+        const last = stroke.points[stroke.points.length - 1];
+        if (last && st.map.distance(last, p) < st.brushM / 2) return;
+        stroke.points.push(p);
+        L.circle(p, { radius: st.brushM, stroke: false, fillColor: stroke.color, fillOpacity: 0.28, interactive: false }).addTo(stroke.layer);
+      };
+      el.addEventListener('pointerdown', (e) => {
+        if (!st.brushM || e.button !== 0 || e.target.closest('.leaflet-control')) return;
+        e.preventDefault();
+        el.setPointerCapture(e.pointerId);
+        const color = st.erasing ? '#d14b3f' : getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+        stroke = { points: [], color, layer: L.featureGroup().addTo(st.paint) };
+        add(e);
+      });
+      el.addEventListener('pointermove', (e) => {
+        if (stroke) add(e);
+      });
+      const end = () => {
+        if (!stroke) return;
+        const done = stroke;
+        stroke = null;
+        // La gomme disparaît tout de suite ; la peinture reste visible jusqu'à la fin du mode pinceau.
+        if (st.erasing) st.paint.removeLayer(done.layer);
+        st.dotnet.invokeMethodAsync('Stroke', done.points.flatMap((p) => [p.lat, p.lng]));
+      };
+      el.addEventListener('pointerup', end);
+      el.addEventListener('pointercancel', end);
+    },
+
+    setBrush(st, brushM, erasing) {
+      st.erasing = erasing;
+      if (brushM === st.brushM) return;
+      st.brushM = brushM;
+      const container = st.map.getContainer();
+      container.classList.toggle('brushing', !!brushM);
+      if (brushM) {
+        st.map.dragging.disable();
+        st.map.doubleClickZoom.disable();
+        st.map.boxZoom.disable();
+      } else {
+        st.map.dragging.enable();
+        st.map.doubleClickZoom.enable();
+        st.map.boxZoom.enable();
+        st.paint.clearLayers();
+      }
     },
 
     /** Recadre la carte sur tout ce qui est affiché. */

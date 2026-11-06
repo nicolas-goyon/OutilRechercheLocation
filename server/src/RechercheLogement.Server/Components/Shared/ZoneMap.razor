@@ -35,6 +35,12 @@
     [Parameter] public IReadOnlyList<Zone> Zones { get; set; } = [];
     /// <summary>Sélection des zones active : curseur en croix.</summary>
     [Parameter] public bool Picking { get; set; }
+    /// <summary>Pinceau actif : taille en km (null : pas de pinceau). La carte ne se déplace plus à la souris.</summary>
+    [Parameter] public double? BrushKm { get; set; }
+    /// <summary>Gomme : trait dessiné en rouge.</summary>
+    [Parameter] public bool Erasing { get; set; }
+    /// <summary>Trait de pinceau terminé : ses points.</summary>
+    [Parameter] public EventCallback<List<GeoPoint>> OnStroke { get; set; }
     /// <summary>Changer cette valeur recadre la carte sur son contenu.</summary>
     [Parameter] public string FitKey { get; set; } = "";
     /// <summary>Clic sur la carte, ou marqueur déplacé.</summary>
@@ -80,6 +86,8 @@
                 label = z.Label,
                 center = z.Center is { } zc ? new[] { zc.Lat, zc.Lon } : null,
             }),
+            brushM = BrushKm is > 0 ? BrushKm * 1000 : null,
+            erasing = Erasing,
             fitKey = FitKey,
         });
         if (state == _sent) return;
@@ -89,6 +97,15 @@
 
     [JSInvokable]
     public Task Point(double lat, double lon) => OnPoint.InvokeAsync(new GeoPoint(lat, lon));
+
+    /// <summary>Trait de pinceau : latitudes et longitudes alternées, pour un message court.</summary>
+    [JSInvokable]
+    public Task Stroke(double[] coords)
+    {
+        var points = new List<GeoPoint>(coords.Length / 2);
+        for (var i = 0; i + 1 < coords.Length; i += 2) points.Add(new GeoPoint(coords[i], coords[i + 1]));
+        return OnStroke.InvokeAsync(points);
+    }
 
     /// <summary>Contours que le navigateur n'a pas pu charger (service indisponible).</summary>
     [JSInvokable]

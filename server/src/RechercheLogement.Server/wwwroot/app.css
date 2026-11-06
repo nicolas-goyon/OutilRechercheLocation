@@ -259,6 +259,12 @@ ul.warn { color: var(--rejected); }
 .zone-dialog-side fieldset { border: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .zone-dialog-side legend { padding: 0 0 6px; font-weight: 600; }
 .zone-option { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+.leaflet-container.brushing { cursor: crosshair; touch-action: none; }
+.leaflet-container.brushing .leaflet-interactive { cursor: crosshair; }
+.zone-brush { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 0 24px; }
+.zone-brush label { display: flex; gap: 8px; align-items: center; }
+.zone-brush input[type=range] { flex: 1; accent-color: var(--accent); }
+.zone-brush .segmented button { padding: 4px 10px; font-size: 13px; }
 .zone-radius { display: flex; gap: 8px; align-items: center; margin: 4px 0 0 24px; }
 .zone-radius input { width: 76px; }
 .zone-last { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--border); }
