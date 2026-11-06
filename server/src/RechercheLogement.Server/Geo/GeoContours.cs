@@ -28,6 +28,13 @@ public sealed partial class GeoContours(IHttpClientFactory factory)
 
     public static bool ValidCode(string code) => CodeRegex().IsMatch(code);
 
+    /// <summary>Code d'un département de métropole d'après son nom ("Hautes-Pyrénées" -> "65"). null : inconnu.</summary>
+    public static string? DepartmentCode(string name)
+    {
+        var wanted = Core.Dedup.DedupScorer.NormalizeText(name);
+        return Departments.Value.FirstOrDefault(d => Core.Dedup.DedupScorer.NormalizeText(JsonRead.Str(d.Value["properties"]?["nom"]) ?? "") == wanted).Key;
+    }
+
     /// <summary>GeoJSON (FeatureCollection) du lieu. null : pas de contour pour ce lieu.</summary>
     public async Task<string?> GetAsync(PlaceType type, string code, CancellationToken ct)
     {

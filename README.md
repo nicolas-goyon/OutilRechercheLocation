@@ -266,6 +266,11 @@ dotnet run --project src/RechercheLogement.Server           # http://localhost:5
 
 - Bien'ici : le plugin relit le JSON de la liste. Cela fait une requête de plus par page. Les deux
   annonces « mises en avant » n'ont souvent que les données de la carte.
+- Mes projets, Cessions de l'État : les biens vendus par l'État sur
+  [cessions.immobilier-etat.gouv.fr](https://cessions.immobilier-etat.gouv.fr/recherche-biens), en achat seulement.
+  Le site n'affiche pas de prix (il dépend de la procédure : enchères, appel d'offres) : un prix maximum ne les
+  écarte donc pas. Le serveur lit la liste (5 pages environ), puis les fiches des départements du projet, une page
+  par seconde.
 - Mes projets, SeLoger : SeLoger refuse les appels hors navigateur. La recherche est donc faite par le
   plugin, dans un onglet seloger.com ouvert, à raison d'une requête toutes les 2 secondes au moins
   (`RechercheLogement__SiteRelayDelayMs`). Sans onglet, le projet affiche « En attente d'un onglet… » et la

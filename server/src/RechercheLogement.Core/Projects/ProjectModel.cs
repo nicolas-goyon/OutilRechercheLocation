@@ -17,6 +17,8 @@ public enum SiteCategory
     GeneralClassifieds,
     /// <summary>Site d'une agence immobilière.</summary>
     Agency,
+    /// <summary>Ventes publiques (cessions de l'État...).</summary>
+    PublicSales,
 }
 
 // ------------------------------------------------------------------ zone de recherche
