@@ -217,7 +217,8 @@ principale), autres pages.
 - **Critères** : location / achat, appartement / maison, prix, surface, pièces, chambres, meublé,
   mots-clés souhaités (au moins un) et exclus.
 - **Sites**, par catégorie, activables un par un : *sites d'annonces immobilières* (**Bien'ici**,
-  **SeLoger** ; PAP, Logic-Immo à venir), *sites généralistes* (Leboncoin, à venir), *sites d'agences*
+  **SeLoger**, **Notaires de France**, **Figaro Immobilier**, **Green-Acres**, **ParuVendu** ; PAP, Logic-Immo à
+  venir), *sites généralistes* (Leboncoin, à venir), *sites d'agences*
   (à venir).
 - **Suivi de chaque annonce** : nouvelle, prix ou surface modifiés, retirée du site, de nouveau en
   ligne (avec la durée d'absence). Les annonces du même bien, sur le même site (republiée) ou sur des
@@ -277,6 +278,14 @@ dotnet run --project src/RechercheLogement.Server           # http://localhost:5
   recherche repart à l'ouverture d'un onglet. Si SeLoger demande une vérification, la recherche s'arrête :
   la passer dans l'onglet, puis relancer le projet. Rien n'est contourné automatiquement. Vérifiez que cet
   usage personnel respecte les conditions d'utilisation du site.
+- Notaires de France : le site demande 10 s entre deux requêtes (robots.txt), et une fiche est lue par annonce :
+  une recherche sur un département prend plusieurs minutes. Pas de position GPS.
+- Figaro Immobilier : par le serveur MCP public du site (son API web est interdite aux robots). 20 annonces par
+  appel, sans page suivante : quand une zone en a plus, la fourchette de prix est découpée en tranches (60 appels
+  au plus par recherche). Pas de recherche par code postal ; le code postal est retrouvé d'après la commune.
+- Green-Acres : achat seulement ; une fiche est lue par annonce (code postal, DPE, position approximative).
+- ParuVendu : pas de date de publication ni de GPS (centre de la commune) ; le code postal est retrouvé d'après
+  la commune.
 - SeLoger : le JSON de la liste ne contient ni position GPS ni photos d'origine (les photos sont
   renommées). La position GPS et les charges viennent de la page de l'annonce, une fois ouverte.
 - Le serveur local n'a pas de connexion utilisateur. Il doit tourner sur votre machine, lié à

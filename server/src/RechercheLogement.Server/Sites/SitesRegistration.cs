@@ -2,6 +2,10 @@ using System.Net;
 using RechercheLogement.Server.Sites.Bienici;
 using RechercheLogement.Server.Sites.Common;
 using RechercheLogement.Server.Sites.Etat;
+using RechercheLogement.Server.Sites.Figaro;
+using RechercheLogement.Server.Sites.GreenAcres;
+using RechercheLogement.Server.Sites.Notaires;
+using RechercheLogement.Server.Sites.Paruvendu;
 using RechercheLogement.Server.Sites.Seloger;
 
 namespace RechercheLogement.Server.Sites;
@@ -24,6 +28,10 @@ public static class SitesRegistration
         services.AddSingleton<ISiteModule, BieniciSite>();
         services.AddSingleton<ISiteModule, SelogerSite>();
         services.AddSingleton<ISiteModule, EtatSite>();
+        services.AddSingleton<ISiteModule, NotairesSite>();
+        services.AddSingleton<ISiteModule, FigaroSite>();
+        services.AddSingleton<ISiteModule, GreenAcresSite>();
+        services.AddSingleton<ISiteModule, ParuvenduSite>();
         services.AddSingleton<SiteRegistry>();
         return services;
     }

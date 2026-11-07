@@ -1,0 +1,84 @@
+{
+ "listings": [
+  {
+   "area": 85,
+   "bedrooms": 3,
+   "city": "Trie-sur-Baïse (65)",
+   "description": "À 10 minutes de Trie-sur-Baïse, cette maison de campagne de 86 m², comprenant un studio indépendant, est implantée sur un terrain de 1 500 m². Avec son architecture traditionnelle, son garage et sa dépendance, cette propriété offre de belles possibilités d'aménagement et de rénovation. \n \nAu rez-de-chaussée, l'entrée ouvre sur une pièce de vie (26 m²), exposée sud et est, disposant d'un foyer ouvert. Ce niveau comprend également une cuisine (9 m²), une salle d'eau (4 m²), un dégagement (4,50 m²), un cellier (6 m²) et un WC indépendant. \n \nÀ l'étage, vous trouverez une grande chambre (23 m² uti",
+   "estateType": "maison",
+   "groundArea": 1503,
+   "options": [
+    "cheminee",
+    "garage",
+    "salle_d_eau"
+   ],
+   "photoCount": 26,
+   "photoUrl": "https://lh3.googleusercontent.com/zpWi8yIhpaVKjMxgaAIudjFhBc3XPBQ5T2mb4s3cIbEx6aROtHEN4xwUSiDBRhOQL166ggsNBRWXv4IoNwusEr2226PAKzk14XXpSqE",
+   "photoUrls": [
+    "https://lh3.googleusercontent.com/zpWi8yIhpaVKjMxgaAIudjFhBc3XPBQ5T2mb4s3cIbEx6aROtHEN4xwUSiDBRhOQL166ggsNBRWXv4IoNwusEr2226PAKzk14XXpSqE",
+    "https://lh3.googleusercontent.com/nw67UVpLr6dztzG8u2ILTVVB8It_mbxV0KFVF5SgaVmyaqSVcKg_ECzRbrUxjtj42xmx863sWQosAT1ScXCxW5OfhbUAnsGfFhQZiA",
+    "https://lh3.googleusercontent.com/INZ69AIY43RzBA7ubzgs-S2SGhASANgevNpJkrM9EuuJn0wuc7nkEqyfMQCr4-df-6M4cvEP7Ds6xk7cOmyi7c_lHTugskfWd-LIZw"
+   ],
+   "price": 88000,
+   "pricePerM2": 1035.2941176470588,
+   "rooms": 4,
+   "title": "Vente Maison 4 Pièces 85 M2",
+   "updatedAt": "2026-11-07T07:01:58+01:00",
+   "url": "https://immobilier.lefigaro.fr/annonces/annonce-110646905.html"
+  },
+  {
+   "area": 196,
+   "bedrooms": 3,
+   "city": "Hères (65)",
+   "description": "À 10 minutes de Maubourguet, au calme d’un petit village, cette authentique ferme gasconne du XIXe siècle a conservé tout le charme des anciennes propriétés rurales. Avec ses murs de pierre, ses cheminées anciennes, son escalier d’époque, sa cour intérieure, ses étables, ses greniers, son puits et ses terres, elle témoigne d’un long passé agricole. \n \nLa maison offre 196 m² habitables à rénover, de nombreuses dépendances et un terrain de 5 798 m² composé notamment d’un ancien potager, d’un verger et d’une vaste prairie. \n \nUne véritable ferme de caractère, idéale pour les amoureux de l’ancien ",
+   "estateType": "ferme",
+   "groundArea": 5798,
+   "options": [
+    "cheminee",
+    "salle_d_eau"
+   ],
+   "photoCount": 37,
+   "photoUrl": "https://lh3.googleusercontent.com/tPBlUvNZHnhhgXddoWIhrhsc6tdWTzEW0G5nOFKrmYez504F2fCtlgGL6Cbe0aOy6-uRWUjHkPQROaOwFKdcjIObinAmWCigTRiV_dk",
+   "photoUrls": [
+    "https://lh3.googleusercontent.com/tPBlUvNZHnhhgXddoWIhrhsc6tdWTzEW0G5nOFKrmYez504F2fCtlgGL6Cbe0aOy6-uRWUjHkPQROaOwFKdcjIObinAmWCigTRiV_dk",
+    "https://lh3.googleusercontent.com/gNFgzRaUg9fBE-aMoD58eIXqQoP8SXRtZBYDFwzVLq4ToKFQt3T5DFBKVkp-dY6YmxWk03RopGTQSnRxZlC1TA6lJAWwN2tQPoZy-mA",
+    "https://lh3.googleusercontent.com/Bs20xNKmqm9xolqQemN0fW1JhBMMKtvoMqsPcVrTM0Z1HCCN3HTUeg0Eoh0WbcG6PRy3jirrlEHl7fI9JW_9upsnGxnuhCWH4G8HyA"
+   ],
+   "price": 154000,
+   "pricePerM2": 785.7142857142857,
+   "rooms": 6,
+   "title": "Vente Ferme 6 Pièces 196 M2",
+   "updatedAt": "2026-11-07T07:00:13+01:00",
+   "url": "https://immobilier.lefigaro.fr/annonces/annonce-110126943.html"
+  },
+  {
+   "area": 190,
+   "bedrooms": 4,
+   "city": "Maubourguet (65)",
+   "description": "À 30 minutes au nord de Tarbes, cette ancienne grange rénovée offre 158 m² habitables, et un studio indépendant de 32 m², soit une surface totale de 190 m². La maison principale comprend 5 chambres, une cuisine équipée avec un espace séjour, une salle d’eau ainsi que des dépendances. L’ensemble est situé sur un terrain calme et paisible de 4 800 m². \n \nLa maison est vendue entièrement meublée et avec tout le matériel nécessaire à l’entretien du terrain, notamment du matériel pour la tonte de la pelouse ainsi que divers équipements de jardinage. \n \nVous apprécierez son emplacement proche des co",
+   "dpe": "C",
+   "estateType": "maison",
+   "groundArea": 4800,
+   "options": [
+    "garage",
+    "piscine",
+    "terrasse",
+    "petit_prix"
+   ],
+   "photoCount": 16,
+   "photoUrl": "https://lh3.googleusercontent.com/lEGc2ACmmPofyUeQdLCBxX6rI-E2nKrR6OFsx0IWUNYdD_xfY_YtIz9YlpWHL6em4sdOGTU85Q6pIOz1obpX8EcPpmpspQoGnH5e",
+   "photoUrls": [
+    "https://lh3.googleusercontent.com/lEGc2ACmmPofyUeQdLCBxX6rI-E2nKrR6OFsx0IWUNYdD_xfY_YtIz9YlpWHL6em4sdOGTU85Q6pIOz1obpX8EcPpmpspQoGnH5e",
+    "https://lh3.googleusercontent.com/i-dF_5Mcvo2VedTUgVbZZ9EcDQlo7tEEWsrHCgMtyfujbiFGhec8QcIaYkoRAd83Y1DKhHkC5FkaQmhsAvBvO0F4d80W-hQ8vj7-VQ",
+    "https://lh3.googleusercontent.com/HgH97jXalG-JzYZazKDe5wwmW7J7f3cpqbJJDp2rLg_BKl70A_UVZuxMV9EdCAE1p-iSi3ufREaFIvJb4ssxKeGm4bu4QT9WNBqlbg"
+   ],
+   "price": 220000,
+   "pricePerM2": 1157.8947368421052,
+   "rooms": 6,
+   "title": "Vente Maison 6 Pièces 190 M2",
+   "updatedAt": "2026-11-07T07:00:13+01:00",
+   "url": "https://immobilier.lefigaro.fr/annonces/annonce-110319309.html"
+  }
+ ],
+ "totalHits": 1222
+}
