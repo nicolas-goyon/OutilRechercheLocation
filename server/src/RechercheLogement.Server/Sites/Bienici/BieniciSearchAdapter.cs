@@ -165,15 +165,23 @@ public sealed class BieniciSearchAdapter(IHttpClientFactory factory) : ISearchAd
         if (p.SurfaceMax is { } smax) f["maxArea"] = smax;
         if (p.RoomsMin is { } rmin) f["minRooms"] = rmin;
         if (p.RoomsMax is { } rmax) f["maxRooms"] = rmax;
-        if (p.BedroomsMin is { } bmin) f["minBedrooms"] = bmin;
+        // Les filtres de Bien'ici écartent les annonces sans l'information (mesuré en novembre 2026) : un critère non
+        // obligatoire n'est pas envoyé, l'outil le vérifie sur les annonces (Criteria).
+        if (p.BedroomsMin is { } bmin && p.IsStrict(Criteria.Bedrooms)) f["minBedrooms"] = bmin;
         if (p.Furnished is { } furnished) f["isFurnished"] = furnished;
-        if (p.LandSurfaceMin is { } lmin) f["minGardenSurfaceArea"] = lmin;
-        if (p.LandSurfaceMax is { } lmax) f["maxGardenSurfaceArea"] = lmax;
-        if (p.EnergyClassMax is { } energy) f["energyClassification"] = new JsonArray(EnergyClasses.UpTo(energy).Select(c => (JsonNode?)JsonValue.Create(c)).ToArray());
+        if (p.IsStrict(Criteria.LandSurface))
+        {
+            if (p.LandSurfaceMin is { } lmin) f["minGardenSurfaceArea"] = lmin;
+            if (p.LandSurfaceMax is { } lmax) f["maxGardenSurfaceArea"] = lmax;
+        }
+        if (p.EnergyClassMax is { } energy && p.IsStrict(Criteria.EnergyClass))
+            f["energyClassification"] = new JsonArray(EnergyClasses.UpTo(energy).Select(c => (JsonNode?)JsonValue.Create(c)).ToArray());
+        // newProperty est renseigné sur toutes les annonces : envoyé même s'il n'est pas obligatoire.
         if (p.NewBuild is { } newBuild) f["newProperty"] = newBuild;
         // workToDo: false ne garde que les annonces qui le disent : "sans travaux" est vérifié par l'outil.
-        if (p.WorkNeeded == true) f["workToDo"] = true;
-        foreach (var name in SiteFeatures(p.RequiredFeatures)) f[name] = true;
+        if (p.WorkNeeded == true && p.IsStrict(Criteria.WorkNeeded)) f["workToDo"] = true;
+        if (p.IsStrict(Criteria.Features))
+            foreach (var name in SiteFeatures(p.RequiredFeatures)) f[name] = true;
         return f;
     }
 

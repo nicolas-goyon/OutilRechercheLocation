@@ -149,13 +149,20 @@ public sealed class SelogerSearchAdapter(BrowserRelay relay) : ISearchAdapter
         if (p.SurfaceMin is { } smin) criteria["spaceMin"] = smin;
         if (p.RoomsMin is { } rmin) criteria["numberOfRoomsMin"] = rmin;
         if (p.RoomsMax is { } rmax) criteria["numberOfRoomsMax"] = rmax;
-        if (p.BedroomsMin is { } bmin) criteria["numberOfBedroomsMin"] = bmin;
-        if (p.LandSurfaceMin is { } lmin) criteria["plotSpaceMin"] = lmin;
-        if (p.LandSurfaceMax is { } lmax) criteria["plotSpaceMax"] = lmax;
-        if (p.YearBuiltMin is { } ymin) criteria["yearOfConstructionMin"] = ymin;
-        if (p.YearBuiltMax is { } ymax) criteria["yearOfConstructionMax"] = ymax;
-        if (p.EnergyClassMax is { } energy) criteria["energyCertificateClass"] = Strings(EnergyClasses.UpTo(energy));
-        if (SiteFeatures(p.RequiredFeatures).ToList() is { Count: > 0 } features) criteria["featuresIncluded"] = Strings(features);
+        // Critère non obligatoire : pas envoyé (le site écarterait les annonces sans l'information), vérifié par l'outil.
+        if (p.BedroomsMin is { } bmin && p.IsStrict(Criteria.Bedrooms)) criteria["numberOfBedroomsMin"] = bmin;
+        if (p.IsStrict(Criteria.LandSurface))
+        {
+            if (p.LandSurfaceMin is { } lmin) criteria["plotSpaceMin"] = lmin;
+            if (p.LandSurfaceMax is { } lmax) criteria["plotSpaceMax"] = lmax;
+        }
+        if (p.IsStrict(Criteria.YearBuilt))
+        {
+            if (p.YearBuiltMin is { } ymin) criteria["yearOfConstructionMin"] = ymin;
+            if (p.YearBuiltMax is { } ymax) criteria["yearOfConstructionMax"] = ymax;
+        }
+        if (p.EnergyClassMax is { } energy && p.IsStrict(Criteria.EnergyClass)) criteria["energyCertificateClass"] = Strings(EnergyClasses.UpTo(energy));
+        if (p.IsStrict(Criteria.Features) && SiteFeatures(p.RequiredFeatures).ToList() is { Count: > 0 } features) criteria["featuresIncluded"] = Strings(features);
         if (ProjectTypes(p) is { } projectTypes) criteria["projectTypes"] = Strings(projectTypes);
         return new JsonObject
         {

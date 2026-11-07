@@ -89,3 +89,24 @@ public static class SaleKinds
         _ => kind ?? "",
     };
 }
+
+/// <summary>
+/// Critères de projet qui peuvent être "obligatoires" (<see cref="Projects.SearchProject.StrictCriteria"/>) : une
+/// annonce qui ne précise pas l'information est alors écartée. Sinon, seule une valeur précisée et non conforme
+/// l'écarte. Les sites écartent toujours les annonces sans l'information quand ils filtrent eux-mêmes : un critère
+/// non obligatoire ne leur est donc pas envoyé (sauf si toutes leurs annonces la précisent).
+/// </summary>
+public static class Criteria
+{
+    public const string Bedrooms = "bedrooms";
+    public const string LandSurface = "landSurface";
+    public const string Bathrooms = "bathrooms";
+    public const string EnergyClass = "energyClass";
+    public const string YearBuilt = "yearBuilt";
+    public const string NewBuild = "newBuild";
+    public const string WorkNeeded = "workNeeded";
+    /// <summary>Équipements exigés : chacun doit être mentionné comme présent.</summary>
+    public const string Features = "features";
+
+    public static readonly IReadOnlyList<string> All = [Bedrooms, LandSurface, Bathrooms, EnergyClass, YearBuilt, NewBuild, WorkNeeded, Features];
+}

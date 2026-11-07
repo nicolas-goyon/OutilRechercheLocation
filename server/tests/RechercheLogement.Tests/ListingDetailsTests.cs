@@ -155,6 +155,8 @@ public class ListingDetailsTests
         Assert.Null(d.Subtype);
         Assert.Null(d.LandSurface);
         Assert.Null(d.Features);
+        // Terrain dans l'autre champ (selon l'agence).
+        Assert.Equal(2900, BieniciListingParser.ParseAd(JsonNode.Parse("""{ "id": "y", "gardenSurfaceArea": 2900 }""")!)!.Data.LandSurface);
     }
 
     [Fact]
@@ -168,6 +170,7 @@ public class ListingDetailsTests
             p.NewBuild = false;
             p.WorkNeeded = false;
             p.RequiredFeatures = [Features.Pool, Features.Garage, Features.Parking, Features.AirConditioning];
+            p.StrictCriteria = [.. Criteria.All];
         });
         var f = BieniciSearchAdapter.BuildFilters(p, ["-7467"], 0);
 
@@ -233,6 +236,7 @@ public class ListingDetailsTests
             p.YearBuiltMax = 2000;
             p.EnergyClassMax = "B";
             p.RequiredFeatures = [Features.Terrace, Features.Balcony, Features.Pool, Features.Fireplace];
+            p.StrictCriteria = [.. Criteria.All];
         });
         var c = SelogerSearchAdapter.BuildSearch(p, ["AD06FR65"], 1)["criteria"]!;
 
@@ -242,6 +246,81 @@ public class ListingDetailsTests
         Assert.Equal("[\"A\",\"B\"]", c["energyCertificateClass"]!.ToJsonString());
         Assert.Equal("[\"Balcony_Terrace\",\"Swimming_Pool\"]", c["featuresIncluded"]!.ToJsonString());
         Assert.Equal("[\"Resale\",\"New_Build\",\"Projected\"]", c["projectTypes"]!.ToJsonString()); // viagers écartés
+    }
+
+    /// <summary>
+    /// Critères non obligatoires : pas envoyés aux sites, qui écarteraient les annonces sans l'information (mesuré sur
+    /// Bien'ici : 510 maisons sur 1 470 ne disent rien de la piscine). Neuf/ancien, toujours renseigné, reste envoyé.
+    /// </summary>
+    [Fact]
+    public void OptionalCriteria_AreNotSentToSites()
+    {
+        var p = Project(p =>
+        {
+            p.BedroomsMin = 3;
+            p.LandSurfaceMin = 1000;
+            p.EnergyClassMax = "D";
+            p.YearBuiltMin = 1950;
+            p.WorkNeeded = true;
+            p.NewBuild = false;
+            p.RequiredFeatures = [Features.Pool];
+        });
+        var bienici = BieniciSearchAdapter.BuildFilters(p, ["-7467"], 0);
+        foreach (var name in new[] { "minBedrooms", "minGardenSurfaceArea", "energyClassification", "workToDo", "hasPool" })
+            Assert.Null(bienici[name]);
+        Assert.False((bool)bienici["newProperty"]!);
+
+        var seloger = SelogerSearchAdapter.BuildSearch(p, ["AD06FR65"], 1)["criteria"]!;
+        foreach (var name in new[] { "numberOfBedroomsMin", "plotSpaceMin", "energyCertificateClass", "yearOfConstructionMin", "featuresIncluded" })
+            Assert.Null(seloger[name]);
+        Assert.Equal("[\"Resale\"]", seloger["projectTypes"]!.ToJsonString());
+
+        p.StrictCriteria = [Criteria.EnergyClass];
+        Assert.NotNull(BieniciSearchAdapter.BuildFilters(p, ["-7467"], 0)["energyClassification"]);
+        Assert.Null(BieniciSearchAdapter.BuildFilters(p, ["-7467"], 0)["minGardenSurfaceArea"]);
+    }
+
+    [Fact]
+    public void StrictCriteria_DropListingsWithoutTheInformation()
+    {
+        var p = Project(p =>
+        {
+            p.BedroomsMin = 3;
+            p.LandSurfaceMin = 1000;
+            p.EnergyClassMax = "D";
+            p.YearBuiltMin = 1950;
+            p.BathroomsMin = 1;
+            p.NewBuild = false;
+            p.WorkNeeded = false;
+            p.RequiredFeatures = [Features.Pool];
+        });
+        var unknown = new ListingData();
+        Assert.True(ProjectMatcher.Matches(p, unknown, out _)); // rien d'obligatoire : gardée
+
+        void Strict(string criterion, string reason)
+        {
+            p.StrictCriteria = [criterion];
+            Assert.False(ProjectMatcher.Matches(p, unknown, out var why));
+            Assert.Equal(reason, why);
+        }
+        Strict(Criteria.Bedrooms, "nombre de chambres non renseigné");
+        Strict(Criteria.LandSurface, "terrain non renseigné");
+        Strict(Criteria.EnergyClass, "DPE non renseigné");
+        Strict(Criteria.YearBuilt, "année de construction non renseigné");
+        Strict(Criteria.Bathrooms, "salles de bain non renseigné");
+        Strict(Criteria.NewBuild, "neuf ou ancien non renseigné");
+        Strict(Criteria.WorkNeeded, "état (travaux) non renseigné");
+        Strict(Criteria.Features, "piscine : non mentionné");
+
+        // Obligatoire mais critère vide : rien à exiger.
+        p.StrictCriteria = [.. Criteria.All];
+        p.BedroomsMin = null;
+        Assert.False(ProjectMatcher.Matches(p, unknown with { }, out var first));
+        Assert.NotEqual("nombre de chambres non renseigné", first);
+
+        // Valeurs connues et conformes : gardée, même tout obligatoire.
+        var good = new ListingData { LandSurface = 1200, EnergyClass = "C", YearBuilt = 1990, Bathrooms = 1, NewBuild = false, WorkNeeded = false, Features = Features.Of((Features.Pool, true)) };
+        Assert.True(ProjectMatcher.Matches(p, good, out var reason), reason);
     }
 
     [Fact]

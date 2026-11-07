@@ -75,6 +75,7 @@ public class BieniciLiveTests(ITestOutputHelper output)
             EnergyClassMax = "D",
             NewBuild = false,
             RequiredFeatures = [Features.Pool],
+            StrictCriteria = [.. Criteria.All], // obligatoires : envoyés au site, qui les filtre
         };
 
         var outcome = await LiveHttp.Retry(() => _adapter.SearchAsync(new SearchRequest(project, place!.Ids, 24), default));

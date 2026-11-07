@@ -208,6 +208,7 @@ export interface BieniciApiAd {
   publicationDate?: string;
   accountDisplayName?: string;
   landSurfaceArea?: number;
+  gardenSurfaceArea?: number;
   energyClassification?: string;
   greenhouseGazClassification?: string;
   yearOfConstruction?: number;
@@ -265,7 +266,8 @@ export function parseBieniciApiAd(ad: BieniciApiAd): ListingData {
     photoKeys: ad.photos?.map((p) => photoKey(p.url_photo)).filter((u): u is string => !!u).slice(0, 6),
     descriptionExcerpt: ad.description ? normalizeText(ad.description).slice(0, 600) : undefined,
     publishedAt: ad.publicationDate,
-    landSurface: ad.landSurfaceArea && ad.landSurfaceArea > 0 ? ad.landSurfaceArea : undefined,
+    // Deux champs selon l'agence ; le filtre de surface de terrain du site porte sur "gardenSurfaceArea".
+    landSurface: positive(ad.landSurfaceArea) ?? positive(ad.gardenSurfaceArea),
     energyClass: energyClass(ad.energyClassification),
     ghgClass: energyClass(ad.greenhouseGazClassification),
     yearBuilt: ad.yearOfConstruction && ad.yearOfConstruction > 1000 ? ad.yearOfConstruction : undefined,
@@ -281,6 +283,8 @@ export function parseBieniciApiAd(ad: BieniciApiAd): ListingData {
     features: bieniciFeatures(ad),
   };
 }
+
+const positive = (n: number | undefined) => (n !== undefined && n > 0 ? n : undefined);
 
 /** Équipements : "hasPool", ou un nombre ("balconyQuantity" : 0 = absent). Mêmes règles que le serveur. */
 export function bieniciFeatures(ad: BieniciApiAd): ListingFeatures | undefined {

@@ -65,6 +65,7 @@ test("Bien'ici : terrain, DPE, équipements et viager (mêmes règles que le ser
   assert.equal(d.heating, undefined); // code numérique, pas un libellé
   assert.equal(d.workNeeded, true);
   assert.deepEqual(d.features, { garden: true, pool: false, garage: true, parking: false });
+  assert.equal(parseBieniciApiAd({ id: 'y', gardenSurfaceArea: 2900 }).landSurface, 2900);
 });
 
 test('SeLoger, liste : terrain, DPE, année, sous-type, neuf, viager', () => {

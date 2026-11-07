@@ -413,3 +413,10 @@ dl.details { grid-template-columns: 130px 1fr; }
 .feature { font-size: 13px; border-radius: var(--radius); padding: 2px 8px; border: 1px solid var(--border); }
 .feature.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
 .feature.off { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--border); }
+
+/* Case "Obligatoire" à côté d'un critère de projet. */
+.with-strict { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.with-strict select { flex: 1 1 240px; }
+.strict { display: inline-flex; gap: 5px; align-items: center; font-size: 13px; color: var(--muted); white-space: nowrap; cursor: pointer; margin-left: 4px; }
+.strict:has(input:checked) { color: var(--accent); font-weight: 600; }
+.form-grid .range .strict input { width: auto; }
