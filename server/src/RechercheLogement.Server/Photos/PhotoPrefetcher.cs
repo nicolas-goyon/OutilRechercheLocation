@@ -33,10 +33,10 @@ public static class PhotoPlan
             var rounds = items.Count == 0 ? 0 : items.Max(w => Math.Min(w.Depth, w.Photos.Count));
             for (var i = 0; i < rounds; i++)
             {
-                foreach (var w in items)
+                var round = i;
+                foreach (var w in items.Where(w => round < Math.Min(w.Depth, w.Photos.Count)))
                 {
-                    if (i >= Math.Min(w.Depth, w.Photos.Count)) continue;
-                    var url = w.Photos[i];
+                    var url = w.Photos[round];
                     if (seen.Add(url) && !skip(url)) yield return (url, level.Key);
                 }
             }

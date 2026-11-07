@@ -34,7 +34,7 @@ public static class PhotoEndpoints
         {
             var db = Path.GetFullPath(settings.DatabasePath, env.ContentRootPath);
             var dir = string.IsNullOrWhiteSpace(settings.PhotoCachePath)
-                ? Path.Combine(Path.GetDirectoryName(db) ?? env.ContentRootPath, "photos")
+                ? Path.Join(Path.GetDirectoryName(db) ?? env.ContentRootPath, "photos")
                 : Path.GetFullPath(settings.PhotoCachePath, env.ContentRootPath);
             cache = new PhotoCache(dir, (long)(Math.Max(0.1, settings.PhotoCacheMaxGb) * 1024 * 1024 * 1024));
         }

@@ -15,7 +15,7 @@ namespace RechercheLogement.Tests;
 /// <summary>Cache des photos : ordre des téléchargements, compression, place limitée, adresse /photo.</summary>
 public sealed class PhotoCacheTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "rl-photos-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = Path.Join(Path.GetTempPath(), "rl-photos-" + Guid.NewGuid().ToString("N"));
 
     public void Dispose()
     {
@@ -108,11 +108,12 @@ public sealed class PhotoCacheTests : IDisposable
     public async Task Endpoint_ServesTheCachedPhoto_OrRedirectsToTheSite()
     {
         const string url = "https://file.bienici.com/photo/b.jpg";
-        new PhotoCache(Path.Combine(_dir, "photos"), long.MaxValue).Store(url, Jpeg(1000, 800, SKColors.Green));
+        new PhotoCache(Path.Join(_dir, "photos"), long.MaxValue).Store(url, Jpeg(1000, 800, SKColors.Green));
 
-        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+        using var app = new WebApplicationFactory<Program>();
+        using var factory = app.WithWebHostBuilder(b =>
         {
-            b.UseSetting("RechercheLogement:DatabasePath", Path.Combine(_dir, "test.db"));
+            b.UseSetting("RechercheLogement:DatabasePath", Path.Join(_dir, "test.db"));
             b.UseSetting("RechercheLogement:AnalyzePhotos", "false");
             b.UseSetting("RechercheLogement:ProjectsAutoRun", "false");
         });
@@ -152,7 +153,7 @@ public sealed class PhotoCacheTests : IDisposable
         var ids = catalog.QueryProperties(new PropertyQuery()).ToDictionary(p => p.Title!, p => p.Property.Id);
         catalog.SetStatus(ids["c"], PropertyStatus.Rejected);
 
-        var http = new FakeImages(Jpeg(400, 300, SKColors.Brown));
+        using var http = new FakeImages(Jpeg(400, 300, SKColors.Brown));
         var cache = new PhotoCache(_dir, long.MaxValue);
         using var prefetcher = new PhotoPrefetcher(cache, catalog, new ProjectStore(new InMemoryProjectPersistence()),
             new RecommendationService(catalog, new InMemoryPhotoStatsStore()), http, NullLogger<PhotoPrefetcher>.Instance)
@@ -172,12 +173,28 @@ public sealed class PhotoCacheTests : IDisposable
     {
         public List<string> Requested { get; } = [];
 
+        private readonly List<HttpResponseMessage> _responses = [];
+
         public HttpClient CreateClient(string name) => new(this, disposeHandler: false);
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
-            lock (Requested) Requested.Add(request.RequestUri!.ToString());
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(image) });
+            var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(image) };
+            lock (Requested)
+            {
+                Requested.Add(request.RequestUri!.ToString());
+                _responses.Add(response); // libérées avec le faux client
+            }
+            return Task.FromResult(response);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                lock (Requested) _responses.ForEach(r => r.Dispose());
+            }
+            base.Dispose(disposing);
         }
     }
 }

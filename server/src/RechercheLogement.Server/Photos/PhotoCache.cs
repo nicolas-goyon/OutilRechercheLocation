@@ -95,7 +95,7 @@ public sealed class PhotoCache
         var encoded = Encode(original);
         if (encoded is null) return false;
         var key = Key(url);
-        Directory.CreateDirectory(Path.Combine(_dir, key[..2]));
+        Directory.CreateDirectory(Path.Join(_dir, key[..2]));
         var bytes = 0L;
         foreach (var (size, data) in new[] { (PhotoSize.Small, encoded.Value.Small), (PhotoSize.Large, encoded.Value.Large) })
         {
@@ -164,8 +164,8 @@ public sealed class PhotoCache
     public int RemoveWhere(Func<string, long, bool> drop)
     {
         var removed = 0;
-        foreach (var kv in _entries.ToList())
-            if (drop(kv.Key, kv.Value.LastAccessMs) && Remove(kv.Key)) removed++;
+        foreach (var key in _entries.Where(kv => drop(kv.Key, kv.Value.LastAccessMs)).Select(kv => kv.Key).ToList())
+            if (Remove(key)) removed++;
         return removed;
     }
 
@@ -187,7 +187,7 @@ public sealed class PhotoCache
         return true;
     }
 
-    private string PathOf(string key, PhotoSize size) => Path.Combine(_dir, key[..2], $"{key}.{(size == PhotoSize.Small ? 's' : 'l')}.webp");
+    private string PathOf(string key, PhotoSize size) => Path.Join(_dir, key[..2], $"{key}.{(size == PhotoSize.Small ? 's' : 'l')}.webp");
 
     private static string? KeyOfFile(string path)
     {
