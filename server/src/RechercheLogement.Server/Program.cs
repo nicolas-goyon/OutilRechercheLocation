@@ -4,6 +4,7 @@ using RechercheLogement.Server.Api;
 using RechercheLogement.Server.Components;
 using RechercheLogement.Server.Geo;
 using RechercheLogement.Server.Projects;
+using RechercheLogement.Server.Recommend;
 using RechercheLogement.Server.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +18,7 @@ builder.Services.AddSingleton(sp => new Catalog(
     new CatalogOptions { PublicUrl = settings.PublicUrl }));
 builder.Services.AddSingleton<ApiTokenService>();
 builder.Services.AddProjects(settings, builder.Environment);
+builder.Services.AddRecommendations(settings, builder.Environment);
 
 builder.Services.ConfigureHttpJsonOptions(o => JsonDefaults.Configure(o.SerializerOptions));
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();

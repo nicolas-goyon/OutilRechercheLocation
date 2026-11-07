@@ -90,6 +90,14 @@ public sealed class SqlitePersistence : IPersistence
         """,
         // v3 : recherche rattachée à un projet (projets.db). NULL : visible dans tous les projets.
         "ALTER TABLE saved_searches ADD COLUMN project_id TEXT NULL;",
+        // v4 : descripteurs des photos (recommandations). json NULL : photo illisible ou introuvable (réessayée plus tard).
+        """
+        CREATE TABLE photo_stats (
+            url  TEXT PRIMARY KEY,
+            json TEXT NULL,
+            at   INTEGER NOT NULL
+        );
+        """,
     ];
 
     private readonly string _connectionString;
