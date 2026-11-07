@@ -65,6 +65,7 @@ public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegis
         var project = store.Get(projectId);
         if (project is null) return;
         if (!await PlanAsync(project, ct)) return;
+        await AddFormerNamesAsync(project, ct);
 
         var targets = project.Sites.Distinct()
             .Where(s => onlySite is null || s == onlySite)
@@ -80,6 +81,19 @@ public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegis
         }
         Notify(force: true);
         await Task.WhenAll(targets.Select(t => RunSiteGatedAsync(project, t, ct)));
+    }
+
+    /// <summary>Anciens noms des communes nouvelles : facultatif, une panne n'empêche pas la recherche.</summary>
+    private async Task AddFormerNamesAsync(SearchProject project, CancellationToken ct)
+    {
+        try
+        {
+            if (await planner.AddFormerNamesAsync(project, ct)) lock (project) store.SaveQuietly(project);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            log.LogWarning(e, "Projet {Project} : anciennes communes non récupérées", project.Name);
+        }
     }
 
     /// <summary>Zone des modes rayon et temps de trajet. false : calcul impossible (erreur notée sur chaque site).</summary>
@@ -215,7 +229,8 @@ public sealed class ProjectRunner(ProjectStore store, Catalog catalog, SiteRegis
                 done++;
                 CachedPlace? place;
                 bool known;
-                lock (project) known = cache.TryGetValue(q.CacheKey, out place);
+                // Lieu non reconnu la dernière fois : redemandé (le site ou la règle de choix ont pu changer).
+                lock (project) known = cache.TryGetValue(q.CacheKey, out place) && place is not null;
                 if (!known)
                 {
                     progress($"reconnaissance des lieux {done}/{queries.Count}");
