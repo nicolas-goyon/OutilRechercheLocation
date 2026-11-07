@@ -15,6 +15,13 @@ public static class Format
     public static string Date(long ms) => TimeZoneInfo.ConvertTime(DateTimeOffset.FromUnixTimeMilliseconds(ms), Paris).ToString("dd/MM/yyyy", Fr);
     public static string DateTime(long ms) => TimeZoneInfo.ConvertTime(DateTimeOffset.FromUnixTimeMilliseconds(ms), Paris).ToString("dd/MM/yyyy HH:mm", Fr);
 
+    /// <summary>
+    /// Photo d'annonce par le cache du serveur (/photo) : servie depuis le disque si elle y est, sinon redirigée vers
+    /// <see cref="Thumb"/>. Sans taille (0) : grande photo.
+    /// </summary>
+    public static string Photo(string url, int width = 0, int height = 0) =>
+        $"/photo?u={Uri.EscapeDataString(url)}{(width > 0 ? $"&w={width}&h={height}" : "")}";
+
     /// <summary>Miniature d'une photo d'annonce (le CDN du site redimensionne l'image).</summary>
     public static string Thumb(string url, int width, int height)
     {

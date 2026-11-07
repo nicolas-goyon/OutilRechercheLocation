@@ -3,6 +3,7 @@
 @inject ApiTokenService Tokens
 @inject ServerSettings Settings
 @inject IJSRuntime JS
+@inject RechercheLogement.Server.Photos.PhotoPrefetcher Prefetch
 
 <PageTitle>Paramètres — Recherche logement</PageTitle>
 <h1>Paramètres</h1>
@@ -54,6 +55,24 @@
     <pre class="cmd">docker compose up -d --pull always</pre>
     <p class="muted">Ou les scripts <code>update.sh</code> / <code>update.ps1</code> fournis avec le docker-compose.
         Les données (volume Docker) sont conservées et la base est migrée au démarrage.</p>
+</section>
+
+<section class="panel">
+    <h2>Cache des photos</h2>
+    @if (Prefetch.Cache is { } cache)
+    {
+        <p>
+            @Format.Number(cache.Count) photo(s), @Format.Number(Math.Round(cache.TotalBytes / 1048576.0)) Mo sur
+            @Format.Number(cache.MaxBytes / 1073741824.0) Go permis.
+            Les 5 premières photos des biens sont téléchargées en tâche de fond (bien ouvert, liste affichée, puis biens
+            les mieux recommandés du projet), au plus une toutes les 2 s par site.
+        </p>
+        <p class="muted">Place permise : réglage <code>RechercheLogement__PhotoCacheMaxGb</code>. Au-delà, les photos des biens refusés, vus ou à contacter partent en premier.</p>
+    }
+    else
+    {
+        <p class="muted">Désactivé (réglage <code>RechercheLogement__PhotoCache</code>, ou stockage en mémoire) : les photos viennent directement des sites.</p>
+    }
 </section>
 
 <section class="panel">

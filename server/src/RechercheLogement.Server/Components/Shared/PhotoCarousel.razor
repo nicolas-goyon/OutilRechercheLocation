@@ -1,3 +1,4 @@
+@inject RechercheLogement.Server.Photos.PhotoPrefetcher Prefetch
 @* Photos d'un bien, une à la fois. Les boutons restent hors du lien : ils n'ouvrent pas la fiche. *@
 @if (Photos.Count == 0)
 {
@@ -7,7 +8,7 @@ else
 {
     <div class="carousel">
         <a class="photo-link" href="@Href" aria-hidden="true" tabindex="-1">
-            <img src="@Format.Thumb(Photos[Index], Width, Height)" alt="" loading="lazy" />
+            <img src="@Format.Photo(Photos[Index], Width, Height)" alt="" loading="lazy" />
         </a>
         @if (Photos.Count > 1)
         {
@@ -21,6 +22,8 @@ else
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<string> Photos { get; set; } = [];
     [Parameter, EditorRequired] public string Href { get; set; } = "";
+    /// <summary>Bien des photos : défiler le carrousel fait télécharger ses 10 premières photos.</summary>
+    [Parameter] public string? PropertyId { get; set; }
     [Parameter] public int Width { get; set; } = 400;
     [Parameter] public int Height { get; set; } = 240;
 
@@ -29,5 +32,9 @@ else
     /// <summary>Les photos peuvent changer pendant l'affichage : la position reste valide.</summary>
     private int Index => Photos.Count == 0 ? 0 : Math.Min(_index, Photos.Count - 1);
 
-    private void Move(int delta) => _index = (Index + delta + Photos.Count) % Photos.Count;
+    private void Move(int delta)
+    {
+        _index = (Index + delta + Photos.Count) % Photos.Count;
+        if (PropertyId is not null) Prefetch.Deepen(PropertyId);
+    }
 }

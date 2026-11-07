@@ -1,6 +1,6 @@
 <article class="card @Format.StatusClass(Item.Property.Status)">
     <div class="photo">
-        <PhotoCarousel Photos="Item.Photos ?? []" Href="@($"/biens/{Item.Property.Id}")" />
+        <PhotoCarousel PropertyId="@Item.Property.Id" Photos="Item.Photos ?? []" Href="@($"/biens/{Item.Property.Id}")" />
     </div>
     <div class="card-body">
         <div class="card-top">

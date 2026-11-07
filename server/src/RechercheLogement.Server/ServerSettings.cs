@@ -33,6 +33,19 @@ public sealed class ServerSettings
     /// </summary>
     public bool AnalyzePhotos { get; set; } = true;
 
+    /// <summary>
+    /// Cache des photos : les premières photos des biens sont téléchargées en tâche de fond (bien ouvert, liste
+    /// affichée, puis biens les mieux recommandés) et gardées en WebP, pour des listes et des carrousels plus rapides.
+    /// Jamais avec le stockage en mémoire.
+    /// </summary>
+    public bool PhotoCache { get; set; } = true;
+
+    /// <summary>Place maximale du cache des photos, en Go. Au-delà, les photos qui servent le moins sont supprimées.</summary>
+    public double PhotoCacheMaxGb { get; set; } = 5;
+
+    /// <summary>Dossier du cache des photos. Vide : "photos" dans le dossier de <see cref="DatabasePath"/> (Docker : /data/photos).</summary>
+    public string? PhotoCachePath { get; set; }
+
     /// <summary>Lancement automatique des projets (intervalle choisi dans chaque projet). false : seulement à la demande.</summary>
     public bool ProjectsAutoRun { get; set; } = true;
 

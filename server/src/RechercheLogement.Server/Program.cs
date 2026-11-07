@@ -3,6 +3,7 @@ using RechercheLogement.Server;
 using RechercheLogement.Server.Api;
 using RechercheLogement.Server.Components;
 using RechercheLogement.Server.Geo;
+using RechercheLogement.Server.Photos;
 using RechercheLogement.Server.Projects;
 using RechercheLogement.Server.Recommend;
 using RechercheLogement.Server.Storage;
@@ -19,6 +20,7 @@ builder.Services.AddSingleton(sp => new Catalog(
 builder.Services.AddSingleton<ApiTokenService>();
 builder.Services.AddProjects(settings, builder.Environment);
 builder.Services.AddRecommendations(settings, builder.Environment);
+builder.Services.AddPhotoCache(settings, builder.Environment);
 
 builder.Services.ConfigureHttpJsonOptions(o => JsonDefaults.Configure(o.SerializerOptions));
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
@@ -36,6 +38,7 @@ app.MapStaticAssets();
 app.MapApi();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapContours();
+app.MapPhotos();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 
 app.Run();

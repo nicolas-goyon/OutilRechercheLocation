@@ -1,4 +1,5 @@
 @inject IJSRuntime JS
+@inject RechercheLogement.Server.Photos.PhotoPrefetcher Prefetch
 
 @* Photos d'un bien : grand carrousel, 3 vignettes et une case « + X photos ». Un clic ouvre la galerie en grand. *@
 @if (Photos.Count > 0)
@@ -6,7 +7,7 @@
     <div class="gallery">
         <div class="gallery-main">
             <button type="button" class="gallery-open" aria-label="Agrandir la photo @(_index + 1)" @onclick="() => Open(_index)">
-                <img src="@Photos[_index]" alt="" />
+                <img src="@Format.Photo(Photos[_index])" alt="" />
             </button>
             @if (Photos.Count > 1)
             {
@@ -24,8 +25,8 @@
                     var more = i == Shown - 1 && Photos.Count > Shown;
                     <button type="button" class="gallery-thumb @(index == _index && !more ? "on" : "")"
                             aria-label="@(more ? $"Voir les {Photos.Count} photos" : $"Photo {index + 1}")"
-                            @onclick="() => { if (more) Open(index); else _index = index; }">
-                        <img src="@Format.Thumb(Photos[index], 320, 220)" alt="" loading="lazy" />
+                            @onclick="() => { if (more) Open(index); else Show(index); }">
+                        <img src="@Format.Photo(Photos[index], 320, 220)" alt="" loading="lazy" />
                         @if (more) { <span class="gallery-more">+ @(Photos.Count - Shown + 1) photos</span> }
                     </button>
                 }
@@ -37,7 +38,7 @@
     {
         <dialog class="gallery-dialog" @ref="_dialog" aria-label="Photos du bien" @oncancel="Close" @onkeydown="OnKey">
             <div class="gallery-dialog-main">
-                <img src="@Photos[_index]" alt="Photo @(_index + 1) sur @Photos.Count" />
+                <img src="@Format.Photo(Photos[_index])" alt="Photo @(_index + 1) sur @Photos.Count" />
                 @if (Photos.Count > 1)
                 {
                     <button type="button" class="carousel-nav prev" aria-label="Photo précédente" @onclick="() => Move(-1)"><Icon Name="arrow-left" /></button>
@@ -50,8 +51,8 @@
                 @for (var i = 0; i < Photos.Count; i++)
                 {
                     var index = i;
-                    <button type="button" class="gallery-thumb @(index == _index ? "on" : "")" aria-label="Photo @(index + 1)" aria-current="@(index == _index ? "true" : null)" @onclick="() => _index = index">
-                        <img src="@Format.Thumb(Photos[index], 200, 140)" alt="" loading="lazy" />
+                    <button type="button" class="gallery-thumb @(index == _index ? "on" : "")" aria-label="Photo @(index + 1)" aria-current="@(index == _index ? "true" : null)" @onclick="() => Show(index)">
+                        <img src="@Format.Photo(Photos[index], 200, 140)" alt="" loading="lazy" />
                     </button>
                 }
             </div>
@@ -64,6 +65,8 @@
     private const int Shown = 4;
 
     [Parameter, EditorRequired] public IReadOnlyList<string> Photos { get; set; } = [];
+    /// <summary>Bien des photos : parcourir la galerie fait télécharger ses 10 premières photos.</summary>
+    [Parameter] public string? PropertyId { get; set; }
 
     private ElementReference _dialog, _strip;
     private int _index;
@@ -74,14 +77,17 @@
         if (_index >= Photos.Count) _index = 0;
     }
 
-    private void Move(int delta)
+    private void Move(int delta) => Show((_index + delta + Photos.Count) % Photos.Count);
+
+    private void Show(int index)
     {
-        _index = (_index + delta + Photos.Count) % Photos.Count;
+        _index = index;
+        if (PropertyId is not null) Prefetch.Deepen(PropertyId);
     }
 
     private void Open(int index)
     {
-        _index = index;
+        Show(index);
         _open = true;
         _justOpened = true;
     }
