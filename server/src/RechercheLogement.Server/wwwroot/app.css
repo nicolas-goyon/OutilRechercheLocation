@@ -230,7 +230,12 @@ ul.warn { color: var(--rejected); }
 .suggest-list li.message { display: block; cursor: default; color: var(--muted); font-size: 12px; }
 
 /* Lieux sous forme d'étiquettes */
-.tags-input { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; max-width: 520px; border: 1px solid var(--border); border-radius: 6px; padding: 4px; background: var(--panel); }
+.tags-input { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border: 1px solid var(--border); border-radius: 6px; padding: 4px; background: var(--panel); }
+/* Tous les lieux dépliés : le cadre défile au lieu d'allonger la page. */
+.tags-input.open { max-height: 340px; overflow-y: auto; }
+.tags-count { margin-bottom: 4px; }
+.tags-more { border: 1px dashed var(--accent); color: var(--accent); background: transparent; border-radius: var(--radius); padding: 2px 10px; font-size: 13px; cursor: pointer; }
+.tags-more:hover { background: var(--bg); }
 .tags-input:focus-within { border-color: var(--accent); }
 .tags-input .suggest { flex: 1 1 160px; min-width: 160px; }
 .form-grid .tags-input .suggest input, .tags-input .suggest input { border: none; padding: 4px; outline: none; max-width: none; }

@@ -54,13 +54,23 @@
         {
             <label>Lieux</label>
             <div>
-                <div class="tags-input">
-                    @foreach (var l in _places)
+                @if (_places.Count > PlacesFolded)
+                {
+                    <div class="tags-count muted small">@_places.Count lieux</div>
+                }
+                <div class="tags-input @(_placesOpen && _places.Count > PlacesFolded ? "open" : "")">
+                    @foreach (var l in _placesOpen ? _places : _places.Take(PlacesFolded))
                     {
                         <span class="tag @(l.Type == PlaceType.Free ? "free" : "")" title="@PlaceTitle(l)">
                             <Icon Name="@PlaceIcon(l.Type)" /> @l.Display()
                             <button type="button" title="Retirer ce lieu" @onclick="() => RemovePlace(l)">×</button>
                         </span>
+                    }
+                    @if (_places.Count > PlacesFolded)
+                    {
+                        <button type="button" class="tags-more" @onclick="() => _placesOpen = !_placesOpen">
+                            @(_placesOpen ? "Réduire" : $"+ {_places.Count - PlacesFolded} autres lieux")
+                        </button>
                     }
                     <SuggestInput @bind-Value="_placeText" Search="Geo.SuggestPlacesAsync" OnPick="AddPlace" OnBackspaceEmpty="RemoveLastPlace"
                                   ClearOnPick="true" SplitOnSeparators="true"
@@ -313,6 +323,9 @@
     }
     private LocationMode _mode = LocationMode.Places;
     private List<ProjectLocation> _places = [];
+    /// <summary>Au-delà, les lieux sont repliés (le pinceau en ajoute facilement des centaines).</summary>
+    private const int PlacesFolded = 24;
+    private bool _placesOpen;
     private string _placeText = "";
     private string _center = "";
     /// <summary>Point de départ validé (suggestion, clic ou marqueur déplacé) ; null : texte libre, géocodé au lancement.</summary>
