@@ -151,22 +151,16 @@ public sealed class PhotoCache
     public int Evict(long targetBytes, Func<string, long, double> order)
     {
         if (TotalBytes <= targetBytes) return 0;
-        var removed = 0;
-        foreach (var (key, _) in _entries.Select(kv => (kv.Key, Rank: order(kv.Key, kv.Value.LastAccessMs))).OrderBy(x => x.Rank).ToList())
-        {
-            if (TotalBytes <= targetBytes) break;
-            if (Remove(key)) removed++;
-        }
-        return removed;
+        var ordered = _entries.OrderBy(kv => order(kv.Key, kv.Value.LastAccessMs)).Select(kv => kv.Key).ToList();
+        // Une à une, tant que le cache dépasse la cible (la condition est relue après chaque suppression).
+        return ordered.TakeWhile(_ => TotalBytes > targetBytes).Count(Remove);
     }
 
     /// <summary>Supprime les photos dont l'empreinte vérifie <paramref name="drop"/> (empreinte, dernier accès).</summary>
     public int RemoveWhere(Func<string, long, bool> drop)
     {
-        var removed = 0;
-        foreach (var key in _entries.Where(kv => drop(kv.Key, kv.Value.LastAccessMs)).Select(kv => kv.Key).ToList())
-            if (Remove(key)) removed++;
-        return removed;
+        var keys = _entries.Where(kv => drop(kv.Key, kv.Value.LastAccessMs)).Select(kv => kv.Key).ToList();
+        return keys.Count(Remove);
     }
 
     private bool Remove(string key)

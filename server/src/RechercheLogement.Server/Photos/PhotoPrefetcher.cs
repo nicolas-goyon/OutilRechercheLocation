@@ -34,11 +34,8 @@ public static class PhotoPlan
             for (var i = 0; i < rounds; i++)
             {
                 var round = i;
-                foreach (var w in items.Where(w => round < Math.Min(w.Depth, w.Photos.Count)))
-                {
-                    var url = w.Photos[round];
-                    if (seen.Add(url) && !skip(url)) yield return (url, level.Key);
-                }
+                var urls = items.Where(w => round < Math.Min(w.Depth, w.Photos.Count)).Select(w => w.Photos[round]);
+                foreach (var url in urls.Where(u => seen.Add(u) && !skip(u))) yield return (url, level.Key);
             }
         }
     }
