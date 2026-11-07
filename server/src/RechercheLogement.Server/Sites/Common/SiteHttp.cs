@@ -49,6 +49,15 @@ public static class SiteHttp
         }
     }
 
+    /// <summary>
+    /// Page de vérification anti-robot (DataDome, Cloudflare) au lieu du contenu attendu : page courte avec un de leurs
+    /// marqueurs. (Une vraie page peut contenir ces scripts, par exemple PAP : la taille départage.)
+    /// </summary>
+    public static bool LooksLikeCaptcha(string html) =>
+        html.Length < 30_000 && (html.Contains("captcha-delivery.com", StringComparison.Ordinal)
+            || html.Contains("cf-chl", StringComparison.Ordinal) || html.Contains("challenge-platform", StringComparison.Ordinal)
+            || html.Contains("Just a moment", StringComparison.Ordinal));
+
     public static Task<JsonNode> GetJsonAsync(HttpClient http, string url, string siteLabel, CancellationToken ct) =>
         SendJsonAsync(http, new HttpRequestMessage(HttpMethod.Get, url), siteLabel, ct);
 }

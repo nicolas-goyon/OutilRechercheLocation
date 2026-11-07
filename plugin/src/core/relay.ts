@@ -97,7 +97,9 @@ export class RelayWorker {
       const res = await this.options.fetch(r.url, {
         method: r.method,
         credentials: 'include',
-        headers: r.body === undefined || r.body === null ? { Accept: 'application/json' } : { Accept: 'application/json', 'Content-Type': 'application/json' },
+        headers: r.body === undefined || r.body === null
+          ? { Accept: r.accept ?? 'application/json' }
+          : { Accept: r.accept ?? 'application/json', 'Content-Type': 'application/json' },
         body: r.body ?? undefined,
       });
       return { status: res.status, body: await res.text() };

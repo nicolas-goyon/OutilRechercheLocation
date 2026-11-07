@@ -5,7 +5,8 @@ using System.Threading.Channels;
 namespace RechercheLogement.Server.Sites.Common;
 
 /// <summary>Requête à exécuter par le plugin, dans un onglet du site.</summary>
-public sealed record RelayRequest(string Id, string Method, string Url, string? Body);
+/// <param name="Accept">Type de réponse attendu ("application/json" par défaut, "text/html" pour une page).</param>
+public sealed record RelayRequest(string Id, string Method, string Url, string? Body, string? Accept = null);
 
 /// <summary>Réponse du site vue par le plugin. <paramref name="Error"/> : le navigateur n'a pas pu appeler le site.</summary>
 public sealed record RelayResult(int Status, string? Body, string? Error);
@@ -59,6 +60,27 @@ public sealed class BrowserRelay(int delayMs = 2000, TimeSpan? timeout = null, T
     /// <summary>Exécute la requête dans le navigateur et lit le JSON, avec les mêmes erreurs qu'un appel direct.</summary>
     public async Task<JsonNode> SendJsonAsync(string site, string label, HttpMethod method, string url, string? body, CancellationToken ct)
     {
+        var result = await SendAsync(site, label, method, url, body, null, ct);
+        return Blocked(label, () => SiteHttp.ReadJson(result.Status, result.Body ?? "", label));
+    }
+
+    /// <summary>
+    /// Page HTML lue dans le navigateur (sites sans API : Leboncoin, PAP). Page anti-robot (captcha) ou refus : erreur
+    /// qui demande de passer la vérification dans l'onglet.
+    /// </summary>
+    public async Task<string> SendHtmlAsync(string site, string label, string url, CancellationToken ct)
+    {
+        var result = await SendAsync(site, label, HttpMethod.Get, url, null, "text/html", ct);
+        var text = result.Body ?? "";
+        if (result.Status is 403 or 429 || SiteHttp.LooksLikeCaptcha(text))
+            throw new SiteException($"{label} refuse la requête (HTTP {result.Status}) : protection anti-robot du site. Passer la vérification dans l'onglet {label}, puis relancer le projet.");
+        if (result.Status is < 200 or >= 300)
+            throw new SiteException($"{label} : HTTP {result.Status} pour {url}");
+        return text;
+    }
+
+    private async Task<RelayResult> SendAsync(string site, string label, HttpMethod method, string url, string? body, string? accept, CancellationToken ct)
+    {
         var state = State(site);
         if (!Connected(state))
             throw new SiteException($"{NoTabPrefix} {label} : ouvrir le site dans le navigateur, avec le plugin actif. La recherche reprendra toute seule.");
@@ -71,14 +93,14 @@ public sealed class BrowserRelay(int delayMs = 2000, TimeSpan? timeout = null, T
             state.LastSent = _clock.GetUtcNow();
 
             var pending = new Pending(
-                new RelayRequest(Guid.NewGuid().ToString("N"), method.Method, url, body),
+                new RelayRequest(Guid.NewGuid().ToString("N"), method.Method, url, body, accept),
                 new TaskCompletionSource<RelayResult>(TaskCreationOptions.RunContinuationsAsynchronously));
             await state.Queue.Writer.WriteAsync(pending, ct);
             try
             {
                 var result = await WaitResultAsync(state, pending, label, ct);
                 if (result.Error is not null) throw new SiteException($"{label} injoignable depuis le navigateur : {result.Error}");
-                return Blocked(label, () => SiteHttp.ReadJson(result.Status, result.Body ?? "", label));
+                return result;
             }
             finally
             {

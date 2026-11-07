@@ -143,6 +143,17 @@ jobs:
           check /projets/nouveau 200
           check /geo/contours/department/65 200
           check /api/searches 401
+          check /recommandations 200
+          # Analyse des photos (recommandations) : la bibliothèque native de SkiaSharp doit se charger dans l'image.
+          # (journal lu dans une variable : grep -q fermerait le tube, et pipefail verrait docker logs échouer)
+          logs=""
+          for _ in $(seq 1 30); do
+            logs=$(docker logs rl 2>&1)
+            [[ "$logs" == *"Analyse des photos"* ]] && break
+            sleep 1
+          done
+          grep "Analyse des photos" <<< "$logs"
+          [[ "$logs" == *"Analyse des photos prête"* ]]
       - name: Journal du conteneur
         if: always()
         working-directory: .

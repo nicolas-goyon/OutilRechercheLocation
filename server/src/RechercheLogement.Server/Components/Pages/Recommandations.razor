@@ -1,0 +1,60 @@
+@page "/recommandations"
+@inherits LiveComponent
+@using RechercheLogement.Core.Recommend
+@using RechercheLogement.Server.Recommend
+@inject RecommendationService Recommendations
+
+<PageTitle>Recommandations — Recherche logement</PageTitle>
+<h1>Recommandations</h1>
+
+@if (!_state.Ready)
+{
+    <section class="panel empty-reco">
+        <p>
+            Les recommandations s'appuient sur tes choix : marque quelques biens <b>Vue</b> ou <b>À contacter</b> (ils
+            t'intéressent) et <b>Pas intéressé</b> (ils ne t'intéressent pas). L'outil apprend ce qui les distingue et
+            propose les biens qui leur ressemblent.
+        </p>
+        <a class="button primary" href="/biens"><Icon Name="list-checks" /> Voir les biens</a>
+    </section>
+}
+else
+{
+    <p class="muted reco-state">
+        Appris sur @_state.Liked bien(s) qui t'intéressent et @_state.Disliked écarté(s)
+        @(_state.Trained ? "" : $" · encore {Math.Max(0, 3 - _state.Liked)} aimé(s) / {Math.Max(0, 3 - _state.Disliked)} écarté(s) pour affiner (en attendant : biens les plus proches de ceux qui t'intéressent)")
+        · photos analysées pour @_state.WithPhotos bien(s) sur @_state.Total.
+        Rien n'est envoyé ailleurs : tout est calculé sur ton serveur.
+    </p>
+    @if (_items.Count == 0)
+    {
+        <p class="muted">Aucun bien sans statut dans ce périmètre.</p>
+    }
+    <div class="grid reco-grid">
+        @foreach (var r in _items)
+        {
+            <div @key="r.Item.Property.Id" class="grid-item reco">
+                <div class="reco-score" title="Score de recommandation">
+                    <span class="meter"><span style="width: @Percent(r.Score)%"></span></span> @Percent(r.Score) %
+                </div>
+                <PropertyCard Item="r.Item" />
+                @if (r.Reasons.Count > 0)
+                {
+                    <ul class="reasons">
+                        @foreach (var reason in r.Reasons) { <li>@reason</li> }
+                    </ul>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private const int Take = 30;
+    private RecommenderState _state = new(0, 0, false, 0, 0);
+    private IReadOnlyList<Recommendation> _items = [];
+
+    protected override void Load() => (_state, _items) = Recommendations.Recommend(Selection.Scope, Take);
+
+    private static string Percent(double score) => Math.Round(score * 100).ToString(System.Globalization.CultureInfo.InvariantCulture);
+}
