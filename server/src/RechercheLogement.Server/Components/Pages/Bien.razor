@@ -105,7 +105,7 @@ else
                 <ul class="timeline">
                     @foreach (var e in _detail.Events)
                     {
-                        <li><span class="muted">@Format.DateTime(e.At)</span> @e.Text</li>
+                        <li class="ev-@e.Kind.ToString().ToLowerInvariant()"><span class="muted">@Format.DateTime(e.At)</span> @e.Text</li>
                     }
                 </ul>
             </section>
