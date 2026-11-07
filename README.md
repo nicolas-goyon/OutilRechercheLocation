@@ -227,6 +227,13 @@ principale), autres pages.
   site était complète.
 - `RechercheLogement__ProjectsAutoRun=false` coupe les lancements automatiques.
   `RechercheLogement__ProjectsDatabasePath` change l'emplacement de `projets.db`.
+- **Cache des photos** : les 5 premières photos des biens (10 dès qu'on fait défiler un carrousel) sont
+  téléchargées en tâche de fond et gardées en WebP (vignette 480 px et grande photo 1 600 px, environ 75 Ko
+  par photo), dans `/data/photos`. Ordre : le bien ouvert, les biens affichés à l'écran, la liste de la page,
+  puis les biens non notés du projet ouvert, du mieux au moins recommandé. Une photo à la fois, au plus une
+  toutes les 2 s par site en tâche de fond (0,3 s pour ce que l'on regarde). 5 Go au plus
+  (`RechercheLogement__PhotoCacheMaxGb`) : au-delà, les photos des biens disparus, refusés, puis vus ou à
+  contacter partent en premier. `RechercheLogement__PhotoCache=false` le désactive.
 
 ## Développement
 

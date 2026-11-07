@@ -52,7 +52,7 @@
         var url = l.Data.Photos?.FirstOrDefault();
         if (url is not null)
         {
-            <img src="@Format.Thumb(url, 320, 200)" alt="" loading="lazy" />
+            <img src="@Format.Photo(url, 320, 200)" alt="" loading="lazy" />
         }
     };
 

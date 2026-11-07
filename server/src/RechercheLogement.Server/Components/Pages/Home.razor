@@ -66,6 +66,7 @@ else
         _searches = Selection.Visible(Catalog.Searches()).ToList();
         _toContact = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.ToContact }, Sort = PropertySort.LastUpdate, Take = 12, Scope = scope });
         _recent = Catalog.QueryProperties(new PropertyQuery { Statuses = new HashSet<PropertyStatus> { PropertyStatus.None, PropertyStatus.Seen }, Take = 12, Scope = scope });
+        ShowPhotos(_toContact.Concat(_recent).Select(p => p.Property.Id));
     }
 
     private int Count(PropertyStatus s) => _stats.ByStatus.GetValueOrDefault(s);

@@ -1,6 +1,7 @@
 @page "/projets/{Id}"
 @inherits ProjectsComponent
 @inject RechercheLogement.Server.Sites.Common.BrowserRelay Relay
+@inject RechercheLogement.Server.Photos.PhotoPrefetcher Prefetch
 
 <PageTitle>@(_project?.Name ?? "Projet") — Recherche logement</PageTitle>
 
@@ -127,7 +128,7 @@ else
                 <a class="photo" href="@d.Url" target="_blank" rel="noopener">
                     @if (d.Photos is { Count: > 0 })
                     {
-                        <img src="@Format.Thumb(d.Photos[0], 400, 240)" alt="" loading="lazy" />
+                        <img src="@Format.Photo(d.Photos[0], 400, 240)" alt="" loading="lazy" />
                     }
                     else
                     {
@@ -231,6 +232,7 @@ else
     protected override void Load()
     {
         _project = Store.Get(Id);
+        if (_project is not null) Prefetch.UseProject(Id);
         _groups = _project is null ? [] : Store.Groups(Id);
         _runs = _project is null ? [] : Store.Runs(Id);
         _newCount = _groups.Count(g => !g.Hidden && !g.Removed && g.FirstSeenAt > _since);
