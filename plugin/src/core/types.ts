@@ -196,6 +196,8 @@ export interface RelayRequest {
   method: string;
   url: string;
   body?: string;
+  /** Type de réponse attendu : JSON par défaut, "text/html" pour une page (Leboncoin, PAP). */
+  accept?: string;
 }
 
 /** Réponse du site, renvoyée telle quelle au serveur. status 0 : le navigateur n'a pas pu appeler le site. */

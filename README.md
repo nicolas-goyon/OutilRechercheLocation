@@ -21,8 +21,8 @@ par un token). Le serveur local répond avec l'état de chaque annonce.
 Si le serveur local est arrêté, le plugin continue de masquer et d'étiqueter les annonces avec son
 cache. Il garde les actions en attente. Il les envoie quand le serveur local redémarre.
 
-Sites d'annonces compatibles : **Bien'ici** et **SeLoger** (pages de résultats et page d'une
-annonce). Pour ajouter un site d'annonces, lire
+Sites d'annonces compatibles : **Bien'ici**, **SeLoger**, **Leboncoin** et **PAP** (pages de résultats et
+page d'une annonce). Pour ajouter un site d'annonces, lire
 [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ## Démarrage
@@ -217,7 +217,7 @@ principale), autres pages.
 - **Critères** : location / achat, appartement / maison, prix, surface, pièces, chambres, meublé,
   mots-clés souhaités (au moins un) et exclus.
 - **Sites**, par catégorie, activables un par un : *sites d'annonces immobilières* (**Bien'ici**,
-  **SeLoger** ; PAP, Logic-Immo à venir), *sites généralistes* (Leboncoin, à venir), *sites d'agences*
+  **SeLoger**, **PAP** ; Logic-Immo à venir), *sites généralistes* (**Leboncoin**), *sites d'agences*
   (à venir).
 - **Suivi de chaque annonce** : nouvelle, prix ou surface modifiés, retirée du site, de nouveau en
   ligne (avec la durée d'absence). Les annonces du même bien, sur le même site (republiée) ou sur des
@@ -271,12 +271,18 @@ dotnet run --project src/RechercheLogement.Server           # http://localhost:5
   Le site n'affiche pas de prix (il dépend de la procédure : enchères, appel d'offres) : un prix maximum ne les
   écarte donc pas. Le serveur lit la liste (5 pages environ), puis les fiches des départements du projet, une page
   par seconde.
-- Mes projets, SeLoger : SeLoger refuse les appels hors navigateur. La recherche est donc faite par le
-  plugin, dans un onglet seloger.com ouvert, à raison d'une requête toutes les 2 secondes au moins
+- Mes projets, SeLoger, Leboncoin et PAP : ces sites refusent les appels hors navigateur. La recherche est donc
+  faite par le plugin, dans un onglet du site ouvert (seloger.com, leboncoin.fr, pap.fr), à raison d'une requête toutes les 2 secondes au moins
   (`RechercheLogement__SiteRelayDelayMs`). Sans onglet, le projet affiche « En attente d'un onglet… » et la
-  recherche repart à l'ouverture d'un onglet. Si SeLoger demande une vérification, la recherche s'arrête :
+  recherche repart à l'ouverture d'un onglet. Si le site demande une vérification, la recherche s'arrête :
   la passer dans l'onglet, puis relancer le projet. Rien n'est contourné automatiquement. Vérifiez que cet
   usage personnel respecte les conditions d'utilisation du site.
+- Leboncoin : 35 annonces par page ; la position est celle de la commune, sauf si le vendeur a donné l'adresse.
+  Équipements obligatoires : un seul par groupe est envoyé au site (« piscine » ou « jardin »), l'outil vérifie
+  les autres.
+- PAP : un type de bien par recherche (le site ne les combine pas) ; la fiche de chaque annonce est lue (code
+  postal, terrain, DPE, date). Les annonces « à proximité », ajoutées par PAP quand la zone en a peu, sont
+  ignorées.
 - SeLoger : le JSON de la liste ne contient ni position GPS ni photos d'origine (les photos sont
   renommées). La position GPS et les charges viennent de la page de l'annonce, une fois ouverte.
 - Le serveur local n'a pas de connexion utilisateur. Il doit tourner sur votre machine, lié à

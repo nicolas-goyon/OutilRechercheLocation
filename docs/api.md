@@ -169,6 +169,9 @@ faire. Sinon :
 { "id": "…", "method": "POST", "url": "https://www.seloger.com/serp-bff/search", "body": "{…}" }
 ```
 
+`accept` (facultatif) : type de réponse attendu, `application/json` par défaut. `"text/html"` pour les sites
+qui n'ont que des pages HTML (Leboncoin, PAP).
+
 Le plugin n'exécute que les adresses déclarées par l'adaptateur du site (`relayPaths`), sur l'origine de l'onglet.
 
 ## `POST /api/relay/{id}/result`
