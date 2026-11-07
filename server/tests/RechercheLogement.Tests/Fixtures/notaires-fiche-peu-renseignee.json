@@ -1,0 +1,347 @@
+{
+ "id": 1846377,
+ "status": "LIGNE",
+ "typeTransaction": "VENTE",
+ "vente": {
+  "dateCreation": "2025-10-31T14:45:53Z",
+  "dateMaj": "2026-11-06T16:16:02Z",
+  "dateActivation": "2025-10-31T14:45:55Z",
+  "statut": "LIGNE",
+  "dateStatut": "2025-10-31T14:45:55Z",
+  "reference": "65004-161",
+  "referencePartenaire": "R65004/161",
+  "exclusivite": "NON",
+  "facturation": "65004",
+  "origineNegociation": "INCONNU",
+  "partenaire": 29,
+  "redactionCompromis": "INCONNU",
+  "typeTransaction": "VENTE",
+  "crpcen": "65004",
+  "publiable": "OUI",
+  "multimedias": [
+   {
+    "id": 54149600,
+    "checksum": "b475c066",
+    "nomDocument": "",
+    "numDocument": 0,
+    "photoPrincipale": "OUI",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65004/1846377",
+    "ratio": 0.75,
+    "format": "QQVGA,QVGA,VGA,UXGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/b475c066_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/b475c066_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/b475c066_VGA.jpg"
+    },
+    "uxga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/b475c066_UXGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/b475c066_UXGA.jpg"
+   },
+   {
+    "id": 54149601,
+    "checksum": "36234560",
+    "nomDocument": "",
+    "numDocument": 1,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65004/1846377",
+    "ratio": 1.3333,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/36234560_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/36234560_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/36234560_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/36234560_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/36234560_XGA.jpg"
+   },
+   {
+    "id": 54149602,
+    "checksum": "89093ff4",
+    "nomDocument": "",
+    "numDocument": 2,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65004/1846377",
+    "ratio": 0.75,
+    "format": "QQVGA,QVGA,VGA,UXGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/89093ff4_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/89093ff4_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/89093ff4_VGA.jpg"
+    },
+    "uxga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/89093ff4_UXGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/89093ff4_UXGA.jpg"
+   },
+   {
+    "id": 54149603,
+    "checksum": "7010de8d",
+    "nomDocument": "",
+    "numDocument": 3,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65004/1846377",
+    "ratio": 0.75,
+    "format": "QQVGA,QVGA,VGA,UXGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/7010de8d_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/7010de8d_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/7010de8d_VGA.jpg"
+    },
+    "uxga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/7010de8d_UXGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/7010de8d_UXGA.jpg"
+   },
+   {
+    "id": 54149604,
+    "checksum": "4da735aa",
+    "nomDocument": "",
+    "numDocument": 4,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65004/1846377",
+    "ratio": 1.3333,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/4da735aa_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/4da735aa_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/4da735aa_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/4da735aa_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/4da735aa_XGA.jpg"
+   },
+   {
+    "id": 54149605,
+    "checksum": "2318fc85",
+    "nomDocument": "",
+    "numDocument": 5,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65004/1846377",
+    "ratio": 0.75,
+    "format": "QQVGA,QVGA,VGA,UXGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/2318fc85_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/2318fc85_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/2318fc85_VGA.jpg"
+    },
+    "uxga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/2318fc85_UXGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/2318fc85_UXGA.jpg"
+   },
+   {
+    "id": 54149606,
+    "checksum": "7e8d38e7",
+    "nomDocument": "",
+    "numDocument": 6,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65004/1846377",
+    "ratio": 0.75,
+    "format": "QQVGA,QVGA,VGA,UXGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/7e8d38e7_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/7e8d38e7_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/7e8d38e7_VGA.jpg"
+    },
+    "uxga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/7e8d38e7_UXGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65004/1846377/7e8d38e7_UXGA.jpg"
+   }
+  ],
+  "descriptions": [
+   {
+    "id": 1742820,
+    "langue": "fr",
+    "descCourte": "Laloubère Centre village ",
+    "descLongue": "Sur la commune de Laloubère à l'abri des regards, venez découvrir cette écurie à rénover de 300 m² avec un étage de la même superficie pouvant être également aménagé.\nLe tout sur une parcelle de 818 m²\nMais aussi un terrain agricole attenant de 8140 m².\n\nLe lieu peut être divisé avec une partie habitation et l'autre à usage équestre ou agricole.\nLe bien dispose également d'un ancien manège équestre de 200 m² actuellement loué.\nFort potentiel!"
+   }
+  ],
+  "historiques": [
+   {
+    "id": 194036,
+    "prix": 238000,
+    "date": 1770997543000,
+    "variation": "BAISSE",
+    "pourcentage": 21,
+    "deltaPrix": -62000
+   },
+   {
+    "id": 220075,
+    "prix": 190000,
+    "date": 1793981762000,
+    "variation": "BAISSE",
+    "pourcentage": 20,
+    "deltaPrix": -48000
+   }
+  ],
+  "visite": {
+   "id": 1406598,
+   "typeVisite": "RDV",
+   "visiteContact": "0785883249",
+   "visiteNomContact": "Anaïs FRANCES"
+  },
+  "redevableEmoluments": "ACQUEREUR",
+  "prix": 190000,
+  "emoluments": 9500,
+  "viager": {
+   "viager": "NON",
+   "viagerPeriodiciteRente": "INCONNU",
+   "viagerIndexationRente": "INCONNU",
+   "viagerSexe1": "INCONNU",
+   "viagerSexe2": "INCONNU",
+   "viagerOccupation": "INCONNU"
+  },
+  "bienVendu": "INCONNU",
+  "bienRetire": "INCONNU",
+  "ventePrivee": "NON",
+  "prixVenteCommunique": "INCONNU"
+ },
+ "bien": {
+  "id": 2068166,
+  "typeBien": "MAI",
+  "maison": {
+   "id": 2068166,
+   "hexaviaLocalite": "28792",
+   "localiteNom": "LALOUBERE",
+   "inseeCommune": "65251",
+   "communeNom": "Laloubère",
+   "charniere": "de ",
+   "charniere2": "à ",
+   "codePostal": "65310",
+   "inseeDepartement": "65",
+   "departementNom": "Hautes-Pyrénées",
+   "inseeRegion": "76",
+   "regionNom": "Occitanie",
+   "typeBien": "MAI",
+   "affichagePublic": "NON",
+   "bordMer": "INCONNU",
+   "pleineCampagne": "INCONNU",
+   "belleVue": "INCONNU",
+   "procheMontagne": "INCONNU",
+   "vuePanoramique": "INCONNU",
+   "procheGolf": "INCONNU",
+   "piedsDansEau": "INCONNU",
+   "ancienNeuf": "ANCIEN",
+   "sousType": "INCONNU",
+   "prestige": "INCONNU",
+   "etat": "INCONNU",
+   "epoqueConstruction": "INCONNU",
+   "surfaceHabitable": 300.0,
+   "surfaceTerrain": 8958,
+   "livraison": "INCONNU",
+   "nbPieces": 1,
+   "situationLocative": "INCONNU",
+   "exposition": "INCONNU",
+   "stationnement": "INCONNU",
+   "cuisine": "INCONNU",
+   "chauffage": "INCONNU",
+   "energie": "INCONNU",
+   "balcon": "INCONNU",
+   "terrasse": "INCONNU",
+   "cave": "INCONNU",
+   "piscine": "INCONNU",
+   "accesHandicapes": "INCONNU",
+   "basseConsommation": "INCONNU",
+   "consommationClasse": "Y",
+   "emissionGesClasse": "Y",
+   "checkBus": "INCONNU",
+   "checkMetro": "INCONNU",
+   "checkAeroport": "INCONNU",
+   "checkTram": "INCONNU",
+   "checkGare": "INCONNU",
+   "checkEcole": "INCONNU",
+   "ecole": "INCONNU",
+   "checkVueMer": "INCONNU",
+   "vueMer": "INCONNU",
+   "checkCommerce": "INCONNU",
+   "commerce": "INCONNU",
+   "checkPistes": "INCONNU",
+   "pistes": "INCONNU",
+   "boxFerme": "INCONNU",
+   "cheminee": "INCONNU",
+   "parquet": "INCONNU",
+   "moulures": "INCONNU",
+   "sansVisAVis": "INCONNU",
+   "dependances": "INCONNU",
+   "jardin": "INCONNU",
+   "courtTennis": "INCONNU",
+   "climatisation": "INCONNU",
+   "salleReception": "INCONNU",
+   "chambreService": "INCONNU",
+   "contemporain": "INCONNU",
+   "architecte": "INCONNU",
+   "maisonAmis": "INCONNU",
+   "maisonGardien": "INCONNU",
+   "dependancesAgricoles": "INCONNU",
+   "monumentHistorique": "INCONNU",
+   "domaineChasse": "INCONNU",
+   "parcPaysager": "INCONNU",
+   "ecurie": "INCONNU",
+   "spa": "INCONNU",
+   "typeCuisine": "AMERICAINE",
+   "residenceFermee": "INCONNU"
+  }
+ },
+ "contact": {
+  "id": 1402770,
+  "nom": "Anaïs FRANCES",
+  "adresse4": "7, rue Jean PELLET",
+  "codePostal": "65006",
+  "ville": "Tarbes",
+  "coordonneesW84": {
+   "coordonneeX": 0.06741,
+   "coordonneeY": 43.23929
+  },
+  "telephone": "0785883249",
+  "mail": "anais.frances.65004@notaires.fr"
+ },
+ "idOffice": 1216,
+ "crpcen": "65004"
+}

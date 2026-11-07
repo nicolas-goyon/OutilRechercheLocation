@@ -32,6 +32,10 @@ public static class Labels
         "leboncoin" => "Leboncoin",
         "pap" => "PAP",
         "logicimmo" => "Logic-Immo",
+        "notaires" => "Notaires de France",
+        "figaro" => "Figaro Immobilier",
+        "greenacres" => "Green-Acres",
+        "paruvendu" => "ParuVendu",
         _ => site,
     };
 }

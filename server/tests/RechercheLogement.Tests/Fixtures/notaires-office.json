@@ -1,0 +1,42 @@
+{
+ "idEtablissement": 1216,
+ "crpcen": "65004",
+ "intitule": "Emilie BAREILLE",
+ "denominationSociale": "SELARL EMILIE BAREILLE",
+ "adresse": {
+  "ligne4": "7 rue Jean Pellet",
+  "codePostal": "65000",
+  "localite": "TARBES"
+ },
+ "departement": "65",
+ "telephone": "0562938585",
+ "email": "scp.bareille@notaires.fr",
+ "latitude": 0.084207,
+ "longitude": 43.23048,
+ "urlSiteWeb": "https://bareille-tarbes.notaires.fr/",
+ "abonnement": {
+  "id": 7609,
+  "siret": "40017880200023",
+  "rcs": "",
+  "tvaIntracom": "FR10400178802",
+  "isGnnAdherent": "OUI",
+  "isJurisvin": "OUI",
+  "isNotel": "OUI",
+  "isPharmetudes": "OUI",
+  "isNce": "OUI",
+  "isGrpSup1": "OUI",
+  "isGrpSup2": "OUI",
+  "isNotexpert": "OUI",
+  "isRevtegova": "OUI",
+  "isTrvtegova": "OUI"
+ },
+ "commune": {
+  "id": "65440",
+  "nom": "Tarbes",
+  "inseeDepartement": "65",
+  "article": "",
+  "charniere": "de ",
+  "charniere2": "à "
+ },
+ "typeEntiteEtablissement": "office"
+}

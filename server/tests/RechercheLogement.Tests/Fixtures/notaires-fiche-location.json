@@ -1,0 +1,264 @@
+{
+ "id": 2050270,
+ "status": "LIGNE",
+ "typeTransaction": "LOCATION",
+ "location": {
+  "dateCreation": "2026-07-30T16:21:28Z",
+  "dateMaj": "2026-11-06T16:27:55Z",
+  "dateActivation": "2026-07-30T16:21:32Z",
+  "statut": "LIGNE",
+  "dateStatut": "2026-07-30T16:21:32Z",
+  "reference": "65009-L87",
+  "referencePartenaire": "R65009/L87",
+  "exclusivite": "NON",
+  "facturation": "65009",
+  "origineNegociation": "INCONNU",
+  "partenaire": 29,
+  "redactionCompromis": "INCONNU",
+  "typeTransaction": "LOCATION",
+  "crpcen": "65009",
+  "publiable": "OUI",
+  "multimedias": [
+   {
+    "id": 54005209,
+    "checksum": "2fff02e3",
+    "nomDocument": "",
+    "numDocument": 0,
+    "photoPrincipale": "OUI",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65009/2050270",
+    "ratio": 1.2752,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/2fff02e3_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/2fff02e3_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/2fff02e3_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/2fff02e3_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/2fff02e3_XGA.jpg"
+   },
+   {
+    "id": 50479883,
+    "checksum": "c5abdb6",
+    "nomDocument": "",
+    "numDocument": 1,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65009/2050270",
+    "ratio": 1.3001,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/c5abdb6_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/c5abdb6_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/c5abdb6_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/c5abdb6_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/c5abdb6_XGA.jpg"
+   },
+   {
+    "id": 54005210,
+    "checksum": "493aa29e",
+    "nomDocument": "",
+    "numDocument": 2,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65009/2050270",
+    "ratio": 1.2917,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/493aa29e_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/493aa29e_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/493aa29e_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/493aa29e_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/493aa29e_XGA.jpg"
+   },
+   {
+    "id": 54005211,
+    "checksum": "75a720ec",
+    "nomDocument": "",
+    "numDocument": 3,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65009/2050270",
+    "ratio": 1.2931,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/75a720ec_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/75a720ec_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/75a720ec_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/75a720ec_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65009/2050270/75a720ec_XGA.jpg"
+   }
+  ],
+  "descriptions": [
+   {
+    "id": 1815727,
+    "langue": "fr",
+    "descCourte": "BEL APPARTEMENT DERNIER ETAGE",
+    "descLongue": "Tarbes centre, bel appartement type haussmannien au 2ème et dernier étage d'un immeuble de 3 logements de 108m² carrez avec hauteurs sous plafonds, parquets et cheminées (non fonctionnelles) dans chaque pièce. Chauffage individuel gaz. Deux balcons et une place de parking privative complètent le bien."
+   }
+  ],
+  "visite": {
+   "id": 1466662,
+   "typeVisite": "RDV",
+   "visiteContact": "0621810206",
+   "visiteNomContact": "Virginie LOPEZ"
+  },
+  "loyer": 770,
+  "complementLoyer": 0,
+  "periodicite": "MEN",
+  "meuble": "NON",
+  "honoraires": 738,
+  "honorairesEtatLieuxLocataire": 164,
+  "chargesIncluses": "NON",
+  "montantCharges": 25,
+  "eauChaude": "INCONNU",
+  "chauffage": "INCONNU",
+  "montantDepotGarantie": 770,
+  "prixVenteCommunique": "INCONNU",
+  "dateDisponibilite": "2026-08-04T00:00:00Z",
+  "utilisation": "INCONNU",
+  "bienLoue": "INCONNU",
+  "bienRetire": "INCONNU"
+ },
+ "bien": {
+  "id": 2279495,
+  "typeBien": "APP",
+  "appartement": {
+   "id": 2279495,
+   "hexaviaLocalite": "28978",
+   "localiteNom": "TARBES",
+   "inseeCommune": "65440",
+   "communeNom": "Tarbes",
+   "charniere": "de ",
+   "charniere2": "à ",
+   "codePostal": "65000",
+   "inseeDepartement": "65",
+   "departementNom": "Hautes-Pyrénées",
+   "inseeRegion": "76",
+   "regionNom": "Occitanie",
+   "typeBien": "APP",
+   "affichagePublic": "NON",
+   "bordMer": "INCONNU",
+   "pleineCampagne": "INCONNU",
+   "belleVue": "INCONNU",
+   "procheMontagne": "INCONNU",
+   "vuePanoramique": "INCONNU",
+   "procheGolf": "INCONNU",
+   "piedsDansEau": "INCONNU",
+   "sousType": "INCONNU",
+   "prestige": "INCONNU",
+   "etat": "INCONNU",
+   "ancienNeuf": "ANCIEN",
+   "epoqueConstruction": "D",
+   "livraison": "INCONNU",
+   "surfaceHabitable": 114.32,
+   "surfaceCarrez": 108.48,
+   "nbPieces": 5,
+   "nbChambres": 3,
+   "nbSdb": 1,
+   "etage": 2,
+   "nbEtages": 2,
+   "situationLocative": "INCONNU",
+   "exposition": "INCONNU",
+   "ascenseur": "NON",
+   "stationnement": "OUI",
+   "nbStationnements": 1,
+   "cuisine": "OUI",
+   "chauffage": "INCONNU",
+   "energie": "INCONNU",
+   "balcon": "OUI",
+   "terrasse": "NON",
+   "cave": "OUI",
+   "piscine": "NON",
+   "accesHandicapes": "NON",
+   "basseConsommation": "INCONNU",
+   "consommationClasse": "D",
+   "consommation": 192,
+   "emissionGesClasse": "D",
+   "emissionGes": 42,
+   "dateRealisationDpe": "2026-07-10",
+   "checkBus": "INCONNU",
+   "checkMetro": "INCONNU",
+   "checkAeroport": "INCONNU",
+   "checkTram": "INCONNU",
+   "checkGare": "INCONNU",
+   "checkEcole": "INCONNU",
+   "ecole": "INCONNU",
+   "checkVueMer": "INCONNU",
+   "vueMer": "INCONNU",
+   "checkCommerce": "INCONNU",
+   "commerce": "INCONNU",
+   "checkPistes": "INCONNU",
+   "pistes": "INCONNU",
+   "boxFerme": "INCONNU",
+   "cheminee": "INCONNU",
+   "parquet": "INCONNU",
+   "moulures": "INCONNU",
+   "sansVisAVis": "INCONNU",
+   "dependances": "INCONNU",
+   "jardin": "INCONNU",
+   "courtTennis": "INCONNU",
+   "climatisation": "INCONNU",
+   "chambreService": "INCONNU",
+   "contemporain": "INCONNU",
+   "architecte": "INCONNU",
+   "maisonAmis": "INCONNU",
+   "maisonGardien": "INCONNU",
+   "dependancesAgricoles": "INCONNU",
+   "monumentHistorique": "INCONNU",
+   "parcPaysager": "INCONNU",
+   "spa": "INCONNU",
+   "typeCuisine": "AMERICAINE",
+   "residenceFermee": "INCONNU",
+   "depensesEnergieMin": 1890,
+   "depensesEnergieMax": 2600,
+   "depensesEnergieAnnee": 2023
+  }
+ },
+ "contact": {
+  "id": 1462834,
+  "nom": "Virginie LOPEZ",
+  "adresse4": "1 Chemin Saint-Jorly",
+  "codePostal": "65290",
+  "ville": "Juillan",
+  "coordonneesW84": {
+   "coordonneeX": 0.02189,
+   "coordonneeY": 43.19971
+  },
+  "telephone": "0621810206",
+  "mail": "virginie.lopez@idoane.notaires.fr"
+ },
+ "crpcen": "65009",
+ "idOffice": 1642
+}

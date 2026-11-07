@@ -1,0 +1,439 @@
+{
+ "id": 1620160,
+ "status": "LIGNE",
+ "typeTransaction": "VNI",
+ "vni": {
+  "dateCreation": "2023-12-07T09:59:39Z",
+  "dateMaj": "2023-12-21T09:33:49Z",
+  "dateActivation": "2023-12-19T14:18:58Z",
+  "statut": "LIGNE",
+  "dateStatut": "2023-12-19T14:18:58Z",
+  "reference": "VNI ARREAU",
+  "exclusivite": "OUI",
+  "facturation": "65002",
+  "origineNegociation": "INCONNU",
+  "partenaire": 0,
+  "redactionCompromis": "INCONNU",
+  "typeTransaction": "VNI",
+  "crpcen": "65002",
+  "publiable": "OUI",
+  "multimedias": [
+   {
+    "id": 9754665,
+    "checksum": "907877da",
+    "nomDocument": "Facade Principale",
+    "numDocument": 0,
+    "photoPrincipale": "OUI",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/0/65002/1620160",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,QXGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/907877da_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/907877da_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/907877da_VGA.jpg"
+    },
+    "qxga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/907877da_QXGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/907877da_QXGA.jpg"
+   },
+   {
+    "id": 9754666,
+    "checksum": "ea97ea1c",
+    "nomDocument": "Garages",
+    "numDocument": 1,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/0/65002/1620160",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,QXGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/ea97ea1c_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/ea97ea1c_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/ea97ea1c_VGA.jpg"
+    },
+    "qxga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/ea97ea1c_QXGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/ea97ea1c_QXGA.jpg"
+   },
+   {
+    "id": 9754667,
+    "checksum": "ab0de063",
+    "nomDocument": "Sejour",
+    "numDocument": 2,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/0/65002/1620160",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,QXGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/ab0de063_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/ab0de063_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/ab0de063_VGA.jpg"
+    },
+    "qxga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/ab0de063_QXGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/ab0de063_QXGA.jpg"
+   },
+   {
+    "id": 9754668,
+    "checksum": "3cc7e707",
+    "nomDocument": "Sejour",
+    "numDocument": 3,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/0/65002/1620160",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,QXGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/3cc7e707_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/3cc7e707_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/3cc7e707_VGA.jpg"
+    },
+    "qxga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/3cc7e707_QXGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/3cc7e707_QXGA.jpg"
+   },
+   {
+    "id": 9754670,
+    "checksum": "7e9bfae3",
+    "nomDocument": "Cuisine",
+    "numDocument": 4,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/0/65002/1620160",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,QXGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/7e9bfae3_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/7e9bfae3_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/7e9bfae3_VGA.jpg"
+    },
+    "qxga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/7e9bfae3_QXGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/7e9bfae3_QXGA.jpg"
+   },
+   {
+    "id": 9754671,
+    "checksum": "eeb9f5fd",
+    "nomDocument": "Cuisine",
+    "numDocument": 5,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/0/65002/1620160",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,QXGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/eeb9f5fd_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/eeb9f5fd_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/eeb9f5fd_VGA.jpg"
+    },
+    "qxga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/eeb9f5fd_QXGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/eeb9f5fd_QXGA.jpg"
+   },
+   {
+    "id": 9754672,
+    "checksum": "d5e8f327",
+    "nomDocument": "Chambre",
+    "numDocument": 6,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/0/65002/1620160",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,QXGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/d5e8f327_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/d5e8f327_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/d5e8f327_VGA.jpg"
+    },
+    "qxga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/d5e8f327_QXGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/d5e8f327_QXGA.jpg"
+   },
+   {
+    "id": 9754673,
+    "checksum": "519449c1",
+    "nomDocument": "Chambre",
+    "numDocument": 7,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/0/65002/1620160",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,QXGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/519449c1_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/519449c1_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/519449c1_VGA.jpg"
+    },
+    "qxga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/519449c1_QXGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/519449c1_QXGA.jpg"
+   },
+   {
+    "id": 9754674,
+    "checksum": "f439b70b",
+    "nomDocument": "Salle de bains",
+    "numDocument": 8,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/0/65002/1620160",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,QXGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/f439b70b_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/f439b70b_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/f439b70b_VGA.jpg"
+    },
+    "qxga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/f439b70b_QXGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/f439b70b_QXGA.jpg"
+   },
+   {
+    "id": 9754675,
+    "checksum": "4ba0a606",
+    "nomDocument": "Cave",
+    "numDocument": 9,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/0/65002/1620160",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,QXGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/4ba0a606_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/4ba0a606_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/4ba0a606_VGA.jpg"
+    },
+    "qxga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/4ba0a606_QXGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/0/65002/1620160/4ba0a606_QXGA.jpg"
+   }
+  ],
+  "descriptions": [
+   {
+    "id": 1536784,
+    "langue": "fr",
+    "descCourte": "MAISON/VILLA - ARREAU- HAUTES-PYRENEES  (65)",
+    "descLongue": "MAISON/VILLA - ARREAU- HAUTES-PYRENEES  (65)\n\nVENTE  EN IMMO-INTERACTIF   ARREAU  (65240)  2  Rue de la  Capellère.\n\nMaison  T5  de  plain pied d'une surface habitable de  88 m2 offrant : \n \nEntrée, séjour, cuisine, quatre chambres, salle de bains, wc.  Combles isolés.\n\nSous-sol semi enterré  de  32 m2 env à usage de chaufferie.  Vide sanitaire.\n\nDeux garages de  15  et 20 m2.\n\nLe tout sur un terrain clôturé de 518 m2.\n\nFenêtres en pvc double vitrage.  Volets bois.  Chauffage central au gaz. Electricité et gaz : aux normes actuelles.",
+    "descPapier": ""
+   },
+   {
+    "id": 1536785,
+    "langue": "en",
+    "descCourte": "",
+    "descLongue": "",
+    "descPapier": ""
+   }
+  ],
+  "documents": [
+   {
+    "id": 51746,
+    "nomDocument": "Dossier de Diagnostic Technique (DDTi)",
+    "typeDocument": "DIAG_TECHNIQUE",
+    "type": "application/pdf",
+    "extension": "pdf",
+    "size": 4724514,
+    "url": "https://media.immobilier.notaires.fr/inotr/documents/0/65002/1620160/DIAG_TECHNIQUE_9c7abcce.pdf",
+    "directory": "/0/65002/1620160",
+    "checksum": "9c7abcce"
+   }
+  ],
+  "visite": {
+   "id": 1245033,
+   "typeVisite": "RDV",
+   "visiteFixe": "[{\"opened\":false}]",
+   "visiteContact": "0610391414",
+   "visiteNomContact": "Catherine  DEMANDES"
+  },
+  "prixMin": 170000,
+  "emolumentsNegociation": 8500,
+  "fraisPub": 500,
+  "prixTotal": 179000,
+  "premierPrix": 150000,
+  "pasOffres": 3000,
+  "assistance": "INCONNU",
+  "dateDebutEncheres": "2024-01-24T11:00:00Z",
+  "dateFinEncheres": "2024-01-25T11:04:00Z",
+  "bienVendu": "NON",
+  "bienRetire": "NON",
+  "dateServeur": "2026-11-07T10:08:50Z",
+  "redevableEmoluments": "ACQUEREUR",
+  "ventePrivee": "NON",
+  "systemeEncheres": "ASCENDANTES",
+  "prixVenteCommunique": "INCONNU",
+  "forIminter": "OUI"
+ },
+ "bien": {
+  "id": 1819971,
+  "typeBien": "MAI",
+  "maison": {
+   "id": 1819971,
+   "hexaviaLocalite": "28579",
+   "localiteNom": "ARREAU",
+   "inseeCommune": "65031",
+   "communeNom": "Arreau",
+   "charniere": "d'",
+   "charniere2": "à ",
+   "codePostal": "65240",
+   "inseeDepartement": "65",
+   "departementNom": "Hautes-Pyrénées",
+   "inseeRegion": "76",
+   "regionNom": "Occitanie",
+   "adresse4": "2  Rue de la Capellere",
+   "typeBien": "MAI",
+   "affichagePublic": "OUI",
+   "bordMer": "INCONNU",
+   "pleineCampagne": "INCONNU",
+   "belleVue": "INCONNU",
+   "procheMontagne": "INCONNU",
+   "vuePanoramique": "INCONNU",
+   "procheGolf": "INCONNU",
+   "piedsDansEau": "INCONNU",
+   "ancienNeuf": "ANCIEN",
+   "sousType": "VILLE",
+   "prestige": "NON",
+   "etat": "BON",
+   "epoqueConstruction": "D",
+   "surfaceHabitable": 88.0,
+   "surfaceTerrain": 518,
+   "surfaceSejour": 25.79,
+   "livraison": "INCONNU",
+   "nbPieces": 5,
+   "nbChambres": 4,
+   "nbSdb": 1,
+   "situationLocative": "LIBRE",
+   "exposition": "S",
+   "stationnement": "OUI",
+   "nbStationnements": 2,
+   "cuisine": "INCONNU",
+   "chauffage": "INDIVIDUEL",
+   "energie": "INCONNU",
+   "balcon": "INCONNU",
+   "terrasse": "INCONNU",
+   "cave": "OUI",
+   "piscine": "INCONNU",
+   "accesHandicapes": "INCONNU",
+   "basseConsommation": "INCONNU",
+   "consommationClasse": "F",
+   "consommation": 382,
+   "emissionGesClasse": "F",
+   "emissionGes": 85,
+   "dateRealisationDpe": "2023-07-04",
+   "taxeFonciere": 288,
+   "checkBus": "NON",
+   "checkMetro": "NON",
+   "checkAeroport": "NON",
+   "checkTram": "NON",
+   "checkGare": "NON",
+   "checkEcole": "OUI",
+   "ecole": "INCONNU",
+   "checkVueMer": "NON",
+   "vueMer": "INCONNU",
+   "checkCommerce": "OUI",
+   "commerce": "INCONNU",
+   "checkPistes": "NON",
+   "pistes": "INCONNU",
+   "boxFerme": "INCONNU",
+   "cheminee": "INCONNU",
+   "parquet": "INCONNU",
+   "moulures": "INCONNU",
+   "sansVisAVis": "INCONNU",
+   "dependances": "INCONNU",
+   "jardin": "INCONNU",
+   "courtTennis": "INCONNU",
+   "climatisation": "INCONNU",
+   "salleReception": "INCONNU",
+   "chambreService": "INCONNU",
+   "contemporain": "INCONNU",
+   "architecte": "INCONNU",
+   "maisonAmis": "INCONNU",
+   "maisonGardien": "INCONNU",
+   "dependancesAgricoles": "INCONNU",
+   "monumentHistorique": "INCONNU",
+   "domaineChasse": "INCONNU",
+   "parcPaysager": "INCONNU",
+   "ecurie": "INCONNU",
+   "spa": "INCONNU",
+   "typeCuisine": "AMERICAINE",
+   "residenceFermee": "INCONNU",
+   "nbEtages": 1,
+   "depensesEnergieMin": 3750,
+   "depensesEnergieMax": 5130,
+   "depensesEnergieAnnee": 2021,
+   "adresse": "2  Rue de la Capellere"
+  }
+ },
+ "contact": {
+  "id": 1241205,
+  "nom": "Catherine DEMANDES",
+  "adresse2": "",
+  "adresse4": "7 Place Jean Jaures",
+  "adresse5": "",
+  "codePostal": "65000",
+  "ville": "TARBES",
+  "telephone": "0610391414",
+  "mail": "negociation.65002@notaires.fr"
+ },
+ "crpcen": "65002",
+ "idOffice": 3498
+}

@@ -1,0 +1,537 @@
+{
+ "id": 2096588,
+ "status": "LIGNE",
+ "typeTransaction": "VENTE",
+ "vente": {
+  "dateCreation": "2026-10-19T11:19:38Z",
+  "dateMaj": "2026-11-05T15:42:58Z",
+  "dateActivation": "2026-10-19T11:19:49Z",
+  "statut": "LIGNE",
+  "dateStatut": "2026-10-19T11:19:49Z",
+  "reference": "65002-1867",
+  "referencePartenaire": "R65002/1867",
+  "exclusivite": "NON",
+  "facturation": "65002",
+  "origineNegociation": "INCONNU",
+  "partenaire": 29,
+  "redactionCompromis": "INCONNU",
+  "typeTransaction": "VENTE",
+  "crpcen": "65002",
+  "publiable": "OUI",
+  "multimedias": [
+   {
+    "id": 54101174,
+    "checksum": "dc22e2e",
+    "nomDocument": "",
+    "numDocument": 0,
+    "photoPrincipale": "OUI",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65002/2096588",
+    "ratio": 1.3333,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/dc22e2e_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/dc22e2e_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/dc22e2e_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/dc22e2e_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/dc22e2e_XGA.jpg"
+   },
+   {
+    "id": 54105580,
+    "checksum": "ba886c8a",
+    "nomDocument": "",
+    "numDocument": 1,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65002/2096588",
+    "ratio": 1.3333,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/ba886c8a_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/ba886c8a_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/ba886c8a_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/ba886c8a_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/ba886c8a_XGA.jpg"
+   },
+   {
+    "id": 54101175,
+    "checksum": "8d424664",
+    "nomDocument": "",
+    "numDocument": 2,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65002/2096588",
+    "ratio": 1.3333,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/8d424664_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/8d424664_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/8d424664_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/8d424664_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/8d424664_XGA.jpg"
+   },
+   {
+    "id": 53979072,
+    "checksum": "614a30db",
+    "nomDocument": "",
+    "numDocument": 3,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65002/2096588",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/614a30db_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/614a30db_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/614a30db_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/614a30db_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/614a30db_XGA.jpg"
+   },
+   {
+    "id": 53979073,
+    "checksum": "ce319dea",
+    "nomDocument": "",
+    "numDocument": 4,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65002/2096588",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/ce319dea_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/ce319dea_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/ce319dea_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/ce319dea_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/ce319dea_XGA.jpg"
+   },
+   {
+    "id": 53979074,
+    "checksum": "b9bfa2ee",
+    "nomDocument": "",
+    "numDocument": 5,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65002/2096588",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/b9bfa2ee_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/b9bfa2ee_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/b9bfa2ee_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/b9bfa2ee_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/b9bfa2ee_XGA.jpg"
+   },
+   {
+    "id": 53979075,
+    "checksum": "777641b8",
+    "nomDocument": "",
+    "numDocument": 6,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65002/2096588",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/777641b8_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/777641b8_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/777641b8_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/777641b8_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/777641b8_XGA.jpg"
+   },
+   {
+    "id": 53979076,
+    "checksum": "e0907307",
+    "nomDocument": "",
+    "numDocument": 7,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65002/2096588",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/e0907307_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/e0907307_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/e0907307_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/e0907307_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/e0907307_XGA.jpg"
+   },
+   {
+    "id": 53979077,
+    "checksum": "43de70fd",
+    "nomDocument": "",
+    "numDocument": 8,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65002/2096588",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/43de70fd_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/43de70fd_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/43de70fd_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/43de70fd_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/43de70fd_XGA.jpg"
+   },
+   {
+    "id": 53979078,
+    "checksum": "943a594",
+    "nomDocument": "",
+    "numDocument": 9,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65002/2096588",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/943a594_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/943a594_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/943a594_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/943a594_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/943a594_XGA.jpg"
+   },
+   {
+    "id": 53979079,
+    "checksum": "c455dbb",
+    "nomDocument": "",
+    "numDocument": 10,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65002/2096588",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/c455dbb_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/c455dbb_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/c455dbb_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/c455dbb_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/c455dbb_XGA.jpg"
+   },
+   {
+    "id": 53979080,
+    "checksum": "5a2e2736",
+    "nomDocument": "",
+    "numDocument": 11,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65002/2096588",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/5a2e2736_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/5a2e2736_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/5a2e2736_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/5a2e2736_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/5a2e2736_XGA.jpg"
+   },
+   {
+    "id": 53979081,
+    "checksum": "d2756e5c",
+    "nomDocument": "",
+    "numDocument": 12,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65002/2096588",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/d2756e5c_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/d2756e5c_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/d2756e5c_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/d2756e5c_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/d2756e5c_XGA.jpg"
+   },
+   {
+    "id": 53979082,
+    "checksum": "54d9ca",
+    "nomDocument": "",
+    "numDocument": 13,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65002/2096588",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/54d9ca_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/54d9ca_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/54d9ca_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/54d9ca_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/54d9ca_XGA.jpg"
+   },
+   {
+    "id": 53979083,
+    "checksum": "91b58f2c",
+    "nomDocument": "",
+    "numDocument": 14,
+    "photoPrincipale": "NON",
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "directory": "/29/65002/2096588",
+    "ratio": 1.5056,
+    "format": "QQVGA,QVGA,VGA,XGA",
+    "qqvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/91b58f2c_QQVGA.jpg"
+    },
+    "qvga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/91b58f2c_QVGA.jpg"
+    },
+    "vga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/91b58f2c_VGA.jpg"
+    },
+    "xga": {
+     "url": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/91b58f2c_XGA.jpg"
+    },
+    "urlHighestResolution": "https://media.immobilier.notaires.fr/inotr/media/29/65002/2096588/91b58f2c_XGA.jpg"
+   }
+  ],
+  "descriptions": [
+   {
+    "id": 1836145,
+    "langue": "fr",
+    "descCourte": "BARBAZAN-DEBAT Maison T4, 92 m2 hab env, jardin.",
+    "descLongue": "Une maison individuelle à usage d'habitation accolée d'un côté à la maison voisine. Construction de 1975.\n\nAu rez-de-chaussée : entrée, salon séjour, cuisine équipée, WC indépendant, rangement.\n\nA l'étage : trois chambres  dont une avec un dressing, salle d'eau (double vasque et douche à l'italienne), cabinet de toilettes  avec un WC, dégagement  et rangement.\n\nSurface habitable : 92 m2\n\nGarage attenant  et terrain autour  de  332 m2.\n\nDeux terrasses en bois.\n\nLes points positifs et techniques : \n\nMaison saine : absence d’amiante et de termites \nDPE : Classe C estimation des coûts annuels d'énergie du logement  entre 970 € et 1 370 € / an \nPAC Air/Air réversible (type split)  Chauffe-eau thermodynamique. \nMenuiseries en pvc double vitrage. Volets roulants solaires aluminium électriques. Store banne électrique.  Combles avec isolation.\nCuisine équipée.  Salle d'eau refaite. \nMaison fonctionnelle et bien entretenue. \nJardin agréable. Vue sur les Pyrénées. Secteur calme.\n\nProche de Tarbes, elle bénéficie de toutes les commodités à proximité, écoles,...\n\nContactez moi dès maintenant  pour organiser une visite.\n\nLes informations sur les risques auxquels ce bien est exposé sont disponibles sur le site Géorisques : www. georisques. gouv.fr"
+   }
+  ],
+  "visite": {
+   "id": 1483449,
+   "typeVisite": "RDV",
+   "visiteContact": "0610391414",
+   "visiteNomContact": "Catherine DEMANDES"
+  },
+  "redevableEmoluments": "ACQUEREUR",
+  "prix": 219000,
+  "emoluments": 10950,
+  "viager": {
+   "viager": "NON",
+   "viagerPeriodiciteRente": "INCONNU",
+   "viagerIndexationRente": "INCONNU",
+   "viagerSexe1": "INCONNU",
+   "viagerSexe2": "INCONNU",
+   "viagerOccupation": "INCONNU"
+  },
+  "bienVendu": "INCONNU",
+  "bienRetire": "INCONNU",
+  "ventePrivee": "NON",
+  "prixVenteCommunique": "INCONNU"
+ },
+ "bien": {
+  "id": 2327559,
+  "typeBien": "MAI",
+  "maison": {
+   "id": 2327559,
+   "hexaviaLocalite": "28608",
+   "localiteNom": "BARBAZAN DEBAT",
+   "inseeCommune": "65062",
+   "communeNom": "Barbazan-Debat",
+   "charniere": "de ",
+   "charniere2": "à ",
+   "codePostal": "65690",
+   "inseeDepartement": "65",
+   "departementNom": "Hautes-Pyrénées",
+   "inseeRegion": "76",
+   "regionNom": "Occitanie",
+   "typeBien": "MAI",
+   "affichagePublic": "NON",
+   "bordMer": "INCONNU",
+   "pleineCampagne": "INCONNU",
+   "belleVue": "INCONNU",
+   "procheMontagne": "INCONNU",
+   "vuePanoramique": "INCONNU",
+   "procheGolf": "INCONNU",
+   "piedsDansEau": "INCONNU",
+   "ancienNeuf": "ANCIEN",
+   "sousType": "INCONNU",
+   "prestige": "INCONNU",
+   "etat": "INCONNU",
+   "epoqueConstruction": "E",
+   "surfaceHabitable": 92.0,
+   "surfaceTerrain": 332,
+   "livraison": "INCONNU",
+   "nbPieces": 4,
+   "nbChambres": 3,
+   "situationLocative": "INCONNU",
+   "exposition": "INCONNU",
+   "stationnement": "INCONNU",
+   "cuisine": "OUI",
+   "chauffage": "INCONNU",
+   "energie": "INCONNU",
+   "balcon": "INCONNU",
+   "terrasse": "OUI",
+   "cave": "NON",
+   "piscine": "NON",
+   "accesHandicapes": "INCONNU",
+   "basseConsommation": "INCONNU",
+   "consommationClasse": "C",
+   "consommation": 110,
+   "emissionGesClasse": "A",
+   "emissionGes": 4,
+   "dateRealisationDpe": "2026-10-15",
+   "taxeFonciere": 1145,
+   "checkBus": "INCONNU",
+   "checkMetro": "INCONNU",
+   "checkAeroport": "INCONNU",
+   "checkTram": "INCONNU",
+   "checkGare": "INCONNU",
+   "checkEcole": "OUI",
+   "ecole": "INCONNU",
+   "checkVueMer": "INCONNU",
+   "vueMer": "INCONNU",
+   "checkCommerce": "OUI",
+   "commerce": "INCONNU",
+   "checkPistes": "INCONNU",
+   "pistes": "INCONNU",
+   "boxFerme": "INCONNU",
+   "cheminee": "INCONNU",
+   "parquet": "INCONNU",
+   "moulures": "INCONNU",
+   "sansVisAVis": "INCONNU",
+   "dependances": "INCONNU",
+   "jardin": "INCONNU",
+   "courtTennis": "INCONNU",
+   "climatisation": "INCONNU",
+   "salleReception": "INCONNU",
+   "chambreService": "INCONNU",
+   "contemporain": "INCONNU",
+   "architecte": "INCONNU",
+   "maisonAmis": "INCONNU",
+   "maisonGardien": "INCONNU",
+   "dependancesAgricoles": "INCONNU",
+   "monumentHistorique": "INCONNU",
+   "domaineChasse": "INCONNU",
+   "parcPaysager": "INCONNU",
+   "ecurie": "INCONNU",
+   "spa": "INCONNU",
+   "typeCuisine": "AMERICAINE",
+   "residenceFermee": "INCONNU",
+   "depensesEnergieMin": 970,
+   "depensesEnergieMax": 1370,
+   "depensesEnergieAnnee": 2023
+  }
+ },
+ "contact": {
+  "id": 1479621,
+  "nom": "Catherine DEMANDES",
+  "adresse4": "7, Place Jean Jaurès, BP 216",
+  "codePostal": "65000",
+  "ville": "Tarbes",
+  "coordonneesW84": {
+   "coordonneeX": 0.06741,
+   "coordonneeY": 43.23929
+  },
+  "telephone": "0610391414",
+  "mail": "catherine.demandes@pyrenot.notaires.fr"
+ },
+ "crpcen": "65002",
+ "idOffice": 3498
+}
