@@ -31,10 +31,10 @@ public class RecommenderTests
         return new PropertySummary(new Property { Id = id, Status = status }, [], title, price, surface, null, cp, city, null, null, 0, Details: data);
     }
 
-    private static PropertySummary Chalet(PropertyStatus status, int i) => Item(status, $"Chalet {i}", 320_000 + i * 10_000, 120 + i * 5, 1500 + i * 300,
+    private static PropertySummary Chalet(PropertyStatus status, int i) => Item(status, $"Chalet {i}", 320_000m + i * 10_000m, 120.0 + i * 5.0, 1500.0 + i * 300.0,
         "Saint-Lary-Soulan", "65170", "chalet bois montagne vue pistes jardin calme");
 
-    private static PropertySummary Flat(PropertyStatus status, int i) => Item(status, $"Appartement {i}", 180_000 + i * 5_000, 45 + i * 3, null,
+    private static PropertySummary Flat(PropertyStatus status, int i) => Item(status, $"Appartement {i}", 180_000m + i * 5_000m, 45.0 + i * 3.0, null,
         "Tarbes", "65000", "appartement centre ville ascenseur commerces tramway", PropertyTypes.Flat);
 
     [Fact]

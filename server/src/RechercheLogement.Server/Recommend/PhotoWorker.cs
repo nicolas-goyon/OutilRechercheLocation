@@ -101,7 +101,7 @@ public static class RecommendRegistration
         }
         else
         {
-            var path = Path.IsPathRooted(settings.DatabasePath) ? settings.DatabasePath : Path.Combine(env.ContentRootPath, settings.DatabasePath);
+            var path = Path.GetFullPath(settings.DatabasePath, env.ContentRootPath); // chemin absolu : gardé tel quel
             // La base doit être migrée (table photo_stats) : IPersistence d'abord.
             services.AddSingleton<IPhotoStatsStore>(sp =>
             {

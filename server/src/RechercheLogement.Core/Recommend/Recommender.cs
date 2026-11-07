@@ -55,7 +55,7 @@ public sealed class Recommender
     private readonly Dictionary<string, string> _cityNames = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (double Mean, double Sd)> _scales = [];
     private double _bias;
-    private List<(string Id, double Label, double Weight)> _labeled = [];
+    private List<(string Id, bool Liked, double Weight)> _labeled = [];
 
     public RecommenderState State { get; private set; } = new(0, 0, false, 0, 0);
 
@@ -124,10 +124,10 @@ public sealed class Recommender
 
         _labeled = all
             .Where(s => s.Property.Status != PropertyStatus.None)
-            .Select(s => (s.Property.Id, Label: s.Property.Status == PropertyStatus.Rejected ? 0.0 : 1.0,
+            .Select(s => (s.Property.Id, Liked: s.Property.Status != PropertyStatus.Rejected,
                 Weight: s.Property.Status switch { PropertyStatus.ToContact => 2.0, PropertyStatus.Rejected => 1.5, _ => 1.0 }))
             .ToList();
-        var liked = _labeled.Count(l => l.Label > 0);
+        var liked = _labeled.Count(l => l.Liked);
         var disliked = _labeled.Count - liked;
         var trained = liked >= MinForModel && disliked >= MinForModel;
         if (trained) Fit();
@@ -181,13 +181,11 @@ public sealed class Recommender
         var d = s.Details;
         var text = DedupScorer.NormalizeText($"{s.Title} {d?.Subtype} {d?.DescriptionExcerpt}");
         var counts = new Dictionary<string, int>(StringComparer.Ordinal);
-        foreach (var token in text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-        {
-            if (token.Length < 4 || token.Any(char.IsAsciiDigit)) continue;
-            var w = token.Length > 4 && (token.EndsWith('s') || token.EndsWith('x')) ? token[..^1] : token;
-            if (StopWords.Contains(w) || StopWords.Contains(token)) continue;
-            counts[w] = counts.GetValueOrDefault(w) + 1;
-        }
+        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(t => t.Length >= 4 && !t.Any(char.IsAsciiDigit) && !StopWords.Contains(t))
+            .Select(t => t.Length > 4 && (t.EndsWith('s') || t.EndsWith('x')) ? t[..^1] : t)
+            .Where(w => !StopWords.Contains(w));
+        foreach (var w in words) counts[w] = counts.GetValueOrDefault(w) + 1;
         return counts;
     }
 
@@ -199,9 +197,9 @@ public sealed class Recommender
     /// </summary>
     private void Fit()
     {
-        var posWeight = _labeled.Where(l => l.Label > 0).Sum(l => l.Weight);
-        var negWeight = _labeled.Where(l => l.Label == 0).Sum(l => l.Weight);
-        var samples = _labeled.Select(l => (X: _vectors[l.Id], l.Label, W: l.Weight * (l.Label > 0 ? 0.5 / posWeight : 0.5 / negWeight))).ToList();
+        var posWeight = _labeled.Where(l => l.Liked).Sum(l => l.Weight);
+        var negWeight = _labeled.Where(l => !l.Liked).Sum(l => l.Weight);
+        var samples = _labeled.Select(l => (X: _vectors[l.Id], Label: l.Liked ? 1.0 : 0.0, W: l.Weight * (l.Liked ? 0.5 / posWeight : 0.5 / negWeight))).ToList();
         const double rate = 0.5, lambda = 0.02;
         for (var it = 0; it < 400; it++)
         {
@@ -230,13 +228,13 @@ public sealed class Recommender
     private double NeighbourScore(Dictionary<string, double> x)
     {
         var near = _labeled
-            .Select(l => (Sim: Cosine(x, _vectors[l.Id]), l.Label, l.Weight))
+            .Select(l => (Sim: Cosine(x, _vectors[l.Id]), l.Liked, l.Weight))
             .OrderByDescending(n => n.Sim)
             .Take(Neighbours)
             .ToList();
         if (near.Count == 0) return 0;
         var total = near.Sum(n => n.Weight);
-        var signed = near.Sum(n => n.Weight * n.Sim * (n.Label > 0 ? 1 : -1)) / total;
+        var signed = near.Sum(n => n.Weight * n.Sim * (n.Liked ? 1 : -1)) / total;
         return Math.Clamp((signed + 1) / 2, 0, 1);
     }
 
@@ -246,7 +244,7 @@ public sealed class Recommender
         var dot = small.Sum(kv => large.TryGetValue(kv.Key, out var v) ? kv.Value * v : 0);
         var na = Math.Sqrt(a.Values.Sum(v => v * v));
         var nb = Math.Sqrt(b.Values.Sum(v => v * v));
-        return na == 0 || nb == 0 ? 0 : dot / (na * nb);
+        return na <= 0 || nb <= 0 ? 0 : dot / (na * nb);
     }
 
     // ------------------------------------------------------------------ explications
@@ -266,7 +264,7 @@ public sealed class Recommender
                 if (reasons.Count == 3) break;
             }
         }
-        var closest = _labeled.Where(l => l.Label > 0)
+        var closest = _labeled.Where(l => l.Liked)
             .Select(l => (l.Id, Sim: Cosine(x, _vectors[l.Id])))
             .OrderByDescending(l => l.Sim)
             .FirstOrDefault();
