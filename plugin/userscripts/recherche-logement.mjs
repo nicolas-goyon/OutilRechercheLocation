@@ -16,7 +16,7 @@ export default {
     name: 'Recherche logement — suivi multi-sites',
     namespace: 'local.recherche-logement',
     description: 'Masque et étiquette les annonces immobilières. Synchronise les annonces avec le serveur local.',
-    match: ['https://www.bienici.com/*', 'https://www.seloger.com/*'],
+    match: ['https://www.bienici.com/*', 'https://www.seloger.com/*', 'https://www.leboncoin.fr/*', 'https://www.pap.fr/*'],
     grant: [
       'unsafeWindow',
       'GM_registerMenuCommand',
