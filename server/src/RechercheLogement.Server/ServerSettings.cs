@@ -27,6 +27,12 @@ public sealed class ServerSettings
     /// </summary>
     public string? ProjectsDatabasePath { get; set; }
 
+    /// <summary>
+    /// Recommandations : télécharge des miniatures des photos des annonces et calcule leurs descripteurs (couleurs,
+    /// verdure, ciel...). Faux : les recommandations se passent des photos. Jamais avec le stockage en mémoire (tests).
+    /// </summary>
+    public bool AnalyzePhotos { get; set; } = true;
+
     /// <summary>Lancement automatique des projets (intervalle choisi dans chaque projet). false : seulement à la demande.</summary>
     public bool ProjectsAutoRun { get; set; } = true;
 
