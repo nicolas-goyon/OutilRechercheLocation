@@ -166,6 +166,14 @@ public sealed class SearchProject
     public bool? WorkNeeded { get; set; }
     /// <summary>Écarte les viagers (les sites les mêlent aux ventes classiques). Vrai par défaut.</summary>
     public bool ExcludeLifeAnnuity { get; set; } = true;
+    /// <summary>
+    /// Critères obligatoires (<see cref="Criteria"/>) : une annonce qui ne précise pas l'information est écartée.
+    /// Les autres critères n'écartent que les annonces qui la précisent et ne correspondent pas.
+    /// </summary>
+    public List<string> StrictCriteria { get; set; } = [];
+
+    /// <summary>Le critère est-il obligatoire (et renseigné) ?</summary>
+    public bool IsStrict(string criterion) => StrictCriteria.Contains(criterion);
     /// <summary>Au moins un de ces mots doit apparaître dans le titre ou la description (vide : pas de contrainte).</summary>
     public List<string> KeywordsInclude { get; set; } = [];
     /// <summary>Aucun de ces mots ne doit apparaître.</summary>
@@ -253,15 +261,21 @@ public static class ProjectMatcher
         if (d.Price is not null && (d.Price < p.PriceMin || d.Price > p.PriceMax)) return Fail("prix", out why);
         if (d.Surface is not null && (d.Surface < p.SurfaceMin || d.Surface > p.SurfaceMax)) return Fail("surface", out why);
         if (d.Rooms is not null && (d.Rooms < p.RoomsMin || d.Rooms > p.RoomsMax)) return Fail("pièces", out why);
-        if (d.Bedrooms is not null && d.Bedrooms < p.BedroomsMin) return Fail("chambres", out why);
+        if (Check(p, Criteria.Bedrooms, p.BedroomsMin is not null, d.Bedrooms is null, d.Bedrooms < p.BedroomsMin, "chambres", "nombre de chambres", out why) is false) return false;
         if (p.Furnished is not null && d.Furnished is not null && d.Furnished != p.Furnished) return Fail("meublé", out why);
-        if (d.LandSurface is not null && (d.LandSurface < p.LandSurfaceMin || d.LandSurface > p.LandSurfaceMax)) return Fail("terrain", out why);
-        if (EnergyClasses.Worse(d.EnergyClass, p.EnergyClassMax)) return Fail($"DPE {d.EnergyClass}", out why);
-        if (d.YearBuilt is not null && (d.YearBuilt < p.YearBuiltMin || d.YearBuilt > p.YearBuiltMax)) return Fail("année de construction", out why);
-        if (d.Bathrooms is not null && d.Bathrooms < p.BathroomsMin) return Fail("salles de bain", out why);
+        if (Check(p, Criteria.LandSurface, p.LandSurfaceMin is not null || p.LandSurfaceMax is not null, d.LandSurface is null,
+                d.LandSurface < p.LandSurfaceMin || d.LandSurface > p.LandSurfaceMax, "terrain", "terrain", out why) is false) return false;
+        var energy = EnergyClasses.Normalize(d.EnergyClass);
+        if (Check(p, Criteria.EnergyClass, p.EnergyClassMax is not null, energy is null, EnergyClasses.Worse(energy, p.EnergyClassMax), $"DPE {energy}", "DPE", out why) is false) return false;
+        if (Check(p, Criteria.YearBuilt, p.YearBuiltMin is not null || p.YearBuiltMax is not null, d.YearBuilt is null,
+                d.YearBuilt < p.YearBuiltMin || d.YearBuilt > p.YearBuiltMax, "année de construction", "année de construction", out why) is false) return false;
+        if (Check(p, Criteria.Bathrooms, p.BathroomsMin is not null, d.Bathrooms is null, d.Bathrooms < p.BathroomsMin, "salles de bain", "salles de bain", out why) is false) return false;
         if (p.RequiredFeatures.FirstOrDefault(f => d.Has(f) == false) is { } missing) return Fail($"sans {Features.Label(missing).ToLowerInvariant()}", out why);
-        if (p.NewBuild is not null && d.NewBuild is not null && d.NewBuild != p.NewBuild) return Fail(p.NewBuild.Value ? "ancien" : "neuf", out why);
-        if (p.WorkNeeded is not null && d.WorkNeeded is not null && d.WorkNeeded != p.WorkNeeded) return Fail(p.WorkNeeded.Value ? "sans travaux" : "travaux à prévoir", out why);
+        if (p.IsStrict(Criteria.Features) && p.RequiredFeatures.FirstOrDefault(f => d.Has(f) is null) is { } unknown)
+            return Fail($"{Features.Label(unknown).ToLowerInvariant()} : non mentionné", out why);
+        if (Check(p, Criteria.NewBuild, p.NewBuild is not null, d.NewBuild is null, d.NewBuild != p.NewBuild, p.NewBuild == true ? "ancien" : "neuf", "neuf ou ancien", out why) is false) return false;
+        if (Check(p, Criteria.WorkNeeded, p.WorkNeeded is not null, d.WorkNeeded is null, d.WorkNeeded != p.WorkNeeded,
+                p.WorkNeeded == true ? "sans travaux" : "travaux à prévoir", "état (travaux)", out why) is false) return false;
         if (p.ExcludeLifeAnnuity && d.SaleKind == SaleKinds.LifeAnnuity) return Fail("viager", out why);
 
         var text = DedupScorer.NormalizeText($"{d.Title} {d.DescriptionExcerpt}");
@@ -270,6 +284,18 @@ public static class ProjectMatcher
         if (include.Count > 0 && !include.Any(Has)) return Fail("mots-clés absents", out why);
         if (p.KeywordsExclude.FirstOrDefault(k => !string.IsNullOrWhiteSpace(k) && Has(k)) is { } excluded) return Fail($"mot exclu « {excluded} »", out why);
         return true;
+    }
+
+    /// <summary>
+    /// Un critère renseigné (<paramref name="set"/>) : valeur inconnue -> écartée s'il est obligatoire, gardée sinon ;
+    /// valeur connue et non conforme (<paramref name="mismatch"/>) -> écartée. null : rien à redire.
+    /// </summary>
+    private static bool? Check(SearchProject p, string criterion, bool set, bool unknown, bool mismatch, string reason, string label, out string? why)
+    {
+        why = null;
+        if (!set) return null;
+        if (unknown) return p.IsStrict(criterion) ? Fail($"{label} non renseigné", out why) : null;
+        return mismatch ? Fail(reason, out why) : null;
     }
 
     private static bool Fail(string reason, out string? why)

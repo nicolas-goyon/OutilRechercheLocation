@@ -1,0 +1,22 @@
+@* Case "Obligatoire" d'un critère de projet, affichée seulement quand le critère est renseigné. *@
+@if (Visible)
+{
+    <label class="strict" title="Obligatoire : une annonce qui ne précise pas cette information est écartée. Sinon, seule une valeur précisée et non conforme l'écarte.">
+        <input type="checkbox" checked="@Set.Contains(Criterion)" @onchange="Toggle" /> Obligatoire
+    </label>
+}
+
+@code {
+    /// <summary>Critère (<see cref="Criteria"/>).</summary>
+    [Parameter, EditorRequired] public string Criterion { get; set; } = "";
+    /// <summary>Critères obligatoires du formulaire (modifié sur place).</summary>
+    [Parameter, EditorRequired] public HashSet<string> Set { get; set; } = [];
+    /// <summary>Le critère est renseigné.</summary>
+    [Parameter] public bool Visible { get; set; }
+
+    private void Toggle(ChangeEventArgs e)
+    {
+        if (e.Value is true) Set.Add(Criterion);
+        else Set.Remove(Criterion);
+    }
+}

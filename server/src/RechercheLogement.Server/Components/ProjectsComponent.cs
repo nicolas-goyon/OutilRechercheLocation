@@ -75,10 +75,24 @@ public static class ProjectFormat
         if (p.WorkNeeded is { } work) parts.Add(work ? "à rénover" : "sans travaux");
         if (p.RequiredFeatures.Count > 0) parts.Add(string.Join(", ", p.RequiredFeatures.Select(x => Features.Label(x).ToLowerInvariant())));
         if (p.Transaction == TransactionType.Buy && p.ExcludeLifeAnnuity) parts.Add("hors viager");
+        if (p.StrictCriteria.Count > 0) parts.Add($"obligatoire : {string.Join(", ", p.StrictCriteria.Select(CriterionLabel))}");
         if (p.KeywordsInclude.Count > 0) parts.Add($"avec : {string.Join(", ", p.KeywordsInclude)}");
         if (p.KeywordsExclude.Count > 0) parts.Add($"sans : {string.Join(", ", p.KeywordsExclude)}");
         return string.Join(" · ", parts.Where(x => !string.IsNullOrWhiteSpace(x)));
     }
+
+    private static string CriterionLabel(string criterion) => criterion switch
+    {
+        Criteria.Bedrooms => "chambres",
+        Criteria.LandSurface => "terrain",
+        Criteria.Bathrooms => "salles de bain",
+        Criteria.EnergyClass => "DPE",
+        Criteria.YearBuilt => "année",
+        Criteria.NewBuild => "neuf/ancien",
+        Criteria.WorkNeeded => "travaux",
+        Criteria.Features => "équipements",
+        _ => criterion,
+    };
 
     private static string? Range<T>(T? min, T? max, string unit) where T : struct, IFormattable
     {

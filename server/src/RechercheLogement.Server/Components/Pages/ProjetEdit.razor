@@ -162,7 +162,7 @@
         <div class="range"><input type="number" min="1" @bind="_roomsMin" placeholder="min" /> à <input type="number" min="1" @bind="_roomsMax" placeholder="max" /></div>
 
         <label>Chambres (min)</label>
-        <div class="range"><input type="number" min="0" @bind="_bedroomsMin" placeholder="min" /></div>
+        <div class="range"><input type="number" min="0" @bind="_bedroomsMin" placeholder="min" /><StrictToggle Criterion="@Criteria.Bedrooms" Set="_strict" Visible="_bedroomsMin is not null" /></div>
 
         <label>Meublé</label>
         <select @bind="_furnished">
@@ -189,12 +189,13 @@
     <h2>Caractéristiques du bien</h2>
     <div class="form-grid">
         <label>Terrain (m²)</label>
-        <div class="range"><input type="number" min="0" @bind="_landMin" placeholder="min" /> à <input type="number" min="0" @bind="_landMax" placeholder="max" /></div>
+        <div class="range"><input type="number" min="0" @bind="_landMin" placeholder="min" /> à <input type="number" min="0" @bind="_landMax" placeholder="max" /><StrictToggle Criterion="@Criteria.LandSurface" Set="_strict" Visible="_landMin is not null || _landMax is not null" /></div>
 
         <label>Salles de bain (min)</label>
-        <div class="range"><input type="number" min="0" @bind="_bathroomsMin" placeholder="min" /></div>
+        <div class="range"><input type="number" min="0" @bind="_bathroomsMin" placeholder="min" /><StrictToggle Criterion="@Criteria.Bathrooms" Set="_strict" Visible="_bathroomsMin is not null" /></div>
 
         <label>DPE</label>
+        <div class="with-strict">
         <select @bind="_energyMax">
             <option value="">Indifférent</option>
             @foreach (var c in EnergyClasses.All.Take(6))
@@ -202,25 +203,34 @@
                 <option value="@c">@(c == "A" ? "A seulement" : $"A à {c}")</option>
             }
         </select>
+        <StrictToggle Criterion="@Criteria.EnergyClass" Set="_strict" Visible="_energyMax.Length > 0" />
+        </div>
 
         <label>Année de construction</label>
-        <div class="range"><input type="number" min="1000" max="2100" @bind="_yearMin" placeholder="après" /> à <input type="number" min="1000" max="2100" @bind="_yearMax" placeholder="avant" /></div>
+        <div class="range"><input type="number" min="1000" max="2100" @bind="_yearMin" placeholder="après" /> à <input type="number" min="1000" max="2100" @bind="_yearMax" placeholder="avant" /><StrictToggle Criterion="@Criteria.YearBuilt" Set="_strict" Visible="_yearMin is not null || _yearMax is not null" /></div>
 
         <label>Neuf ou ancien</label>
+        <div class="with-strict">
         <select @bind="_newBuild">
             <option value="any">Indifférent</option>
             <option value="new">Neuf seulement</option>
             <option value="old">Ancien seulement</option>
         </select>
+        <StrictToggle Criterion="@Criteria.NewBuild" Set="_strict" Visible='_newBuild != "any"' />
+        </div>
 
         <label>Travaux</label>
+        <div class="with-strict">
         <select @bind="_work">
             <option value="any">Indifférent</option>
             <option value="none">Sans travaux annoncés</option>
             <option value="needed">À rénover seulement</option>
         </select>
+        <StrictToggle Criterion="@Criteria.WorkNeeded" Set="_strict" Visible='_work != "any"' />
+        </div>
 
         <label>Équipements exigés</label>
+        <div>
         <div class="type-chips">
             @foreach (var (id, label) in Features.All)
             {
@@ -228,6 +238,8 @@
                     <input type="checkbox" checked="@_features.Contains(id)" @onchange="e => ToggleFeature(id, e.Value is true)" /> @label
                 </label>
             }
+        </div>
+        <StrictToggle Criterion="@Criteria.Features" Set="_strict" Visible="_features.Count > 0" />
         </div>
 
         @if (_transaction == TransactionType.Buy)
@@ -237,8 +249,9 @@
         }
     </div>
     <p class="muted small">
-        Chaque site applique ce qu'il sait filtrer ; l'outil vérifie le reste sur les annonces. L'outil n'écarte pas une
-        annonce qui ne précise pas l'information (un DPE ou une piscine non mentionnés), mais un site peut le faire.
+        Par défaut, une annonce qui ne précise pas l'information (un DPE ou une piscine non mentionnés) est gardée : seule
+        une valeur précisée et non conforme l'écarte, et c'est l'outil qui vérifie. « Obligatoire » écarte aussi les
+        annonces muettes sur ce point ; le critère est alors envoyé aux sites, qui filtrent eux-mêmes (recherche plus ciblée).
     </p>
 </section>
 
@@ -352,6 +365,7 @@
     private string _work = "any";
     private HashSet<string> _features = [];
     private bool _excludeLifeAnnuity = true;
+    private HashSet<string> _strict = [];
     private string _include = "";
     private string _exclude = "";
     private HashSet<string> _sites = ["bienici", "seloger"];
@@ -394,6 +408,7 @@
         _work = p.WorkNeeded switch { true => "needed", false => "none", _ => "any" };
         _features = [.. p.RequiredFeatures];
         _excludeLifeAnnuity = p.ExcludeLifeAnnuity;
+        _strict = [.. p.StrictCriteria];
         _include = string.Join(", ", p.KeywordsInclude);
         _exclude = string.Join(", ", p.KeywordsExclude);
         _sites = [.. p.Sites];
@@ -627,6 +642,7 @@
         p.WorkNeeded = _work switch { "needed" => true, "none" => false, _ => null };
         p.RequiredFeatures = Features.All.Select(f => f.Id).Where(_features.Contains).ToList();
         p.ExcludeLifeAnnuity = _excludeLifeAnnuity;
+        p.StrictCriteria = Criteria.All.Where(_strict.Contains).ToList();
         p.KeywordsInclude = SplitWords(_include);
         p.KeywordsExclude = SplitWords(_exclude);
         p.Sites = sites;

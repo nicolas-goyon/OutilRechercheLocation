@@ -55,7 +55,8 @@ public sealed class BieniciListingParser : IListingParser
             Photos = photos is { Count: > 0 } ? photos : null,
             DescriptionExcerpt = JsonRead.Excerpt(description),
             PublishedAt = JsonRead.Str(ad["publicationDate"]),
-            LandSurface = Positive(JsonRead.Dbl(ad["landSurfaceArea"])),
+            // Deux champs selon l'agence ; le filtre de surface de terrain du site porte sur "gardenSurfaceArea".
+            LandSurface = Positive(JsonRead.Dbl(ad["landSurfaceArea"])) ?? Positive(JsonRead.Dbl(ad["gardenSurfaceArea"])),
             EnergyClass = EnergyClasses.Normalize(JsonRead.Str(ad["energyClassification"])),
             GhgClass = EnergyClasses.Normalize(JsonRead.Str(ad["greenhouseGazClassification"])),
             YearBuilt = JsonRead.Int(ad["yearOfConstruction"]) is { } year and > 1000 ? year : null,
