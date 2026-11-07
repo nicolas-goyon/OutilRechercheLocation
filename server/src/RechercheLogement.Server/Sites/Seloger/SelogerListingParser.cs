@@ -60,9 +60,59 @@ public sealed partial class SelogerListingParser : IListingParser
             Photos = photos is { Count: > 0 } ? photos : null,
             DescriptionExcerpt = JsonRead.Excerpt(description),
             PublishedAt = JsonRead.Str(c["metadata"]?["creationDate"]),
+            LandSurface = JsonRead.Dbl(raw?["surface"]?["plot"]) ?? FactNumber(c["hardFacts"]?["facts"], "plotSpace"),
+            EnergyClass = EnergyClasses.Normalize(JsonRead.Str(c["energyClass"]) ?? JsonRead.Str(c["legacyTracking"]?["energy_letter"])),
+            YearBuilt = JsonRead.Int(c["legacyTracking"]?["year_of_construction"]) is { } year and > 1000 ? year : null,
+            Subtype = Subtype(JsonRead.Str(raw?["propertySubType"])),
+            NewBuild = NewBuild(heading, JsonRead.Str(raw?["distributionSubType"]?["buy"])),
+            SaleKind = heading is not null && heading.Contains("viager", StringComparison.OrdinalIgnoreCase) ? SaleKinds.LifeAnnuity : null,
         };
         return new CollectedItem(id, data);
     }
+
+    /// <summary>
+    /// Neuf : titre "Maison à vendre • neuf" (liste) ou "NEW_BUILD_UNIT" (fiche). Titre sans "neuf" : ancien.
+    /// (tags.isNew veut dire "annonce récente", pas "logement neuf".)
+    /// </summary>
+    public static bool? NewBuild(string? heading, string? subType) => subType switch
+    {
+        "NEW_BUILD_UNIT" or "NEW_BUILD_PROJECT" => true,
+        "RESALE" => false,
+        _ when heading is null => null,
+        _ => NewWord().IsMatch(heading),
+    };
+
+    /// <summary>Valeur numérique d'un fait de hardFacts.facts ("plotSpace" : "750 m² de terrain" -> 750).</summary>
+    private static double? FactNumber(JsonNode? facts, string type)
+    {
+        var fact = (facts as JsonArray)?.FirstOrDefault(f => JsonRead.Str(f?["type"]) == type);
+        var text = JsonRead.Str(fact?["splitValue"]) ?? JsonRead.Str(fact?["value"]);
+        var m = text is null ? null : Number().Match(text.Replace("\u00a0", "", StringComparison.Ordinal).Replace(" ", "", StringComparison.Ordinal));
+        return m is { Success: true } && double.TryParse(m.Value.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
+    }
+
+    /// <summary>Sous-types de SeLoger (valeurs de son code, novembre 2026) -> libellé.</summary>
+    public static string? Subtype(string? subtype) => subtype?.ToUpperInvariant() switch
+    {
+        null => null,
+        "VILLA" => "Villa",
+        "CHALET" => "Chalet",
+        "BUNGALOW" => "Bungalow",
+        "FARMHOUSE" => "Ferme",
+        "CASTLE" => "Château",
+        "MANOR_HOUSE" => "Manoir",
+        "MANSION" => "Demeure",
+        "TOWN_HOUSE" => "Maison de ville",
+        "TERRACE_HOUSE" or "SEMIDETACHED_HOUSE" => "Maison mitoyenne",
+        "SINGLE_FAMILY_HOUSE" => "Maison individuelle",
+        "MULTI_FAMILY_HOUSE" => "Maison plurifamiliale",
+        "LOFT" => "Loft",
+        "PENTHOUSE" => "Dernier étage",
+        "STUDIO" => "Studio",
+        "MULTI_STOREY" => "Duplex",
+        "TERRACE" => "Appartement avec terrasse",
+        _ => char.ToUpperInvariant(subtype[0]) + subtype[1..].ToLowerInvariant().Replace('_', ' '),
+    };
 
     /// <summary>"Appartement à louer" + 2 pièces + 45,77 m² -> "Appartement 2 pièces 45,77 m²" (même forme que Bien'ici).</summary>
     private static string? Title(string? heading, int? rooms, double? surface)
@@ -105,4 +155,10 @@ public sealed partial class SelogerListingParser : IListingParser
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex Spaces();
+
+    [GeneratedRegex(@"\bneu(f|ve)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex NewWord();
+
+    [GeneratedRegex(@"\d+(?:[.,]\d+)?")]
+    private static partial Regex Number();
 }

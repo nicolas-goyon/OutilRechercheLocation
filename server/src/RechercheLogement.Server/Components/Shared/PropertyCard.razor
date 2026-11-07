@@ -10,6 +10,7 @@
         <a class="title" href="/biens/@Item.Property.Id">@(Item.Title ?? "Annonce")</a>
         <div class="price">@Format.Price(Item.Price) <span class="muted">· @Format.Surface(Item.Surface)@(Item.Rooms is not null ? $" · {Item.Rooms} p." : "")</span></div>
         <div class="muted">@Item.PostalCode @Item.City @(Item.District is not null ? $"({Item.District})" : "")</div>
+        <ListingFacts Details="Item.Details" />
         <div class="sites">
             @foreach (var l in Item.Listings)
             {

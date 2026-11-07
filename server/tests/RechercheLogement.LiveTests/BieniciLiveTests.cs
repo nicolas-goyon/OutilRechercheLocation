@@ -57,6 +57,39 @@ public class BieniciLiveTests(ITestOutputHelper output)
         LiveChecks.MostHave(outcome.Items, "des photos", d => d.Photos is { Count: > 0 });
         LiveChecks.MostHave(outcome.Items, "le type maison", d => PropertyTypes.Normalize(d.PropertyType) == PropertyTypes.House);
     }
+
+    /// <summary>
+    /// Filtres détaillés (terrain, DPE, piscine, ancien) : Bien'ici les applique, et les annonces renvoyées les
+    /// respectent. Un filtre ignoré par le site (nom changé) laisserait passer des annonces hors critères.
+    /// </summary>
+    [Fact]
+    public async Task DetailedFilters_AreAppliedBySite()
+    {
+        var place = await LiveHttp.Retry(() => _adapter.ResolvePlaceAsync(new PlaceQuery(PlaceKind.Department, "Hautes-Pyrénées"), TransactionType.Buy, default));
+        var project = new SearchProject
+        {
+            Id = "live",
+            Transaction = TransactionType.Buy,
+            PropertyTypes = [PropertyTypes.House],
+            LandSurfaceMin = 1000,
+            EnergyClassMax = "D",
+            NewBuild = false,
+            RequiredFeatures = [Features.Pool],
+        };
+
+        var outcome = await LiveHttp.Retry(() => _adapter.SearchAsync(new SearchRequest(project, place!.Ids, 24), default));
+
+        output.WriteLine($"{outcome.Items.Count} annonces lues sur {outcome.Total}.");
+        Assert.True(outcome.Items.Count >= 3, $"Trop peu d'annonces : {outcome.Items.Count}");
+        LiveChecks.MostHave(outcome.Items, "un terrain d'au moins 1 000 m²", d => d.LandSurface >= 1000);
+        LiveChecks.MostHave(outcome.Items, "un DPE de A à D", d => d.EnergyClass is "A" or "B" or "C" or "D");
+        LiveChecks.MostHave(outcome.Items, "une piscine", d => d.Has(Features.Pool) == true);
+        // Bien'ici n'a pas de filtre "viager" : il en renvoie, et l'outil les écarte ensuite.
+        var sansViager = outcome.Items.Where(i => i.Data.SaleKind != SaleKinds.LifeAnnuity).ToList();
+        output.WriteLine($"{outcome.Items.Count - sansViager.Count} viager(s) écarté(s) par l'outil.");
+        Assert.All(sansViager, i => Assert.True(ProjectMatcher.Matches(project, i.Data, out var why), $"{i.Data.Url} : {why}"));
+        Assert.All(outcome.Items.Except(sansViager), i => Assert.False(ProjectMatcher.Matches(project, i.Data, out _)));
+    }
 }
 
 internal static class LiveChecks

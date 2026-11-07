@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tests && tsc --noEmit -p tests-live",
     "build": "node scripts/build.mjs",
     "build:watch": "node scripts/build.mjs --watch",
     "test": "node --import tsx --test tests/*.test.ts",

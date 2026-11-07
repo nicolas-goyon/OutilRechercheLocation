@@ -69,6 +69,10 @@ else
         </section>
 
         <div>
+            @if (s.Details is { } details)
+            {
+                <ListingDetailsPanel Details="details" />
+            }
             <section class="panel">
                 <h2>Note</h2>
                 <textarea rows="4" @bind="_note" placeholder="Note personnelle"></textarea>

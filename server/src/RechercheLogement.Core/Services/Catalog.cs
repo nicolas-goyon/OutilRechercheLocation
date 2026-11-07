@@ -715,7 +715,9 @@ public sealed class Catalog
             listings.SelectMany(l => l.Data.Photos ?? []).FirstOrDefault(),
             listings.Count == 0 ? 0 : listings.Max(l => l.LastSeenAt),
             listings.Select(l => l.Data.Geo).FirstOrDefault(x => x is not null),
-            listings.SelectMany(l => l.Data.Photos ?? []).Distinct(StringComparer.Ordinal).ToList());
+            listings.SelectMany(l => l.Data.Photos ?? []).Distinct(StringComparer.Ordinal).ToList(),
+            // Informations de toutes les annonces du bien : SeLoger donne le DPE, Bien'ici le terrain...
+            listings.Skip(1).Aggregate(main?.Data ?? new ListingData(), (all, l) => all.Merge(l.Data, fillOnly: true)));
     }
 
     private void AddListingToIndexes(Listing l)
@@ -778,7 +780,8 @@ public sealed record PropertySummary(
     string? Photo,
     long LastSeenAt,
     GeoPoint? Geo = null,
-    IReadOnlyList<string>? Photos = null);
+    IReadOnlyList<string>? Photos = null,
+    ListingData? Details = null);
 
 public sealed record PendingDuplicate(DuplicateLink Link, Listing A, Listing B, PropertyStatus StatusA, PropertyStatus StatusB);
 

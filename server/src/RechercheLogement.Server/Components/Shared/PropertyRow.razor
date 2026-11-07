@@ -6,6 +6,7 @@
     <div class="row-main">
         <a class="title" href="/biens/@Item.Property.Id">@(Item.Title ?? "Annonce")</a>
         <div class="muted">@Item.PostalCode @Item.City @(Item.District is not null ? $"({Item.District})" : "")</div>
+        <ListingFacts Details="Item.Details" />
     </div>
     <div class="row-price">
         <div class="price">@Format.Price(Item.Price)</div>

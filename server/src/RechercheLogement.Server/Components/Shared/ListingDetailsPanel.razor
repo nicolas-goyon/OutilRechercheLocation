@@ -1,0 +1,71 @@
+@* Caractéristiques d'un bien (toutes ses annonces réunies), sur sa fiche. Rien de connu : rien n'est rendu. *@
+@{
+    var rows = Rows(Details);
+}
+@if (rows.Count > 0 || Present.Count > 0 || Absent.Count > 0)
+{
+    <section class="panel">
+        <h2>Caractéristiques</h2>
+        @if (rows.Count > 0)
+        {
+            <dl class="details">
+                @foreach (var (label, value) in rows)
+                {
+                    <dt>@label</dt>
+                    <dd>
+                        @if (label is "DPE" or "GES")
+                        {
+                            <span class="dpe dpe-@value">@value</span>
+                        }
+                        else
+                        {
+                            @value
+                        }
+                    </dd>
+                }
+            </dl>
+        }
+        @if (Present.Count > 0 || Absent.Count > 0)
+        {
+            <div class="features">
+                @foreach (var f in Present)
+                {
+                    <span class="feature on">@Features.Label(f)</span>
+                }
+                @foreach (var f in Absent)
+                {
+                    <span class="feature off" title="Annoncé comme absent">Pas de @Features.Label(f).ToLowerInvariant()</span>
+                }
+            </div>
+        }
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public ListingData Details { get; set; } = default!;
+
+    private List<string> Present => Ordered(true);
+    private List<string> Absent => Ordered(false);
+
+    private List<string> Ordered(bool value) =>
+        Features.All.Select(f => f.Id).Where(id => Details.Has(id) == value).ToList();
+
+    private static List<(string Label, string Value)> Rows(ListingData d)
+    {
+        var rows = new List<(string, string)>();
+        void Add(string label, string? value) { if (!string.IsNullOrWhiteSpace(value)) rows.Add((label, value)); }
+        Add("Type", d.Subtype);
+        Add("Terrain", d.LandSurface is { } land ? $"{Format.Number(land)} m²" : null);
+        Add("Chambres", d.Bedrooms?.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Add("Salles de bain", d.Bathrooms?.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Add("DPE", EnergyClasses.Normalize(d.EnergyClass));
+        Add("GES", EnergyClasses.Normalize(d.GhgClass));
+        Add("Construction", d.YearBuilt?.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Add("État", d.NewBuild == true ? "Neuf" : d.WorkNeeded switch { true => "Travaux à prévoir", false => "Sans travaux annoncés", _ => d.NewBuild == false ? "Ancien" : null });
+        Add("Chauffage", d.Heating);
+        Add("Exposition", d.Exposure);
+        Add("Vente", d.SaleKind is { } kind ? SaleKinds.Label(kind) : null);
+        Add("Taxe foncière", d.PropertyTax is { } tax ? $"{Format.Price(tax)} / an" : null);
+        return rows;
+    }
+}

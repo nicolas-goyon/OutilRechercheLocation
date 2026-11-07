@@ -1,0 +1,140 @@
+{
+  "id": "262XRHGFRHPC",
+  "metadata": {
+    "creationDate": "2026-11-05T10:00:00Z"
+  },
+  "sections": {
+    "location": {
+      "address": {
+        "city": "Hendaye",
+        "zipCode": "64700"
+      }
+    },
+    "description": {
+      "description": "Maison de 156 m² sur 750 m² de terrain avec piscine."
+    },
+    "hardFacts": {
+      "title": "Maison à vendre",
+      "keyfacts": [
+        "5 pièces",
+        "3 chambres",
+        "156 m²",
+        "750 m² de terrain"
+      ],
+      "price": {
+        "ariaLabel": "586000 €",
+        "value": "586 000 €"
+      }
+    },
+    "features": {
+      "details": {
+        "categories": [
+          {
+            "elements": [
+              {
+                "icon": "Orientation",
+                "value": "Exposition: sud, est"
+              },
+              {
+                "icon": "plotSpace",
+                "value": "750 m² de terrain"
+              }
+            ],
+            "title": "Informations générales"
+          },
+          {
+            "elements": [
+              {
+                "icon": "kitchen",
+                "value": "Cuisine ouverte, Cuisine intégrée"
+              },
+              {
+                "icon": "bathroom-amenities",
+                "value": "1 Salle de bain; 1 Salle de douche"
+              },
+              {
+                "icon": "toilet-amenities",
+                "value": "1 WC séparées"
+              },
+              {
+                "icon": "bedroom",
+                "value": "3 Chambres"
+              }
+            ],
+            "title": "Intérieur"
+          },
+          {
+            "elements": [
+              {
+                "icon": "balcony",
+                "value": "Pas de balcon"
+              },
+              {
+                "icon": "garden",
+                "value": "Jardin"
+              },
+              {
+                "icon": "parking-lots",
+                "value": "Pas de garage"
+              }
+            ],
+            "title": "Extérieur"
+          },
+          {
+            "elements": [
+              {
+                "value": "Piscine",
+                "icon": "swimming-pool"
+              }
+            ],
+            "title": "Équipements"
+          }
+        ]
+      }
+    },
+    "energy": {
+      "features": [
+        {
+          "type": "heatingSystem",
+          "label": "Type de chauffage",
+          "value": "Chauffage individuel"
+        },
+        {
+          "type": "energySource",
+          "label": "Sources d'énergie",
+          "value": "Électrique"
+        }
+      ],
+      "certificates": [
+        {
+          "scales": [
+            {
+              "efficiencyClass": {
+                "index": 3,
+                "rating": "D"
+              },
+              "name": "Diagnostic de performance énergétique (DPE)",
+              "type": "FR_ENERGY_AFTER_2021"
+            },
+            {
+              "efficiencyClass": {
+                "index": 1,
+                "rating": "B"
+              },
+              "name": "Indice d'émission de gaz à effet de serre (GES)",
+              "type": "FR_GHG_AFTER_2021"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "rawData": {
+    "distributionSubType": {
+      "buy": "RESALE"
+    },
+    "distributionType": "BUY",
+    "propertyType": "HOUSE",
+    "propertyTypeLabel": "Maison"
+  }
+}
