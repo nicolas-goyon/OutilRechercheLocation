@@ -72,7 +72,7 @@
                 detail = $"{Format.Price(i.Price)}, {Format.Surface(i.Surface)}",
                 place = $"{i.PostalCode} {i.City}".Trim(),
                 status = Format.StatusClass(i.Property.Status),
-                photos = (i.Photos ?? []).Take(MaxPhotos).Select(u => Format.Thumb(u, 480, 300)),
+                photos = (i.Photos ?? []).Take(MaxPhotos).Select(u => Format.Photo(u, 480, 300)),
             };
         }).OfType<object>().ToList();
         _exact = items.Count(i => i.Geo is not null);

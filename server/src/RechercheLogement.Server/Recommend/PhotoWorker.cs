@@ -12,7 +12,7 @@ namespace RechercheLogement.Server.Recommend;
 /// les annonces.
 /// </summary>
 public sealed partial class PhotoWorker(Catalog catalog, IPhotoStatsStore store, RecommendationService recommendations,
-    IHttpClientFactory http, ILogger<PhotoWorker> log) : BackgroundService
+    IHttpClientFactory http, Photos.PhotoPrefetcher prefetcher, ILogger<PhotoWorker> log) : BackgroundService
 {
     private const int DelayBetweenPhotosMs = 800;
     private const int BatchSize = 40;
@@ -59,6 +59,13 @@ public sealed partial class PhotoWorker(Catalog catalog, IPhotoStatsStore store,
     private async Task<bool> AnalyzeAsync(string url, CancellationToken ct)
     {
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        // Déjà dans le cache des photos : pas de téléchargement.
+        if (prefetcher.Cache?.Find(url, Photos.PhotoSize.Small) is { } cached && await ReadAsync(cached, ct) is { } local)
+        {
+            var stats = PhotoAnalyzer.Analyze(local);
+            store.Save(url, stats, now);
+            return stats is not null;
+        }
         try
         {
             using var client = http.CreateClient(SiteHttp.ClientName);
@@ -77,6 +84,18 @@ public sealed partial class PhotoWorker(Catalog catalog, IPhotoStatsStore store,
         {
             store.Save(url, null, now);
             return false;
+        }
+    }
+
+    private static async Task<byte[]?> ReadAsync(string path, CancellationToken ct)
+    {
+        try
+        {
+            return await File.ReadAllBytesAsync(path, ct);
+        }
+        catch (IOException)
+        {
+            return null; // supprimée du cache entre-temps : téléchargée
         }
     }
 

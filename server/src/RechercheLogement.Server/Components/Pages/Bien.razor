@@ -39,7 +39,7 @@ else
 
     <div class="two-cols">
         <section class="panel">
-            <PhotoGallery Photos="s.Photos ?? []" />
+            <PhotoGallery PropertyId="@s.Property.Id" Photos="s.Photos ?? []" />
             <h2>Annonces (@s.Listings.Count)</h2>
             @foreach (var l in s.Listings)
             {
@@ -121,7 +121,11 @@ else
     private string? _comment;
     private string? _loadedFor;
 
-    protected override void OnParametersSet() => Load();
+    protected override void OnParametersSet()
+    {
+        Load();
+        Prefetch.FocusProperty(Id);
+    }
 
     protected override void Load()
     {
@@ -151,5 +155,5 @@ else
         if (e.Key == "Enter") AddComment();
     }
 
-    private static string Thumb(string url) => Format.Thumb(url, 320, 200);
+    private static string Thumb(string url) => Format.Photo(url, 320, 200);
 }

@@ -80,7 +80,13 @@
         base.OnInitialized();
     }
 
-    protected override void Load() => _items = Catalog.QueryProperties(new PropertyQuery
+    protected override void Load()
+    {
+        _items = Query();
+        ShowPhotos(_items.Select(p => p.Property.Id));
+    }
+
+    private IReadOnlyList<PropertySummary> Query() => Catalog.QueryProperties(new PropertyQuery
     {
         Statuses = _statuses,
         Text = _text,

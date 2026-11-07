@@ -1,7 +1,7 @@
 @* Un bien sur une ligne (vue liste). *@
 <article class="row @Format.StatusClass(Item.Property.Status)" data-property="@Item.Property.Id">
     <div class="row-photo">
-        <PhotoCarousel Photos="Item.Photos ?? []" Href="@($"/biens/{Item.Property.Id}")" Width="240" Height="180" />
+        <PhotoCarousel PropertyId="@Item.Property.Id" Photos="Item.Photos ?? []" Href="@($"/biens/{Item.Property.Id}")" Width="240" Height="180" />
     </div>
     <div class="row-main">
         <a class="title" href="/biens/@Item.Property.Id">@(Item.Title ?? "Annonce")</a>

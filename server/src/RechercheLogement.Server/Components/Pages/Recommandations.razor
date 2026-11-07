@@ -54,7 +54,11 @@ else
     private RecommenderState _state = new(0, 0, false, 0, 0);
     private IReadOnlyList<Recommendation> _items = [];
 
-    protected override void Load() => (_state, _items) = Recommendations.Recommend(Selection.Scope, Take);
+    protected override void Load()
+    {
+        (_state, _items) = Recommendations.Recommend(Selection.Scope, Take);
+        ShowPhotos(_items.Select(r => r.Item.Property.Id));
+    }
 
     private static string Percent(double score) => Math.Round(score * 100).ToString(System.Globalization.CultureInfo.InvariantCulture);
 }
