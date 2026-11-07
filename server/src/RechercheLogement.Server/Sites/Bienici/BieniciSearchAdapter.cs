@@ -167,6 +167,31 @@ public sealed class BieniciSearchAdapter(IHttpClientFactory factory) : ISearchAd
         if (p.RoomsMax is { } rmax) f["maxRooms"] = rmax;
         if (p.BedroomsMin is { } bmin) f["minBedrooms"] = bmin;
         if (p.Furnished is { } furnished) f["isFurnished"] = furnished;
+        if (p.LandSurfaceMin is { } lmin) f["minGardenSurfaceArea"] = lmin;
+        if (p.LandSurfaceMax is { } lmax) f["maxGardenSurfaceArea"] = lmax;
+        if (p.EnergyClassMax is { } energy) f["energyClassification"] = new JsonArray(EnergyClasses.UpTo(energy).Select(c => (JsonNode?)JsonValue.Create(c)).ToArray());
+        if (p.NewBuild is { } newBuild) f["newProperty"] = newBuild;
+        // workToDo: false ne garde que les annonces qui le disent : "sans travaux" est vérifié par l'outil.
+        if (p.WorkNeeded == true) f["workToDo"] = true;
+        foreach (var name in SiteFeatures(p.RequiredFeatures)) f[name] = true;
         return f;
     }
+
+    /// <summary>
+    /// Équipements communs -> filtres de l'API (relevés en novembre 2026). Garage et parking : "hasParking" (pas de
+    /// filtre garage seul). Climatisation : pas de filtre, vérifiée par l'outil sur les annonces.
+    /// </summary>
+    public static IEnumerable<string> SiteFeatures(IEnumerable<string> features) => features.Select(f => f switch
+    {
+        Features.Garden => "hasGarden",
+        Features.Pool => "hasPool",
+        Features.Terrace => "hasTerrace",
+        Features.Balcony => "hasBalcony",
+        Features.Cellar => "hasCellar",
+        Features.Elevator => "hasElevator",
+        Features.Fireplace => "hasFirePlace",
+        Features.Garage or Features.Parking => "hasParking",
+        Features.Accessible => "isDisabledPeopleFriendly",
+        _ => null,
+    }).OfType<string>().Distinct();
 }

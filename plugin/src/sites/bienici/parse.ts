@@ -18,6 +18,7 @@
 import type { ListingData } from '../../core/types';
 import { MAX_PHOTOS } from '../../core/types';
 import { extractRefs, normalizeSiren, normalizeText, parseNumber } from '../../shared/text';
+import { energyClass, featuresOf, type ListingFeatures } from '../../shared/details';
 
 export const CARD_SELECTOR = 'article.ad-overview[data-id]';
 
@@ -206,6 +207,34 @@ export interface BieniciApiAd {
   photos?: { url?: string; url_photo?: string }[];
   publicationDate?: string;
   accountDisplayName?: string;
+  landSurfaceArea?: number;
+  energyClassification?: string;
+  greenhouseGazClassification?: string;
+  yearOfConstruction?: number;
+  bathroomsQuantity?: number;
+  showerRoomsQuantity?: number;
+  heating?: string;
+  exposition?: string;
+  propertySubtype?: string;
+  newProperty?: boolean;
+  workToDo?: boolean;
+  hasGarden?: boolean;
+  hasPool?: boolean;
+  hasTerrace?: boolean;
+  terracesQuantity?: number;
+  hasBalcony?: boolean;
+  balconyQuantity?: number;
+  hasGarage?: boolean;
+  garagesQuantity?: number;
+  enclosedParkingQuantity?: number;
+  parkingPlacesQuantity?: number;
+  hasCellar?: boolean;
+  cellarsOrUndergroundsQuantity?: number;
+  hasElevator?: boolean;
+  hasFirePlace?: boolean;
+  firePlacesQuantity?: number;
+  hasAirConditioning?: boolean;
+  isDisabledPeopleFriendly?: boolean;
   /** Présent dans realEstateAd.json (page d'une annonce), absent de la liste. */
   contactRelativeData?: { agencyNameToDisplay?: string; contactNameToDisplay?: string; rcs?: string; agencyId?: string } | null;
 }
@@ -215,7 +244,7 @@ const first = (v: number | number[] | undefined) => (Array.isArray(v) ? v[0] : v
 export function parseBieniciApiAd(ad: BieniciApiAd): ListingData {
   const pos = ad.blurInfo?.position;
   return {
-    transaction: ad.adType === 'rent' ? 'rent' : ad.adType === 'buy' ? 'buy' : undefined,
+    transaction: ad.adType === 'rent' ? 'rent' : ad.adType === 'buy' || ad.adType === 'lifeAnnuitySale' ? 'buy' : undefined,
     propertyType: ad.propertyType,
     agencyRef: ad.reference || undefined,
     otherRefs: nonEmpty(extractRefs(ad.description).filter((r) => r !== ad.reference?.toUpperCase())),
@@ -236,7 +265,40 @@ export function parseBieniciApiAd(ad: BieniciApiAd): ListingData {
     photoKeys: ad.photos?.map((p) => photoKey(p.url_photo)).filter((u): u is string => !!u).slice(0, 6),
     descriptionExcerpt: ad.description ? normalizeText(ad.description).slice(0, 600) : undefined,
     publishedAt: ad.publicationDate,
+    landSurface: ad.landSurfaceArea && ad.landSurfaceArea > 0 ? ad.landSurfaceArea : undefined,
+    energyClass: energyClass(ad.energyClassification),
+    ghgClass: energyClass(ad.greenhouseGazClassification),
+    yearBuilt: ad.yearOfConstruction && ad.yearOfConstruction > 1000 ? ad.yearOfConstruction : undefined,
+    bathrooms: ad.bathroomsQuantity === undefined && ad.showerRoomsQuantity === undefined
+      ? undefined
+      : (ad.bathroomsQuantity ?? 0) + (ad.showerRoomsQuantity ?? 0),
+    heating: ad.heating && !/^\d+$/.test(ad.heating) ? ad.heating : undefined,
+    exposure: ad.exposition || undefined,
+    subtype: ad.propertySubtype === 'barn' ? 'Grange' : ad.propertySubtype && ad.propertySubtype !== 'unknown' ? ad.propertySubtype : undefined,
+    newBuild: ad.newProperty,
+    workNeeded: ad.workToDo,
+    saleKind: ad.adType === 'lifeAnnuitySale' ? 'life-annuity' : undefined,
+    features: bieniciFeatures(ad),
   };
+}
+
+/** Équipements : "hasPool", ou un nombre ("balconyQuantity" : 0 = absent). Mêmes règles que le serveur. */
+export function bieniciFeatures(ad: BieniciApiAd): ListingFeatures | undefined {
+  const count = (n: number | undefined) => (n === undefined || n === null ? undefined : n > 0);
+  const any = (...v: (boolean | undefined)[]) => (v.includes(true) ? true : v.includes(false) ? false : undefined);
+  return featuresOf([
+    ['garden', ad.hasGarden],
+    ['pool', ad.hasPool],
+    ['terrace', any(ad.hasTerrace, count(ad.terracesQuantity))],
+    ['balcony', any(ad.hasBalcony, count(ad.balconyQuantity))],
+    ['garage', any(ad.hasGarage, count(ad.garagesQuantity), count(ad.enclosedParkingQuantity))],
+    ['parking', count(ad.parkingPlacesQuantity)],
+    ['cellar', any(ad.hasCellar, count(ad.cellarsOrUndergroundsQuantity))],
+    ['elevator', ad.hasElevator],
+    ['fireplace', any(ad.hasFirePlace, count(ad.firePlacesQuantity))],
+    ['airConditioning', ad.hasAirConditioning],
+    ['accessible', ad.isDisabledPeopleFriendly],
+  ]);
 }
 
 function nonEmpty<T>(list: T[]): T[] | undefined {

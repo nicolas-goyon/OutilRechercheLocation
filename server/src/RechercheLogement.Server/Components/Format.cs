@@ -10,6 +10,8 @@ public static class Format
 
     public static string Price(decimal? p) => p is null ? "—" : $"{p.Value.ToString("#,0", Fr)} €";
     public static string Surface(double? s) => s is null ? "—" : $"{s.Value.ToString("0.#", Fr)} m²";
+    /// <summary>"1 283" (espaces des milliers, une décimale au plus).</summary>
+    public static string Number(double n) => n.ToString("#,0.#", Fr);
     public static string Date(long ms) => TimeZoneInfo.ConvertTime(DateTimeOffset.FromUnixTimeMilliseconds(ms), Paris).ToString("dd/MM/yyyy", Fr);
     public static string DateTime(long ms) => TimeZoneInfo.ConvertTime(DateTimeOffset.FromUnixTimeMilliseconds(ms), Paris).ToString("dd/MM/yyyy HH:mm", Fr);
 

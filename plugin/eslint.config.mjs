@@ -10,7 +10,7 @@ export default tseslint.config(
   {
     languageOptions: {
       globals: { ...globals.browser, ...globals.node, GM_info: 'readonly', GM_getValue: 'readonly', GM_setValue: 'readonly', GM_xmlhttpRequest: 'readonly', unsafeWindow: 'readonly' },
-      parserOptions: { projectService: { allowDefaultProject: ['*.mjs', 'scripts/*.mjs', 'userscripts/*.mjs', 'tests/*.ts', 'tests-live/*.ts'] }, tsconfigRootDir: import.meta.dirname },
+      parserOptions: { projectService: { allowDefaultProject: ['*.mjs', 'scripts/*.mjs', 'userscripts/*.mjs'] }, tsconfigRootDir: import.meta.dirname },
     },
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],

@@ -69,6 +69,35 @@ public sealed record ListingData
     public string? DescriptionExcerpt { get; init; }
     public string? PublishedAt { get; init; }
 
+    /// <summary>Surface du terrain, en m².</summary>
+    public double? LandSurface { get; init; }
+    /// <summary>Classe du DPE, de "A" à "G" (<see cref="EnergyClasses"/>).</summary>
+    public string? EnergyClass { get; init; }
+    /// <summary>Classe d'émission de gaz à effet de serre (GES), de "A" à "G".</summary>
+    public string? GhgClass { get; init; }
+    public int? YearBuilt { get; init; }
+    /// <summary>Salles de bain et salles d'eau.</summary>
+    public int? Bathrooms { get; init; }
+    /// <summary>Chauffage, tel que le site l'écrit ("gaz individuel", "Pompe à chaleur"...).</summary>
+    public string? Heating { get; init; }
+    /// <summary>Exposition ("sud", "sud, est"...).</summary>
+    public string? Exposure { get; init; }
+    /// <summary>Précision du type, tel que le site l'écrit ("Chalet", "Villa", "Ferme"...).</summary>
+    public string? Subtype { get; init; }
+    /// <summary>Logement neuf (programme neuf, VEFA). false : ancien.</summary>
+    public bool? NewBuild { get; init; }
+    /// <summary>Travaux à prévoir. false : bon état annoncé.</summary>
+    public bool? WorkNeeded { get; init; }
+    /// <summary>Mode de vente particulier (<see cref="SaleKinds"/>) : viager, enchères, appel d'offres. null : vente classique.</summary>
+    public string? SaleKind { get; init; }
+    /// <summary>Taxe foncière annuelle, en euros.</summary>
+    public decimal? PropertyTax { get; init; }
+    /// <summary>
+    /// Équipements (<see cref="Model.Features"/>) : true présent, false absent (annoncé comme absent par le site).
+    /// Un équipement non mentionné n'a pas de clé.
+    /// </summary>
+    public IReadOnlyDictionary<string, bool>? Features { get; init; }
+
     /// <summary>
     /// Fusionne <paramref name="incoming"/> dans ces données. Si <paramref name="fillOnly"/> est vrai,
     /// la méthode remplit uniquement les champs vides. (Une carte HTML ne remplace pas les données de l'API.)
@@ -98,12 +127,47 @@ public sealed record ListingData
         PhotoKeys = PickList(PhotoKeys, incoming.PhotoKeys, fillOnly, 6),
         DescriptionExcerpt = Pick(DescriptionExcerpt, Truncate(incoming.DescriptionExcerpt, 600), fillOnly),
         PublishedAt = Pick(PublishedAt, incoming.PublishedAt, fillOnly),
+        LandSurface = Pick(LandSurface, incoming.LandSurface, fillOnly),
+        EnergyClass = Pick(EnergyClass, incoming.EnergyClass, fillOnly),
+        GhgClass = Pick(GhgClass, incoming.GhgClass, fillOnly),
+        YearBuilt = Pick(YearBuilt, incoming.YearBuilt, fillOnly),
+        Bathrooms = Pick(Bathrooms, incoming.Bathrooms, fillOnly),
+        Heating = Pick(Heating, incoming.Heating, fillOnly),
+        Exposure = Pick(Exposure, incoming.Exposure, fillOnly),
+        Subtype = Pick(Subtype, incoming.Subtype, fillOnly),
+        NewBuild = Pick(NewBuild, incoming.NewBuild, fillOnly),
+        WorkNeeded = Pick(WorkNeeded, incoming.WorkNeeded, fillOnly),
+        SaleKind = Pick(SaleKind, incoming.SaleKind, fillOnly),
+        PropertyTax = Pick(PropertyTax, incoming.PropertyTax, fillOnly),
+        Features = MergeFeatures(Features, incoming.Features, fillOnly),
     };
+
+    /// <summary>
+    /// Équipements des deux côtés, équipement par équipement : la fiche d'un site dit "Piscine", la liste d'un autre
+    /// "pas de cave". Même équipement des deux côtés : la nouvelle valeur l'emporte, sauf si <paramref name="fillOnly"/>.
+    /// </summary>
+    private static IReadOnlyDictionary<string, bool>? MergeFeatures(IReadOnlyDictionary<string, bool>? current, IReadOnlyDictionary<string, bool>? incoming, bool fillOnly)
+    {
+        if (incoming is null || incoming.Count == 0) return current;
+        if (current is null || current.Count == 0) return new SortedDictionary<string, bool>(incoming.ToDictionary(), StringComparer.Ordinal);
+        var merged = new SortedDictionary<string, bool>(current.ToDictionary(), StringComparer.Ordinal);
+        foreach (var (key, value) in incoming)
+            if (!fillOnly || !merged.ContainsKey(key)) merged[key] = value;
+        return merged;
+    }
 
     /// <summary>Égalité de contenu. La méthode compare les listes élément par élément.</summary>
     public bool SameAs(ListingData other) =>
-        this with { Photos = null, PhotoKeys = null, OtherRefs = null } == other with { Photos = null, PhotoKeys = null, OtherRefs = null }
-        && SeqEq(Photos, other.Photos) && SeqEq(PhotoKeys, other.PhotoKeys) && SeqEq(OtherRefs, other.OtherRefs);
+        this with { Photos = null, PhotoKeys = null, OtherRefs = null, Features = null } == other with { Photos = null, PhotoKeys = null, OtherRefs = null, Features = null }
+        && SeqEq(Photos, other.Photos) && SeqEq(PhotoKeys, other.PhotoKeys) && SeqEq(OtherRefs, other.OtherRefs)
+        && SameFeatures(Features, other.Features);
+
+    /// <summary>Équipement présent (true), absent (false) ou non mentionné (null).</summary>
+    public bool? Has(string feature) => Features is not null && Features.TryGetValue(feature, out var v) ? v : null;
+
+    private static bool SameFeatures(IReadOnlyDictionary<string, bool>? a, IReadOnlyDictionary<string, bool>? b) =>
+        (a is null || a.Count == 0) ? (b is null || b.Count == 0)
+        : b is not null && a.Count == b.Count && a.All(kv => b.TryGetValue(kv.Key, out var v) && v == kv.Value);
 
     /// <summary>Photos gardées par annonce. Même limite dans le plugin (MAX_PHOTOS).</summary>
     public const int MaxPhotos = 40;

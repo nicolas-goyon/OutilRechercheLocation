@@ -71,6 +71,24 @@ Champs d'identification utilisés par la détection de doublons :
 - `otherRefs` : autres références lues dans le texte (« Réf. : … », « Mandat n° … »).
 - `agencySiren` : SIREN de l'agence (9 chiffres), lu dans les mentions légales (RCS / SIRET).
 
+Informations détaillées (toutes facultatives ; servent aux critères des projets et à la fiche du bien) :
+
+| champ | valeur |
+| --- | --- |
+| `landSurface` | Surface du terrain, en m². |
+| `energyClass`, `ghgClass` | Classe du DPE et du GES : `A` à `G`. |
+| `yearBuilt` | Année de construction. |
+| `bathrooms` | Salles de bain et salles d'eau. |
+| `heating`, `exposure` | Chauffage et exposition, tels que le site les écrit. |
+| `subtype` | Précision du type (`Chalet`, `Villa`, `Grange`…). |
+| `newBuild` | `true` : neuf ; `false` : ancien. |
+| `workNeeded` | `true` : travaux à prévoir ; `false` : bon état annoncé. |
+| `saleKind` | `life-annuity` (viager), `auction` (enchères), `tender` (appel d'offres). Absent : vente classique. |
+| `propertyTax` | Taxe foncière annuelle, en euros. |
+| `features` | Équipements : `{ "pool": true, "cellar": false }`. `true` présent, `false` annoncé absent ; un équipement non mentionné n'a pas de clé. Clés : `garden`, `pool`, `terrace`, `balcony`, `garage`, `parking`, `cellar`, `elevator`, `fireplace`, `airConditioning`, `accessible`. |
+
+Une nouvelle observation complète les équipements déjà connus, équipement par équipement (même règle `card` / `api` que les autres champs).
+
 | `type` d'action | champs |
 | --- | --- |
 | `setStatus` | `status` : `none` \| `seen` \| `rejected` \| `toContact` |

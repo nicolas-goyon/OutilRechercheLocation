@@ -56,6 +56,10 @@ public static partial class EtatListingParser
         var ends = Group(EndsIn().Match(html)) is { } e ? Clean(e) : null;
         var description = Group(OgDescription().Match(html)) is { } d ? WebUtility.HtmlDecode(d).Trim() : null;
         var notes = new[] { ProcedureNote(procedure), ends }.OfType<string>().ToList();
+        var tiles = Tiles(html);
+        string? Tile(string key) => tiles.GetValueOrDefault(key);
+        var land = Tile("existence d un terrain");
+        var outdoor = Normalize(Tile("presence de balcons ou terrasses"));
 
         var data = new ListingData
         {
@@ -72,6 +76,26 @@ public static partial class EtatListingParser
             DescriptionExcerpt = notes.Count == 0 ? description : $"{string.Join(". ", notes)}. {description}".Trim(),
             PublishedAt = Group(Published().Match(html)) is { } date && DateTime.TryParseExact(date, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var at)
                 ? at.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : null,
+            Rooms = Whole(Tile("nombre de pieces")),
+            Bedrooms = Whole(Tile("nombre de chambres")),
+            Bathrooms = Whole(Tile("nombre de salles de bain")),
+            Floor = Floor(Tile("etage")),
+            LandSurface = Number(Tile("superficie du terrain")) ?? (land is not null && land.Contains("m²", StringComparison.Ordinal) ? Number(land) : null),
+            EnergyClass = EnergyClasses.Normalize(Group(EnergyLabel().Match(html))),
+            GhgClass = EnergyClasses.Normalize(Group(GhgLabel().Match(html))),
+            Heating = Tile("type de chauffage") ?? Tile("type de chauffage climatisation"),
+            WorkNeeded = WorkNeeded(Tile("etat")),
+            PropertyTax = Number(Tile("montant de la taxe fonciere")) is { } tax ? (decimal)tax : null,
+            SaleKind = SaleKind(Tile("type de vente") ?? procedure),
+            Features = Features.Of(
+                (Features.Garden, Normalize(land).Contains("jardin") ? true : null),
+                (Features.Pool, Presence(Tile("presence d une piscine"))),
+                (Features.Cellar, Presence(Tile("presence d une cave"))),
+                (Features.Elevator, Presence(Tile("presence d ascenseurs"))),
+                (Features.Terrace, outdoor.Contains("terrasse") ? true : outdoor == "non" ? false : null),
+                (Features.Balcony, outdoor.Contains("balcon") ? true : outdoor == "non" ? false : null),
+                (Features.Garage, Presence(Tile("presence d un parking box"))),
+                (Features.Parking, Tile("nombre de places de parking") is not null || Tile("type de parking") is not null ? true : null)),
         };
         return new EtatDetail(data, insee);
     }
@@ -104,6 +128,64 @@ public static partial class EtatListingParser
             _ when l.StartsWith("bureau", StringComparison.Ordinal) || l.StartsWith("boutique", StringComparison.Ordinal) || l.StartsWith("locaux commerciaux", StringComparison.Ordinal) || l.StartsWith("fonds de commerce", StringComparison.Ordinal) => PropertyTypes.Commercial,
             _ => PropertyTypes.Other,
         };
+    }
+
+    /// <summary>
+    /// Tuiles "Caractéristiques détaillées du bien" : titre normalisé ("superficie du terrain") -> valeur. Leur liste
+    /// dépend du type de bien (relevé sur 35 fiches en novembre 2026).
+    /// </summary>
+    public static Dictionary<string, string> Tiles(string html)
+    {
+        var tiles = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (Match m in TileRegex().Matches(html))
+            if (Clean(m.Groups[2].Value) is { Length: > 0 } value) tiles.TryAdd(Normalize(Clean(m.Groups[1].Value)), value);
+        return tiles;
+    }
+
+    /// <summary>"Non" -> false ; "2 caves", "oui", "Garage" -> true ; vide : inconnu.</summary>
+    private static bool? Presence(string? value) => Normalize(value) switch
+    {
+        "" => null,
+        "non" or "aucun" or "aucune" or "0" => false,
+        _ => true,
+    };
+
+    /// <summary>"Travaux à prévoir", "A rénover" -> true ; "Très bon état d'entretien", "Correct" -> false.</summary>
+    public static bool? WorkNeeded(string? state)
+    {
+        var s = Normalize(state);
+        if (s.Length == 0) return null;
+        if (s.Contains("travaux") || s.Contains("renov") || s.Contains("rehabilit") || s.Contains("mauvais") || s.Contains("ruine")) return true;
+        if (s.Contains("bon") || s.Contains("correct") || s.Contains("neuf") || s.Contains("excellent")) return false;
+        return null;
+    }
+
+    /// <summary>"Vente par enchères en ligne", "Adjudication" -> enchères ; "Appel d'offres" -> appel d'offres.</summary>
+    public static string? SaleKind(string? procedure)
+    {
+        var s = Normalize(procedure);
+        if (s.Contains("enchere") || s.Contains("adjudication")) return SaleKinds.Auction;
+        if (s.Contains("appel d offre")) return SaleKinds.Tender;
+        return null;
+    }
+
+    /// <summary>Premier nombre : "1283,00" -> 1283 ; "2 178 m²" -> 2178 ; "4411€" -> 4411.</summary>
+    private static double? Number(string? text)
+    {
+        if (text is null) return null;
+        var m = NumberText().Match(text.Replace("\u00a0", " ", StringComparison.Ordinal).Replace("\u202f", " ", StringComparison.Ordinal));
+        return m.Success && double.TryParse(m.Value.Replace(" ", "", StringComparison.Ordinal).Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
+    }
+
+    /// <summary>Nombre entier seul ("4") ; une phrase ("Immeuble de 6 étages") n'en est pas un.</summary>
+    private static int? Whole(string? text) =>
+        int.TryParse(text?.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var n) ? n : null;
+
+    /// <summary>"1" -> 1 ; "Rez de chaussée" -> 0 ; plusieurs étages ("Rez de chaussée et 1er étage") : inconnu.</summary>
+    private static int? Floor(string? text)
+    {
+        if (Whole(text) is { } n) return n;
+        return Normalize(text) == "rez de chaussee" ? 0 : null;
     }
 
     private static List<string>? Photos(string html)
@@ -165,6 +247,14 @@ public static partial class EtatListingParser
     private static partial Regex SurfaceText();
     [GeneratedRegex("<[^>]+>")]
     private static partial Regex TagRegex();
+    [GeneratedRegex("""<h3 class="fr-tile__title">(.*?)</h3>\s*<p class="fr-tile__desc">(.*?)</p>""", RegexOptions.Singleline)]
+    private static partial Regex TileRegex();
+    [GeneratedRegex("""Performance énergétique\s*:\s*([A-G])\b""")]
+    private static partial Regex EnergyLabel();
+    [GeneratedRegex("""Gaz à effet de serre\s*:\s*([A-G])\b""")]
+    private static partial Regex GhgLabel();
+    [GeneratedRegex(@"\d[\d ]*(?:[.,]\d+)?")]
+    private static partial Regex NumberText();
     [GeneratedRegex("""\s+""")]
     private static partial Regex WebSpace();
 }

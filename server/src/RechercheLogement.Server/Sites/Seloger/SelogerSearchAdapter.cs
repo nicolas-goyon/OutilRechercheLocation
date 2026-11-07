@@ -150,12 +150,51 @@ public sealed class SelogerSearchAdapter(BrowserRelay relay) : ISearchAdapter
         if (p.RoomsMin is { } rmin) criteria["numberOfRoomsMin"] = rmin;
         if (p.RoomsMax is { } rmax) criteria["numberOfRoomsMax"] = rmax;
         if (p.BedroomsMin is { } bmin) criteria["numberOfBedroomsMin"] = bmin;
+        if (p.LandSurfaceMin is { } lmin) criteria["plotSpaceMin"] = lmin;
+        if (p.LandSurfaceMax is { } lmax) criteria["plotSpaceMax"] = lmax;
+        if (p.YearBuiltMin is { } ymin) criteria["yearOfConstructionMin"] = ymin;
+        if (p.YearBuiltMax is { } ymax) criteria["yearOfConstructionMax"] = ymax;
+        if (p.EnergyClassMax is { } energy) criteria["energyCertificateClass"] = Strings(EnergyClasses.UpTo(energy));
+        if (SiteFeatures(p.RequiredFeatures).ToList() is { Count: > 0 } features) criteria["featuresIncluded"] = Strings(features);
+        if (ProjectTypes(p) is { } projectTypes) criteria["projectTypes"] = Strings(projectTypes);
         return new JsonObject
         {
             ["criteria"] = criteria,
             ["paging"] = new JsonObject { ["page"] = page, ["size"] = PageSize, ["order"] = "DateDesc" },
         };
     }
+
+    /// <summary>
+    /// Équipements communs -> "featuresIncluded" (valeurs relevées dans le site, novembre 2026). Terrasse et balcon :
+    /// un seul filtre ; garage et parking aussi. Cheminée et climatisation : vérifiées par l'outil sur les annonces.
+    /// </summary>
+    public static IEnumerable<string> SiteFeatures(IEnumerable<string> features) => features.Select(f => f switch
+    {
+        Features.Garden => "Garden",
+        Features.Pool => "Swimming_Pool",
+        Features.Terrace or Features.Balcony => "Balcony_Terrace",
+        Features.Garage or Features.Parking => "Parking_Garage",
+        Features.Cellar => "Cellar",
+        Features.Elevator => "Elevator",
+        Features.Accessible => "Reduce_Mobility_Access",
+        _ => null,
+    }).OfType<string>().Distinct();
+
+    /// <summary>
+    /// Achat : ancien ("Resale"), neuf ("New_Build", "Projected") et viager ("Life_Annuity"). null : tous (rien à
+    /// préciser). Location : jamais.
+    /// </summary>
+    public static IReadOnlyList<string>? ProjectTypes(SearchProject p)
+    {
+        if (p.Transaction != TransactionType.Buy || (p.NewBuild is null && !p.ExcludeLifeAnnuity)) return null;
+        var types = new List<string>();
+        if (p.NewBuild != true) types.Add("Resale");
+        if (p.NewBuild != false) types.AddRange(["New_Build", "Projected"]);
+        if (!p.ExcludeLifeAnnuity && p.NewBuild != true) types.Add("Life_Annuity");
+        return types;
+    }
+
+    private static JsonArray Strings(IEnumerable<string> values) => new(values.Select(v => (JsonNode?)JsonValue.Create(v)).ToArray());
 
     private static string Distribution(TransactionType t) => t == TransactionType.Buy ? "Buy" : "Rent";
 

@@ -35,7 +35,7 @@ public sealed class BieniciListingParser : IListingParser
         {
             Url = $"https://www.bienici.com/annonce/{id}",
             Title = JsonRead.Str(ad["title"]) ?? DefaultTitle(type, rooms, surface),
-            Transaction = JsonRead.Str(ad["adType"]) switch { "rent" => TransactionType.Rent, "buy" => TransactionType.Buy, _ => null },
+            Transaction = JsonRead.Str(ad["adType"]) switch { "rent" => TransactionType.Rent, "buy" or "lifeAnnuitySale" => TransactionType.Buy, _ => null },
             PropertyType = type,
             Price = JsonRead.Dec(ad["price"]),
             Charges = JsonRead.Dec(ad["charges"]),
@@ -55,9 +55,55 @@ public sealed class BieniciListingParser : IListingParser
             Photos = photos is { Count: > 0 } ? photos : null,
             DescriptionExcerpt = JsonRead.Excerpt(description),
             PublishedAt = JsonRead.Str(ad["publicationDate"]),
+            LandSurface = Positive(JsonRead.Dbl(ad["landSurfaceArea"])),
+            EnergyClass = EnergyClasses.Normalize(JsonRead.Str(ad["energyClassification"])),
+            GhgClass = EnergyClasses.Normalize(JsonRead.Str(ad["greenhouseGazClassification"])),
+            YearBuilt = JsonRead.Int(ad["yearOfConstruction"]) is { } year and > 1000 ? year : null,
+            Bathrooms = Sum(JsonRead.Int(ad["bathroomsQuantity"]), JsonRead.Int(ad["showerRoomsQuantity"])),
+            Heating = JsonRead.Str(ad["heating"]) is { } heating && !heating.All(char.IsDigit) ? heating : null,
+            Exposure = JsonRead.Str(ad["exposition"]),
+            Subtype = Subtype(JsonRead.Str(ad["propertySubtype"])),
+            NewBuild = JsonRead.Bool(ad["newProperty"]),
+            WorkNeeded = JsonRead.Bool(ad["workToDo"]),
+            SaleKind = JsonRead.Str(ad["adType"]) == "lifeAnnuitySale" ? SaleKinds.LifeAnnuity : null,
+            Features = ReadFeatures(ad),
         };
         return new CollectedItem(id, data);
     }
+
+    /// <summary>
+    /// Équipements : "hasPool", ou un nombre ("balconyQuantity" : 0 = absent). Garage : garage ou parking fermé.
+    /// </summary>
+    public static IReadOnlyDictionary<string, bool>? ReadFeatures(JsonNode ad)
+    {
+        bool? Flag(string name) => JsonRead.Bool(ad[name]);
+        bool? Count(string name) => JsonRead.Int(ad[name]) is { } n ? n > 0 : null;
+        static bool? Any(params bool?[] values) => values.Any(v => v == true) ? true : values.Any(v => v == false) ? false : null;
+        return Features.Of(
+            (Features.Garden, Flag("hasGarden")),
+            (Features.Pool, Flag("hasPool")),
+            (Features.Terrace, Any(Flag("hasTerrace"), Count("terracesQuantity"))),
+            (Features.Balcony, Any(Flag("hasBalcony"), Count("balconyQuantity"))),
+            (Features.Garage, Any(Flag("hasGarage"), Count("garagesQuantity"), Count("enclosedParkingQuantity"))),
+            (Features.Parking, Count("parkingPlacesQuantity")),
+            (Features.Cellar, Any(Flag("hasCellar"), Count("cellarsOrUndergroundsQuantity"))),
+            (Features.Elevator, Flag("hasElevator")),
+            (Features.Fireplace, Any(Flag("hasFirePlace"), Count("firePlacesQuantity"))),
+            (Features.AirConditioning, Flag("hasAirConditioning")),
+            (Features.Accessible, Flag("isDisabledPeopleFriendly")));
+    }
+
+    /// <summary>Sous-type de Bien'ici ("barn", seul relevé sur 1 800 annonces en novembre 2026). "unknown" : rien.</summary>
+    private static string? Subtype(string? subtype) => subtype switch
+    {
+        null or "unknown" => null,
+        "barn" => "Grange",
+        _ => subtype,
+    };
+
+    private static double? Positive(double? value) => value > 0 ? value : null;
+
+    private static int? Sum(int? a, int? b) => a is null && b is null ? null : (a ?? 0) + (b ?? 0);
 
     private static string DefaultTitle(string? type, int? rooms, double? surface)
     {

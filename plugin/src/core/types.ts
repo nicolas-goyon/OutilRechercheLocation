@@ -12,6 +12,8 @@
  * server/src/RechercheLogement.Core/Contracts/SyncContracts.cs.
  */
 
+import type { ListingFeatures, SaleKind } from '../shared/details';
+
 export type SiteId = 'bienici' | 'seloger' | 'leboncoin' | 'pap' | 'logicimmo' | (string & {});
 
 /** `${site}:${siteId}` */
@@ -75,6 +77,27 @@ export interface ListingData {
   /** Extrait normalisé de la description (≤ 600 caractères). */
   descriptionExcerpt?: string;
   publishedAt?: string;
+  /** Surface du terrain, en m². */
+  landSurface?: number;
+  /** Classe du DPE, de "A" à "G". */
+  energyClass?: string;
+  /** Classe d'émission de gaz à effet de serre (GES), de "A" à "G". */
+  ghgClass?: string;
+  yearBuilt?: number;
+  /** Salles de bain et salles d'eau. */
+  bathrooms?: number;
+  heating?: string;
+  exposure?: string;
+  /** Précision du type ("Chalet", "Villa", "Grange"…). */
+  subtype?: string;
+  /** Logement neuf. false : ancien. */
+  newBuild?: boolean;
+  /** Travaux à prévoir. false : bon état annoncé. */
+  workNeeded?: boolean;
+  saleKind?: SaleKind;
+  /** Taxe foncière annuelle, en euros. */
+  propertyTax?: number;
+  features?: ListingFeatures;
 }
 
 export function listingKey(site: SiteId, siteId: string): ListingKey {

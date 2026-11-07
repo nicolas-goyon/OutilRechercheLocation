@@ -34,6 +34,7 @@
 import type { ListingData, TransactionType } from '../../core/types';
 import { MAX_PHOTOS } from '../../core/types';
 import { extractRefs, extractSiren, normalizeText, parseNumber } from '../../shared/text';
+import { bathroomsFromText, energyClass, featuresFromText } from '../../shared/details';
 
 export const CARD_SELECTOR = '[data-testid="serp-core-classified-card-testid"]';
 export const DETAIL_SELECTOR = '[data-testid="aviv.CDP.main"]';
@@ -208,13 +209,16 @@ export interface SelogerSerpClassified {
   gallery?: { images?: { url?: string }[] };
   mainDescription?: { description?: string; headline?: string };
   provider?: { intermediaryCard?: { title?: string | null }; agencyLegalInformations?: string[] };
+  energyClass?: string;
+  legacyTracking?: { energy_letter?: string; year_of_construction?: number };
   rawData?: {
     distributionType?: string;
     propertyType?: string;
+    propertySubType?: string | null;
     price?: number;
     nbroom?: number;
     nbbedroom?: number;
-    surface?: { main?: number | null };
+    surface?: { main?: number | null; plot?: number | null };
     offererMarketingKey?: string;
   };
 }
@@ -244,7 +248,56 @@ export function parseSelogerSerpClassified(c: SelogerSerpClassified): ListingDat
     photos: photos.length ? photos : undefined,
     descriptionExcerpt: c.mainDescription?.description ? normalizeText(c.mainDescription.description).slice(0, 600) : undefined,
     publishedAt: c.metadata?.creationDate,
+    landSurface: raw.surface?.plot ?? factNumber(c.hardFacts?.facts, 'plotSpace'),
+    energyClass: energyClass(c.energyClass ?? c.legacyTracking?.energy_letter),
+    yearBuilt: (c.legacyTracking?.year_of_construction ?? 0) > 1000 ? c.legacyTracking?.year_of_construction : undefined,
+    subtype: selogerSubtype(raw.propertySubType),
+    newBuild: selogerNewBuild(c.hardFacts?.title),
+    saleKind: /viager/i.test(c.hardFacts?.title ?? '') ? 'life-annuity' : undefined,
   };
+}
+
+/**
+ * Neuf : titre "Maison à vendre • neuf" (liste) ou "NEW_BUILD_UNIT" (fiche). Titre sans "neuf" : ancien.
+ * (tags.isNew veut dire "annonce récente", pas "logement neuf".) Mêmes règles que le serveur.
+ */
+export function selogerNewBuild(heading: string | undefined, subType?: string): boolean | undefined {
+  if (subType === 'NEW_BUILD_UNIT' || subType === 'NEW_BUILD_PROJECT') return true;
+  if (subType === 'RESALE') return false;
+  return heading === undefined ? undefined : /\bneu(f|ve)\b/i.test(heading);
+}
+
+/** Valeur numérique d'un fait ("plotSpace" : "750 m² de terrain" -> 750). */
+function factNumber(facts: { type?: string; value?: string; splitValue?: string }[] | undefined, type: string): number | undefined {
+  const f = facts?.find((x) => x.type === type);
+  return parseNumber(f?.splitValue ?? f?.value);
+}
+
+const SUBTYPES: Record<string, string> = {
+  VILLA: 'Villa',
+  CHALET: 'Chalet',
+  BUNGALOW: 'Bungalow',
+  FARMHOUSE: 'Ferme',
+  CASTLE: 'Château',
+  MANOR_HOUSE: 'Manoir',
+  MANSION: 'Demeure',
+  TOWN_HOUSE: 'Maison de ville',
+  TERRACE_HOUSE: 'Maison mitoyenne',
+  SEMIDETACHED_HOUSE: 'Maison mitoyenne',
+  SINGLE_FAMILY_HOUSE: 'Maison individuelle',
+  MULTI_FAMILY_HOUSE: 'Maison plurifamiliale',
+  LOFT: 'Loft',
+  PENTHOUSE: 'Dernier étage',
+  STUDIO: 'Studio',
+  MULTI_STOREY: 'Duplex',
+  TERRACE: 'Appartement avec terrasse',
+};
+
+/** Sous-types de SeLoger (valeurs de son code, novembre 2026) -> libellé. Mêmes libellés que le serveur. */
+export function selogerSubtype(subtype: string | null | undefined): string | undefined {
+  if (!subtype) return undefined;
+  const key = subtype.toUpperCase();
+  return SUBTYPES[key] ?? key.charAt(0) + key.slice(1).toLowerCase().replace(/_/g, ' ');
 }
 
 function distribution(d: string | undefined): TransactionType | undefined {
@@ -271,9 +324,18 @@ export interface SelogerDetailClassified {
     key?: { keys?: { label?: string; value?: string }[] };
     price?: { components?: PriceComponent[] };
     features?: { details?: { categories?: { elements?: { icon?: string; value?: string }[] }[] } };
+    energy?: {
+      features?: { type?: string; value?: string }[];
+      certificates?: { scales?: { type?: string; efficiencyClass?: { rating?: string } }[] }[];
+    };
   };
   contactSections?: { contactCard?: { title?: string | null }; provider?: { agencyLegalInformations?: string[] } };
-  rawData?: { distributionType?: string; propertyType?: string };
+  rawData?: {
+    distributionType?: string;
+    propertyType?: string;
+    propertySubType?: string | null;
+    distributionSubType?: { buy?: string; rent?: string };
+  };
   tracking?: { av_items?: { price?: number }[] };
 }
 
@@ -301,9 +363,13 @@ export function parseSelogerDetailClassified(c: SelogerDetailClassified, pageUrl
   const amount = (p: PriceEntry | undefined) => parseNumber(p?.value?.main?.ariaLabel ?? p?.value?.main?.value);
   const rent = prices.find((p) => /^loyer/i.test(labelOf(p)));
   const charges = prices.find((p) => /charges/i.test(labelOf(p)) && !/^loyer/i.test(labelOf(p)));
-  const furnishedValue = (s.features?.details?.categories ?? [])
-    .flatMap((cat) => cat.elements ?? [])
-    .find((e) => e.icon === 'furnished')?.value;
+  const elements = (s.features?.details?.categories ?? []).flatMap((cat) => cat.elements ?? []);
+  const furnishedValue = elements.find((e) => e.icon === 'furnished')?.value;
+  const element = (re: RegExp) => elements.find((e) => re.test(e.value ?? ''))?.value;
+  const scales = (s.energy?.certificates ?? []).flatMap((cert) => cert.scales ?? []);
+  const rating = (re: RegExp) => energyClass(scales.find((sc) => re.test(sc.type ?? ''))?.efficiencyClass?.rating);
+  const energyFeature = (type: string) => s.energy?.features?.find((f) => f.type === type)?.value;
+  const heating = [energyFeature('heatingSystem'), energyFeature('energySource')].filter(Boolean).join(', ');
   const photos = (c.domains?.medias?.images ?? []).map((i) => i.url).filter((u): u is string => !!u).slice(0, MAX_PHOTOS);
 
   return {
@@ -326,6 +392,16 @@ export function parseSelogerDetailClassified(c: SelogerDetailClassified, pageUrl
     photos: photos.length ? photos : undefined,
     descriptionExcerpt: s.description?.description ? normalizeText(s.description.description).slice(0, 600) : undefined,
     publishedAt: c.metadata?.creationDate,
+    landSurface: parseNumber(element(/de terrain/i)),
+    energyClass: rating(/ENERGY/),
+    ghgClass: rating(/GHG/),
+    bathrooms: bathroomsFromText(element(/salles? (de bain|d'eau|de douche)/i)),
+    heating: heating || undefined,
+    exposure: element(/^exposition/i)?.replace(/^exposition\s*:\s*/i, '') || undefined,
+    subtype: selogerSubtype(c.rawData?.propertySubType),
+    newBuild: selogerNewBuild(s.hardFacts?.title, c.rawData?.distributionSubType?.buy),
+    saleKind: /viager/i.test(s.hardFacts?.title ?? '') ? 'life-annuity' : undefined,
+    features: featuresFromText(elements.map((e) => e.value)),
   };
 }
 

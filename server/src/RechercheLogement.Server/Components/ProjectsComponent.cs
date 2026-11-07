@@ -60,6 +60,21 @@ public static class ProjectFormat
         if (Range(p.RoomsMin, p.RoomsMax, "pièces") is { } rooms) parts.Add(rooms);
         if (p.BedroomsMin is { } b) parts.Add($"≥ {b} chambre(s)");
         if (p.Furnished is { } f) parts.Add(f ? "meublé" : "non meublé");
+        if (Range(p.LandSurfaceMin, p.LandSurfaceMax, "m² de terrain") is { } land) parts.Add(land);
+        if (p.BathroomsMin is { } bath) parts.Add($"≥ {bath} salle(s) de bain");
+        if (p.EnergyClassMax is { } energy) parts.Add(energy == "A" ? "DPE A" : $"DPE A à {energy}");
+        if (p.YearBuiltMin is not null || p.YearBuiltMax is not null)
+            parts.Add((p.YearBuiltMin, p.YearBuiltMax) switch
+            {
+                ({ } from, { } to) => $"construit entre {from} et {to}",
+                ({ } from, null) => $"construit après {from}",
+                (_, { } to) => $"construit avant {to}",
+                _ => "",
+            });
+        if (p.NewBuild is { } nb) parts.Add(nb ? "neuf" : "ancien");
+        if (p.WorkNeeded is { } work) parts.Add(work ? "à rénover" : "sans travaux");
+        if (p.RequiredFeatures.Count > 0) parts.Add(string.Join(", ", p.RequiredFeatures.Select(x => Features.Label(x).ToLowerInvariant())));
+        if (p.Transaction == TransactionType.Buy && p.ExcludeLifeAnnuity) parts.Add("hors viager");
         if (p.KeywordsInclude.Count > 0) parts.Add($"avec : {string.Join(", ", p.KeywordsInclude)}");
         if (p.KeywordsExclude.Count > 0) parts.Add($"sans : {string.Join(", ", p.KeywordsExclude)}");
         return string.Join(" · ", parts.Where(x => !string.IsNullOrWhiteSpace(x)));

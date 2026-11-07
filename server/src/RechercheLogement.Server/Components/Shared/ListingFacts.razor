@@ -1,0 +1,38 @@
+@* Résumé court des informations d'un bien, pour les cartes et les lignes de liste. Rien à montrer : rien n'est rendu. *@
+@if (Details is { } d)
+{
+    var dpe = EnergyClasses.Normalize(d.EnergyClass);
+    var facts = Facts(d);
+    if (dpe is not null || facts.Count > 0)
+    {
+        <div class="facts">
+            @if (dpe is not null)
+            {
+                <span class="dpe dpe-@dpe" title="Diagnostic de performance énergétique">DPE @dpe</span>
+            }
+            @foreach (var f in facts)
+            {
+                <span class="fact">@f</span>
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public ListingData? Details { get; set; }
+
+    /// <summary>Informations courtes (le DPE est affiché à part, en couleur).</summary>
+    private static List<string> Facts(ListingData d)
+    {
+        var facts = new List<string>();
+        if (d.Subtype is { } subtype) facts.Add(subtype);
+        if (d.LandSurface is { } land) facts.Add($"{Format.Number(land)} m² de terrain");
+        else if (d.Has(Features.Garden) == true) facts.Add("Jardin");
+        if (d.Has(Features.Pool) == true) facts.Add("Piscine");
+        if (d.YearBuilt is { } year) facts.Add(year.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        if (d.NewBuild == true) facts.Add("Neuf");
+        if (d.WorkNeeded == true) facts.Add("Travaux");
+        if (d.SaleKind is { } kind) facts.Add(SaleKinds.Label(kind));
+        return facts;
+    }
+}

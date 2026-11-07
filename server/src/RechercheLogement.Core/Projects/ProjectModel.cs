@@ -149,6 +149,23 @@ public sealed class SearchProject
     public int? BedroomsMin { get; set; }
     /// <summary>null : indifférent.</summary>
     public bool? Furnished { get; set; }
+    /// <summary>Surface du terrain, en m².</summary>
+    public double? LandSurfaceMin { get; set; }
+    public double? LandSurfaceMax { get; set; }
+    /// <summary>DPE le moins bon accepté ("D" : A à D). null : indifférent.</summary>
+    public string? EnergyClassMax { get; set; }
+    public int? YearBuiltMin { get; set; }
+    public int? YearBuiltMax { get; set; }
+    /// <summary>Salles de bain et salles d'eau.</summary>
+    public int? BathroomsMin { get; set; }
+    /// <summary>Équipements exigés (<see cref="Model.Features"/>).</summary>
+    public List<string> RequiredFeatures { get; set; } = [];
+    /// <summary>true : neuf seulement ; false : ancien seulement ; null : indifférent.</summary>
+    public bool? NewBuild { get; set; }
+    /// <summary>true : à rénover seulement ; false : sans travaux annoncés ; null : indifférent.</summary>
+    public bool? WorkNeeded { get; set; }
+    /// <summary>Écarte les viagers (les sites les mêlent aux ventes classiques). Vrai par défaut.</summary>
+    public bool ExcludeLifeAnnuity { get; set; } = true;
     /// <summary>Au moins un de ces mots doit apparaître dans le titre ou la description (vide : pas de contrainte).</summary>
     public List<string> KeywordsInclude { get; set; } = [];
     /// <summary>Aucun de ces mots ne doit apparaître.</summary>
@@ -238,6 +255,14 @@ public static class ProjectMatcher
         if (d.Rooms is not null && (d.Rooms < p.RoomsMin || d.Rooms > p.RoomsMax)) return Fail("pièces", out why);
         if (d.Bedrooms is not null && d.Bedrooms < p.BedroomsMin) return Fail("chambres", out why);
         if (p.Furnished is not null && d.Furnished is not null && d.Furnished != p.Furnished) return Fail("meublé", out why);
+        if (d.LandSurface is not null && (d.LandSurface < p.LandSurfaceMin || d.LandSurface > p.LandSurfaceMax)) return Fail("terrain", out why);
+        if (EnergyClasses.Worse(d.EnergyClass, p.EnergyClassMax)) return Fail($"DPE {d.EnergyClass}", out why);
+        if (d.YearBuilt is not null && (d.YearBuilt < p.YearBuiltMin || d.YearBuilt > p.YearBuiltMax)) return Fail("année de construction", out why);
+        if (d.Bathrooms is not null && d.Bathrooms < p.BathroomsMin) return Fail("salles de bain", out why);
+        if (p.RequiredFeatures.FirstOrDefault(f => d.Has(f) == false) is { } missing) return Fail($"sans {Features.Label(missing).ToLowerInvariant()}", out why);
+        if (p.NewBuild is not null && d.NewBuild is not null && d.NewBuild != p.NewBuild) return Fail(p.NewBuild.Value ? "ancien" : "neuf", out why);
+        if (p.WorkNeeded is not null && d.WorkNeeded is not null && d.WorkNeeded != p.WorkNeeded) return Fail(p.WorkNeeded.Value ? "sans travaux" : "travaux à prévoir", out why);
+        if (p.ExcludeLifeAnnuity && d.SaleKind == SaleKinds.LifeAnnuity) return Fail("viager", out why);
 
         var text = DedupScorer.NormalizeText($"{d.Title} {d.DescriptionExcerpt}");
         bool Has(string kw) => DedupScorer.NormalizeText(kw) is { Length: > 0 } k && $" {text} ".Contains($" {k} ", StringComparison.Ordinal);

@@ -176,6 +176,63 @@
 </section>
 
 <section class="panel">
+    <h2>Caractéristiques du bien</h2>
+    <div class="form-grid">
+        <label>Terrain (m²)</label>
+        <div class="range"><input type="number" min="0" @bind="_landMin" placeholder="min" /> à <input type="number" min="0" @bind="_landMax" placeholder="max" /></div>
+
+        <label>Salles de bain (min)</label>
+        <div class="range"><input type="number" min="0" @bind="_bathroomsMin" placeholder="min" /></div>
+
+        <label>DPE</label>
+        <select @bind="_energyMax">
+            <option value="">Indifférent</option>
+            @foreach (var c in EnergyClasses.All.Take(6))
+            {
+                <option value="@c">@(c == "A" ? "A seulement" : $"A à {c}")</option>
+            }
+        </select>
+
+        <label>Année de construction</label>
+        <div class="range"><input type="number" min="1000" max="2100" @bind="_yearMin" placeholder="après" /> à <input type="number" min="1000" max="2100" @bind="_yearMax" placeholder="avant" /></div>
+
+        <label>Neuf ou ancien</label>
+        <select @bind="_newBuild">
+            <option value="any">Indifférent</option>
+            <option value="new">Neuf seulement</option>
+            <option value="old">Ancien seulement</option>
+        </select>
+
+        <label>Travaux</label>
+        <select @bind="_work">
+            <option value="any">Indifférent</option>
+            <option value="none">Sans travaux annoncés</option>
+            <option value="needed">À rénover seulement</option>
+        </select>
+
+        <label>Équipements exigés</label>
+        <div class="type-chips">
+            @foreach (var (id, label) in Features.All)
+            {
+                <label class="chip @(_features.Contains(id) ? "on" : "")">
+                    <input type="checkbox" checked="@_features.Contains(id)" @onchange="e => ToggleFeature(id, e.Value is true)" /> @label
+                </label>
+            }
+        </div>
+
+        @if (_transaction == TransactionType.Buy)
+        {
+            <label>Viager</label>
+            <label><input type="checkbox" @bind="_excludeLifeAnnuity" /> Écarter les viagers</label>
+        }
+    </div>
+    <p class="muted small">
+        Chaque site applique ce qu'il sait filtrer ; l'outil vérifie le reste sur les annonces. L'outil n'écarte pas une
+        annonce qui ne précise pas l'information (un DPE ou une piscine non mentionnés), mais un site peut le faire.
+    </p>
+</section>
+
+<section class="panel">
     <h2>Sites interrogés</h2>
     @foreach (var group in Sites.All.GroupBy(s => s.Info.Category))
     {
@@ -275,6 +332,13 @@
     private double? _surfaceMin, _surfaceMax;
     private int? _roomsMin, _roomsMax, _bedroomsMin;
     private string _furnished = "any";
+    private double? _landMin, _landMax;
+    private int? _bathroomsMin, _yearMin, _yearMax;
+    private string _energyMax = "";
+    private string _newBuild = "any";
+    private string _work = "any";
+    private HashSet<string> _features = [];
+    private bool _excludeLifeAnnuity = true;
     private string _include = "";
     private string _exclude = "";
     private HashSet<string> _sites = ["bienici", "seloger"];
@@ -311,6 +375,12 @@
         (_priceMin, _priceMax, _surfaceMin, _surfaceMax) = (p.PriceMin, p.PriceMax, p.SurfaceMin, p.SurfaceMax);
         (_roomsMin, _roomsMax, _bedroomsMin) = (p.RoomsMin, p.RoomsMax, p.BedroomsMin);
         _furnished = p.Furnished switch { true => "yes", false => "no", _ => "any" };
+        (_landMin, _landMax, _bathroomsMin, _yearMin, _yearMax) = (p.LandSurfaceMin, p.LandSurfaceMax, p.BathroomsMin, p.YearBuiltMin, p.YearBuiltMax);
+        _energyMax = p.EnergyClassMax ?? "";
+        _newBuild = p.NewBuild switch { true => "new", false => "old", _ => "any" };
+        _work = p.WorkNeeded switch { true => "needed", false => "none", _ => "any" };
+        _features = [.. p.RequiredFeatures];
+        _excludeLifeAnnuity = p.ExcludeLifeAnnuity;
         _include = string.Join(", ", p.KeywordsInclude);
         _exclude = string.Join(", ", p.KeywordsExclude);
         _sites = [.. p.Sites];
@@ -538,6 +608,12 @@
         (p.PriceMin, p.PriceMax, p.SurfaceMin, p.SurfaceMax) = (_priceMin, _priceMax, _surfaceMin, _surfaceMax);
         (p.RoomsMin, p.RoomsMax, p.BedroomsMin) = (_roomsMin, _roomsMax, _bedroomsMin);
         p.Furnished = _furnished switch { "yes" => true, "no" => false, _ => null };
+        (p.LandSurfaceMin, p.LandSurfaceMax, p.BathroomsMin, p.YearBuiltMin, p.YearBuiltMax) = (_landMin, _landMax, _bathroomsMin, _yearMin, _yearMax);
+        p.EnergyClassMax = EnergyClasses.Normalize(_energyMax);
+        p.NewBuild = _newBuild switch { "new" => true, "old" => false, _ => null };
+        p.WorkNeeded = _work switch { "needed" => true, "none" => false, _ => null };
+        p.RequiredFeatures = Features.All.Select(f => f.Id).Where(_features.Contains).ToList();
+        p.ExcludeLifeAnnuity = _excludeLifeAnnuity;
         p.KeywordsInclude = SplitWords(_include);
         p.KeywordsExclude = SplitWords(_exclude);
         p.Sites = sites;
@@ -552,6 +628,12 @@
     {
         if (Id is not null) Store.Delete(Id);
         Nav.NavigateTo("/projets");
+    }
+
+    private void ToggleFeature(string id, bool on)
+    {
+        if (on) _features.Add(id);
+        else _features.Remove(id);
     }
 
     private static List<string> SplitWords(string text) =>

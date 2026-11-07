@@ -1,0 +1,6 @@
+{
+  "//": "Tests (node:test) : types de Node en plus de ceux du plugin. Sert à ESLint (lint avec les types).",
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "types": ["node"] },
+  "include": ["**/*.ts", "../src/**/*.ts", "../userscripts/types.d.ts"]
+}
