@@ -115,8 +115,10 @@ public sealed class Catalog
         var now = Now;
         var changed = false;
 
+        var isNew = false;
         if (!_listings.TryGetValue(key, out var l))
         {
+            isNew = true;
             var p = NewProperty(c, now);
             l = new Listing { Key = key, Site = obs.Site, SiteId = obs.SiteId, PropertyId = p.Id, FirstSeenAt = now, LastSeenAt = now, UpdatedAt = now };
             AddListingToIndexes(l);
@@ -135,6 +137,10 @@ public sealed class Catalog
                 l.PriceHistory.Add(new PricePoint(now, l.Data.Price.Value));
                 if (l.PriceHistory.Count > 20) l.PriceHistory.RemoveAt(0);
             }
+            // Historique : seulement deux lectures de même nature (carte / carte, API / API). La carte et l'API
+            // arrondissent différemment (57,2 m² / 57,17 m²) : ce ne serait pas un changement de l'annonce.
+            if (!isNew && l.Sources.Contains(obs.Source) && ListingChanges.EventText(l.Site, l.Data, merged) is { } text)
+                AddEvent(c, l.PropertyId, PropertyEventKind.ListingChanged, text);
             l.Data = merged;
             changed = true;
         }
@@ -149,6 +155,10 @@ public sealed class Catalog
             l.LastSeenAt = now;
             changed = true;
         }
+
+        if (isNew)
+            AddEvent(c, l.PropertyId, PropertyEventKind.ListingAdded,
+                $"{Labels.Site(l.Site)} : annonce trouvée{(l.Data.Price is { } price ? $" ({price.ToString("#,0", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"))} €)" : "")}");
 
         if (changed)
         {

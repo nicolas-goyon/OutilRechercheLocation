@@ -238,7 +238,19 @@ public sealed class DuplicateLink
     public string Other(string key) => key == A ? B : A;
 }
 
-public enum PropertyEventKind { StatusChanged, ContactStageChanged, Note, Merged, Detached, Comment }
+public enum PropertyEventKind
+{
+    StatusChanged,
+    ContactStageChanged,
+    Note,
+    Merged,
+    Detached,
+    Comment,
+    /// <summary>Nouvelle annonce du bien, sur un site.</summary>
+    ListingAdded,
+    /// <summary>Annonce modifiée par le site : prix, surface, DPE, photos...</summary>
+    ListingChanged,
+}
 
 /// <summary>Historique d'un bien. Le serveur local l'affiche sous forme de frise.</summary>
 public sealed record PropertyEvent(long Id, string PropertyId, long At, PropertyEventKind Kind, string Text);

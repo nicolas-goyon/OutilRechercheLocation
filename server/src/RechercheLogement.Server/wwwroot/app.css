@@ -431,3 +431,7 @@ dl.details { grid-template-columns: 130px 1fr; }
 .reasons { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
 .reasons li { margin: 1px 0; }
 a.button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+
+/* Historique d'un bien : annonce trouvée (discret), annonce modifiée par le site (mis en avant). */
+.timeline .ev-listingadded { color: var(--muted); }
+.timeline .ev-listingchanged { color: var(--suggest); font-weight: 600; }
