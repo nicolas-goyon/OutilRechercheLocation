@@ -9,7 +9,7 @@ COPY src/ src/
 ARG VERSION=0.0.0-local
 RUN dotnet publish src/RechercheLogement.Server/RechercheLogement.Server.csproj -c Release -o /app --no-restore -p:Version=${VERSION}
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+FROM mcr.microsoft.com/dotnet/aspnet:11.0
 ARG VERSION=0.0.0-local
 # source : relie l'image GHCR au dépôt GitHub. title : sert au nettoyage des anciennes images (deploy/update.*).
 LABEL org.opencontainers.image.title="recherche-logement-server" \
